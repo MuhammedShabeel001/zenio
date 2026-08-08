@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:zenio/features/home/presentation/home/home_mobile.dart';
+import 'package:zenio/features/wallet/presentation/wallet/wallet_mobile.dart';
 
-class HomeScreenWeb extends ConsumerStatefulWidget {
-  const HomeScreenWeb({
+class WalletScreenWeb extends ConsumerStatefulWidget {
+  const WalletScreenWeb({
     this.onTabSelected,
     super.key,
   });
@@ -11,10 +11,10 @@ class HomeScreenWeb extends ConsumerStatefulWidget {
   final ValueChanged<int>? onTabSelected;
 
   @override
-  ConsumerState<HomeScreenWeb> createState() => _HomeScreenWebState();
+  ConsumerState<WalletScreenWeb> createState() => _WalletScreenWebState();
 }
 
-class _HomeScreenWebState extends ConsumerState<HomeScreenWeb> {
+class _WalletScreenWebState extends ConsumerState<WalletScreenWeb> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -33,7 +33,7 @@ class _HomeScreenWebState extends ConsumerState<HomeScreenWeb> {
             ],
           ),
           clipBehavior: Clip.antiAlias,
-          child: HomeScreenMobile(onTabSelected: widget.onTabSelected),
+          child: WalletScreenMobile(onTabSelected: widget.onTabSelected),
         ),
       ),
     );

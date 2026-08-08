@@ -8,7 +8,12 @@ import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/widgets/custom_navigation_bar.dart';
 
 class HomeScreenMobile extends ConsumerStatefulWidget {
-  const HomeScreenMobile({super.key});
+  const HomeScreenMobile({
+    this.onTabSelected,
+    super.key,
+  });
+
+  final ValueChanged<int>? onTabSelected;
 
   @override
   ConsumerState<HomeScreenMobile> createState() => _HomeScreenMobileState();
@@ -390,6 +395,7 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                             setState(() {
                               _selectedNavIndex = index;
                             });
+                            widget.onTabSelected?.call(index);
                           },
                           onAddTap: () {
                             // Action callback for center add button
