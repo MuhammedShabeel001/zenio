@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zenio/features/analytics/analytics.dart';
 import 'package:zenio/features/home/home.dart';
+import 'package:zenio/features/settings/settings.dart';
 import 'package:zenio/features/wallet/wallet.dart';
 import 'package:zenio/shared/shared.dart';
 
@@ -30,14 +31,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       HomeScreenMobile(onTabSelected: _onTabSelected),
       WalletScreenMobile(onTabSelected: _onTabSelected),
       AnalyticsScreenMobile(onTabSelected: _onTabSelected),
-      HomeScreenMobile(onTabSelected: _onTabSelected),
+      SettingsScreenMobile(onTabSelected: _onTabSelected),
     ];
 
     final webScreens = [
       HomeScreenWeb(onTabSelected: _onTabSelected),
       WalletScreenWeb(onTabSelected: _onTabSelected),
       AnalyticsScreenWeb(onTabSelected: _onTabSelected),
-      HomeScreenWeb(onTabSelected: _onTabSelected),
+      SettingsScreenWeb(onTabSelected: _onTabSelected),
     ];
 
     final activeScreen = screens[_selectedTabIndex.clamp(0, screens.length - 1)];
