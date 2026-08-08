@@ -1,7 +1,7 @@
-import 'package:app/features/home/home.dart';
-import 'package:app/shared/shared.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:zenio/features/home/home.dart';
+import 'package:zenio/shared/shared.dart';
 
 export 'home_mobile.dart';
 export 'home_web.dart';

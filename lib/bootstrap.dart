@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'dart:developer';
 
-import 'package:app/app/app.dart';
-import 'package:app/shared/shared.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:zenio/app/app.dart';
+import 'package:zenio/shared/shared.dart';
 
 class MyObserver extends ProviderObserver {
   @override

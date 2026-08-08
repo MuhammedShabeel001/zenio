@@ -19,11 +19,11 @@ void main() async {
   final vWidth = double.parse(viewBox[2]);
   final vHeight = double.parse(viewBox[3]);
 
-  print('Processing SVG: ${vWidth}x${vHeight}');
+  print('Processing SVG: ${vWidth}x$vHeight');
 
   // Extract Paths and Colors
   final paths = svg.findAllElements('path');
-  final List<Map<String, String>> vectorPaths = [];
+  final vectorPaths = <Map<String, String>>[];
 
   for (final path in paths) {
     final d = path.getAttribute('d') ?? '';
@@ -67,6 +67,34 @@ ${vectorPaths.map((p) => '        <path\n            android:fillColor="${p['fil
     print('Updated $target');
   }
 
+  // Update Android Background Colors & Launch Background
+  final bgXml = '''<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_launcher_background">#000000</color>
+</resources>''';
+  final androidBgTargets = [
+    'android/app/src/main/res/values/ic_launcher_background.xml',
+    'android/app/src/staging/res/values/ic_launcher_background.xml',
+    'android/app/src/development/res/values/ic_launcher_background.xml',
+  ];
+  for (final target in androidBgTargets) {
+    final file = File(target);
+    if (!file.parent.existsSync()) file.parent.createSync(recursive: true);
+    file.writeAsStringSync(bgXml);
+    print('Updated $target');
+  }
+
+  final launchBgXml = '''<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@android:color/black" />
+    <item android:gravity="center" android:drawable="@drawable/ic_launch_image" />
+</layer-list>''';
+  final launchBgFile = File('android/app/src/main/res/drawable/launch_background.xml');
+  if (launchBgFile.existsSync()) {
+    launchBgFile.writeAsStringSync(launchBgXml);
+    print('Updated android/app/src/main/res/drawable/launch_background.xml');
+  }
+
   // --- 2. Generate iOS Icons using sips ---
   print('Generating iOS Icons...');
   
@@ -75,14 +103,14 @@ ${vectorPaths.map((p) => '        <path\n            android:fillColor="${p['fil
     '-s', 'format', 'png',
     '--resampleHeight', '824',
     'assets/images/app_logo.svg',
-    '--out', 'app_icon_tmp.png'
+    '--out', 'app_icon_tmp.png',
   ]);
   
   await Process.run('sips', [
     '-p', '1024', '1024',
-    '--padColor', 'FFFFFF',
+    '--padColor', '000000',
     'app_icon_tmp.png',
-    '--out', 'app_icon_final.png'
+    '--out', 'app_icon_final.png',
   ]);
 
   final iosTargets = [
@@ -101,14 +129,14 @@ ${vectorPaths.map((p) => '        <path\n            android:fillColor="${p['fil
     '-s', 'format', 'png',
     '--resampleHeight', '360',
     'assets/images/app_logo.svg',
-    '--out', 'launch_tmp_360.png'
+    '--out', 'launch_tmp_360.png',
   ]);
   
   await Process.run('sips', [
     '-p', '450', '450',
-    '--padColor', 'FFFFFF',
+    '--padColor', '000000',
     'launch_tmp_360.png',
-    '--out', 'ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage@3x.png'
+    '--out', 'ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage@3x.png',
   ]);
   
   await Process.run('sips', ['--resampleHeightWidth', '300', '300', 'ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage@3x.png', '--out', 'ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage@2x.png']);

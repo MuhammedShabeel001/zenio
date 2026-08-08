@@ -1,6 +1,6 @@
-import 'package:app/shared/shared.dart';
 import 'package:flutter/material.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:zenio/shared/shared.dart';
 
 part 'locale_provider.g.dart';
 

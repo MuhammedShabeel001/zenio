@@ -1,11 +1,11 @@
-import 'package:app/app/app.dart';
-import 'package:app/bootstrap.dart';
-import 'package:app/env.dart';
-// import 'package:app/firebase_options_prod.dart';
+// import 'package:zenio/firebase_options_prod.dart';
 // import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:scaled_app/scaled_app.dart';
 import 'package:timezone/data/latest.dart' as tz;
+import 'package:zenio/app/app.dart';
+import 'package:zenio/bootstrap.dart';
+import 'package:zenio/env.dart';
 
 Future<void> main() async {
   tz.initializeTimeZones();

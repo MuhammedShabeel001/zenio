@@ -9,7 +9,7 @@
             <sparkle:tags>
                 <sparkle:criticalUpdate />
             </sparkle:tags>
-            <enclosure url="https://play.google.com/store/apps/details?id=com.example.com"
+            <enclosure url="https://play.google.com/store/apps/details?id=com.aurea.zenio"
                 sparkle:version="1.0.6" sparkle:os="android" />
         </item>
     </channel>

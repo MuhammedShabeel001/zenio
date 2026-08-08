@@ -1,9 +1,9 @@
 import 'dart:io';
 
-import 'package:app/shared/utils/downloader/i_platform_downloader.dart';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:zenio/shared/utils/downloader/i_platform_downloader.dart';
 
 IPlatformDownloader getDownloader() => OtherDownloader();
 

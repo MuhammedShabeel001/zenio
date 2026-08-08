@@ -1,4 +1,4 @@
-import 'package:app/shared/utils/downloader/platform_helper.dart'
+import 'package:zenio/shared/utils/downloader/platform_helper.dart'
     if (dart.library.io) './other_downloader.dart'
     if (dart.library.js) './web_downloader.dart';
 
