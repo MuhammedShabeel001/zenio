@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zenio/features/settings/controller/settings/settings_notifier.dart';
 import 'package:zenio/features/settings/presentation/widgets/settings_item_tile.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
+import 'package:zenio/shared/widgets/add_transaction_bottom_sheet.dart';
 import 'package:zenio/shared/widgets/custom_navigation_bar.dart';
 
 class SettingsScreenMobile extends ConsumerStatefulWidget {
@@ -255,7 +256,9 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                           onTabSelected: (index) {
                             widget.onTabSelected?.call(index);
                           },
-                          onAddTap: () {},
+                          onAddTap: () {
+                            AddTransactionBottomSheet.show(context);
+                          },
                         ),
                       ),
                     ],

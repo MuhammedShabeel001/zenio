@@ -6,6 +6,7 @@ import 'package:zenio/features/home/presentation/widgets/quick_action_item.dart'
 import 'package:zenio/features/home/presentation/widgets/transaction_card.dart';
 import 'package:zenio/features/transactions/transactions.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
+import 'package:zenio/shared/widgets/add_transaction_bottom_sheet.dart';
 import 'package:zenio/shared/widgets/custom_navigation_bar.dart';
 
 class HomeScreenMobile extends ConsumerStatefulWidget {
@@ -409,7 +410,7 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                             widget.onTabSelected?.call(index);
                           },
                           onAddTap: () {
-                            // Action callback for center add button
+                            AddTransactionBottomSheet.show(context);
                           },
                         ),
                       ),

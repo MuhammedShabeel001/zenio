@@ -6,6 +6,7 @@ import 'package:zenio/features/analytics/presentation/widgets/category_legend_wi
 import 'package:zenio/features/analytics/presentation/widgets/donut_chart_widget.dart';
 import 'package:zenio/features/analytics/presentation/widgets/top_spent_card.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
+import 'package:zenio/shared/widgets/add_transaction_bottom_sheet.dart';
 import 'package:zenio/shared/widgets/custom_navigation_bar.dart';
 
 class AnalyticsScreenMobile extends ConsumerStatefulWidget {
@@ -195,7 +196,9 @@ class _AnalyticsScreenMobileState
                           onTabSelected: (index) {
                             widget.onTabSelected?.call(index);
                           },
-                          onAddTap: () {},
+                          onAddTap: () {
+                            AddTransactionBottomSheet.show(context);
+                          },
                         ),
                       ),
                     ],

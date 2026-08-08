@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
+import 'package:zenio/shared/widgets/add_transaction_bottom_sheet.dart';
 
 class CustomNavigationBar extends StatelessWidget {
   const CustomNavigationBar({
@@ -72,7 +73,7 @@ class CustomNavigationBar extends StatelessWidget {
 
             // Center Green Floating Action Button
             GestureDetector(
-              onTap: onAddTap,
+              onTap: onAddTap ?? () => AddTransactionBottomSheet.show(context),
               behavior: HitTestBehavior.opaque,
               child: Container(
                 width: 60,

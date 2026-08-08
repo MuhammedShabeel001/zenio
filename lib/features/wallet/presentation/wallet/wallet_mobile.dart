@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
 import 'package:zenio/features/wallet/presentation/widgets/wallet_card_widget.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
+import 'package:zenio/shared/widgets/add_transaction_bottom_sheet.dart';
 import 'package:zenio/shared/widgets/custom_navigation_bar.dart';
 
 class WalletScreenMobile extends ConsumerStatefulWidget {
@@ -288,7 +289,9 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                           onTabSelected: (index) {
                             widget.onTabSelected?.call(index);
                           },
-                          onAddTap: () {},
+                          onAddTap: () {
+                            AddTransactionBottomSheet.show(context);
+                          },
                         ),
                       ),
                     ],

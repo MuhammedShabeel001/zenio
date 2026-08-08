@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:zenio/features/transactions/controller/transactions/transactions_notifier.dart';
 import 'package:zenio/features/transactions/presentation/widgets/transaction_detail_card.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
+import 'package:zenio/shared/widgets/add_transaction_bottom_sheet.dart';
 
 class TransactionsScreenMobile extends ConsumerStatefulWidget {
   const TransactionsScreenMobile({super.key});
@@ -84,7 +85,9 @@ class _TransactionsScreenMobileState
 
                       // + Add Button Pill
                       GestureDetector(
-                        onTap: () {},
+                        onTap: () {
+                          AddTransactionBottomSheet.show(context);
+                        },
                         child: Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 18,
