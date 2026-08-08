@@ -1,5 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:zenio/features/subscriptions/domain/models/subscription_model.dart';
+import 'package:zenio/features/subscriptions/domain/repositories/implementations/subscriptions_repository.dart';
 
 part 'subscriptions_state.freezed.dart';
 
@@ -15,7 +16,7 @@ abstract class SubscriptionsState with _$SubscriptionsState {
 
   factory SubscriptionsState.initial() => const SubscriptionsState(
         totalBalance: 2678.01,
-        subscriptions: [],
+        subscriptions: defaultSubscriptionsList,
         selectedFilter: 'All',
         isLoading: false,
       );
