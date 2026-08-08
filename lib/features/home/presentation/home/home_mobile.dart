@@ -5,6 +5,7 @@ import 'package:zenio/features/home/controller/home/home_notifier.dart';
 import 'package:zenio/features/home/presentation/widgets/quick_action_item.dart';
 import 'package:zenio/features/home/presentation/widgets/transaction_card.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
+import 'package:zenio/shared/widgets/custom_navigation_bar.dart';
 
 class HomeScreenMobile extends ConsumerStatefulWidget {
   const HomeScreenMobile({super.key});
@@ -14,6 +15,8 @@ class HomeScreenMobile extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
+  int _selectedNavIndex = 0;
+
   String _formatWholePart(double amount) {
     final whole = amount.toInt();
     final formatter = NumberFormat('#,##0');
@@ -262,7 +265,7 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
               ),
             ),
 
-            // Curved Light Content Container Sheet
+            // Curved Light Content Container Sheet with Floating Navigation Bar
             Expanded(
               child: Container(
                 width: double.infinity,
@@ -276,100 +279,123 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(36),
                   ),
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(20, 28, 20, 32),
+                  child: Stack(
                     children: [
-                      // Quick Actions Grid (Subscriptions, Debts, Split, Vault)
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      // Scrollable Main Content
+                      ListView(
+                        padding: const EdgeInsets.fromLTRB(20, 28, 20, 100),
                         children: [
-                          QuickActionItem(
-                            label: 'Subscriptions',
-                            backgroundColor: const Color(0xFFFEF7DA),
-                            icon: Assets.icons.reccursion.svg(
-                              width: 26,
-                              height: 26,
-                            ),
-                          ),
-                          QuickActionItem(
-                            label: 'Debts',
-                            backgroundColor: const Color(0xFFE0F8EC),
-                            icon: Assets.icons.debts.svg(
-                              width: 26,
-                              height: 26,
-                            ),
-                          ),
-                          QuickActionItem(
-                            label: 'Split',
-                            backgroundColor: const Color(0xFFFDE7F3),
-                            icon: Assets.icons.split.svg(
-                              width: 26,
-                              height: 26,
-                            ),
-                          ),
-                          QuickActionItem(
-                            label: 'Vault',
-                            backgroundColor: const Color(0xFFE3F0FF),
-                            icon: Assets.icons.vault.svg(
-                              width: 26,
-                              height: 26,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 28),
-
-                      // Transactions Section Header
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Transactions',
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF111111),
-                              letterSpacing: -0.3,
-                            ),
-                          ),
-                          Assets.icons.expense.svg(
-                            width: 22,
-                            height: 22,
-                            colorFilter: const ColorFilter.mode(
-                              Color(0xFF2CC56F),
-                              BlendMode.srcIn,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Divider Line
-                      const Divider(
-                        color: Color(0xFFECECEC),
-                        height: 1,
-                        thickness: 1,
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Transactions List
-                      if (transactions.isEmpty)
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 24),
-                          child: Center(
-                            child: Text(
-                              'No transactions yet',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Color(0xFF8E8E93),
+                          // Quick Actions Grid (Subscriptions, Debts, Split, Vault)
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              QuickActionItem(
+                                label: 'Subscriptions',
+                                backgroundColor: const Color(0xFFFEF7DA),
+                                icon: Assets.icons.reccursion.svg(
+                                  width: 26,
+                                  height: 26,
+                                ),
                               ),
-                            ),
+                              QuickActionItem(
+                                label: 'Debts',
+                                backgroundColor: const Color(0xFFE0F8EC),
+                                icon: Assets.icons.debts.svg(
+                                  width: 26,
+                                  height: 26,
+                                ),
+                              ),
+                              QuickActionItem(
+                                label: 'Split',
+                                backgroundColor: const Color(0xFFFDE7F3),
+                                icon: Assets.icons.split.svg(
+                                  width: 26,
+                                  height: 26,
+                                ),
+                              ),
+                              QuickActionItem(
+                                label: 'Vault',
+                                backgroundColor: const Color(0xFFE3F0FF),
+                                icon: Assets.icons.vault.svg(
+                                  width: 26,
+                                  height: 26,
+                                ),
+                              ),
+                            ],
                           ),
-                        )
-                      else
-                        ...transactions.map(
-                          (tx) => TransactionCard(transaction: tx),
+                          const SizedBox(height: 28),
+
+                          // Transactions Section Header
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Transactions',
+                                style: TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF111111),
+                                  letterSpacing: -0.3,
+                                ),
+                              ),
+                              Assets.icons.expense.svg(
+                                width: 22,
+                                height: 22,
+                                colorFilter: const ColorFilter.mode(
+                                  Color(0xFF2CC56F),
+                                  BlendMode.srcIn,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+
+                          // Divider Line
+                          const Divider(
+                            color: Color(0xFFECECEC),
+                            height: 1,
+                            thickness: 1,
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Transactions List
+                          if (transactions.isEmpty)
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 24),
+                              child: Center(
+                                child: Text(
+                                  'No transactions yet',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Color(0xFF8E8E93),
+                                  ),
+                                ),
+                              ),
+                            )
+                          else
+                            ...transactions.map(
+                              (tx) => TransactionCard(transaction: tx),
+                            ),
+                        ],
+                      ),
+
+                      // Floating Bottom Navigation Bar
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        child: CustomNavigationBar(
+                          selectedIndex: _selectedNavIndex,
+                          onTabSelected: (index) {
+                            setState(() {
+                              _selectedNavIndex = index;
+                            });
+                          },
+                          onAddTap: () {
+                            // Action callback for center add button
+                          },
                         ),
+                      ),
                     ],
                   ),
                 ),
