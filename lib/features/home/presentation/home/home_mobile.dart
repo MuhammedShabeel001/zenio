@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:zenio/features/home/controller/home/home_notifier.dart';
 import 'package:zenio/features/home/presentation/widgets/quick_action_item.dart';
 import 'package:zenio/features/home/presentation/widgets/transaction_card.dart';
+import 'package:zenio/features/subscriptions/subscriptions.dart';
 import 'package:zenio/features/transactions/transactions.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/widgets/add_transaction_bottom_sheet.dart';
@@ -303,6 +304,14 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                                   width: 26,
                                   height: 26,
                                 ),
+                                onTap: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute<void>(
+                                      builder: (context) =>
+                                          const SubscriptionsScreenMobile(),
+                                    ),
+                                  );
+                                },
                               ),
                               QuickActionItem(
                                 label: 'Debts',
