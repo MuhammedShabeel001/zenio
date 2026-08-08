@@ -48,6 +48,7 @@ class AppTextForm<T> extends AppForm<T> {
   final TextStyle? style;
   final void Function(T? value)? onFocusLose;
   final TextInputAction? textInputAction;
+  @override
   final String? secondaryLabel;
   final TextAlign textAlign;
   @override
@@ -246,7 +247,7 @@ class _AppTextFormState<T> extends State<AppTextForm<T>> {
             switch (T) {
               String => TextInputType.text,
               int => TextInputType.number,
-              double => TextInputType.numberWithOptions(decimal: true),
+              double => const TextInputType.numberWithOptions(decimal: true),
               Type() => TextInputType.text,
             },
         onSubmitted: (value) {

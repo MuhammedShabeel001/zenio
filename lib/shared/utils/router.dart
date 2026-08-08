@@ -1,9 +1,9 @@
-import 'package:app/features/home/home.dart';
-import 'package:app/shared/shared.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:zenio/features/home/home.dart';
+import 'package:zenio/shared/shared.dart';
 
 /// Exposes a [GoRouter] that uses a [Listenable] to refresh its internal state.
 ///

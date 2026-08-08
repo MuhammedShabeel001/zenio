@@ -1,7 +1,7 @@
-import 'package:app/shared/shared.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hancod_theme/hancod_theme.dart';
+import 'package:zenio/shared/shared.dart';
 
 class NoInternet extends StatelessWidget {
   const NoInternet({super.key});

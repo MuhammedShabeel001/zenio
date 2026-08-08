@@ -1,9 +1,9 @@
-import 'package:app/env.dart';
-import 'package:app/shared/shared.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hancod_theme/hancod_theme.dart';
 import 'package:upgrader/upgrader.dart';
+import 'package:zenio/env.dart';
+import 'package:zenio/shared/shared.dart';
 
 class App extends ConsumerWidget {
   App({required this.environment, super.key});
@@ -29,7 +29,7 @@ class App extends ConsumerWidget {
       routerConfig: appRouter.router,
       debugShowCheckedModeBanner: false,
       theme: ref.watch(themeProvider),
-      title: 'App',
+      title: 'Zenio',
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       locale: ref.watch(localeNotifierProvider),

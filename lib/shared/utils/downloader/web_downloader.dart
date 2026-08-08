@@ -1,7 +1,7 @@
 // ignore: avoid_web_libraries_in_flutter
 // import 'dart:html' as html;
 
-import 'package:app/shared/utils/downloader/i_platform_downloader.dart';
+import 'package:zenio/shared/utils/downloader/i_platform_downloader.dart';
 
 IPlatformDownloader getDownloader() => WebDownloader();
 

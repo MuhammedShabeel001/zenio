@@ -9,8 +9,8 @@
 // import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 // import 'package:http/http.dart' as http;
 
-// import 'package:app/firebase_options_dev.dart' as dev;
-// import 'package:app/firebase_options_prod.dart' as prod;
+// import 'package:zenio/firebase_options_dev.dart' as dev;
+// import 'package:zenio/firebase_options_prod.dart' as prod;
 
 // /// A service to handle Firebase Cloud Messaging (FCM) notifications
 // class NotificationService {

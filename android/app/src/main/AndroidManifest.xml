@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.app">
+    package="com.aurea.zenio">
     <application
         android:label="${appName}"
         android:name="${applicationName}"

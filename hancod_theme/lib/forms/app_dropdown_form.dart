@@ -2,7 +2,7 @@
 part of '../forms.dart';
 
 class AppDropDownForm<T> extends AppForm<T> {
-  AppDropDownForm({
+  const AppDropDownForm({
     required super.name,
     required super.label,
     required this.items,
@@ -17,7 +17,7 @@ class AppDropDownForm<T> extends AppForm<T> {
     this.showCloseButton = false,
     this.onClear,
     this.decoration = const InputDecoration(),
-    this.sufixIcon=true
+    this.sufixIcon=true,
   });
   final void Function(T?)? onChanged;
   final List<DropDownItems<T>>? items;

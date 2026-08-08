@@ -1,9 +1,9 @@
 import 'dart:convert' as convert;
 
-import 'package:app/shared/shared.dart';
 import 'package:http/http.dart' as http;
 import 'package:riverpod/riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:zenio/shared/shared.dart';
 
 part 'ip_config_provider.g.dart';
 

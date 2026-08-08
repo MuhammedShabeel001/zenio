@@ -9,11 +9,11 @@ class NoTransitionsOnWeb extends PageTransitionsTheme {
 
   @override
   Widget buildTransitions<T>(
-    route,
-    context,
-    animation,
-    secondaryAnimation,
-    child,
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
   ) {
     if (kIsWeb) {
       return child;
@@ -37,7 +37,6 @@ class AppTheme {
     fontFamily: 'Inter',
     colorSchemeSeed: AppColors.brandViolet,
     scaffoldBackgroundColor: AppColors.white,
-    dialogBackgroundColor: AppColors.white,
     inputDecorationTheme: InputDecorationTheme(
       enabledBorder: _inputBorder.copyWith(
         borderSide: const BorderSide(color: AppColors.textfieldOutline),
@@ -76,7 +75,7 @@ class AppTheme {
         alignment: Alignment.center,
       ),
     ),
-    pageTransitionsTheme: const NoTransitionsOnWeb(),
+    pageTransitionsTheme: const NoTransitionsOnWeb(), dialogTheme: const DialogThemeData(backgroundColor: AppColors.white),
   );
   static final darkTheme = ThemeData(
     useMaterial3: false,
