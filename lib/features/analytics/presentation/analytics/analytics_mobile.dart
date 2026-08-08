@@ -104,7 +104,7 @@ class _AnalyticsScreenMobileState
               child: Container(
                 width: double.infinity,
                 decoration: const BoxDecoration(
-                  color: Color(0xFFF7F7F9),
+                  color: Color(0xFFF7F7F7),
                   borderRadius: BorderRadius.vertical(
                     top: Radius.circular(36),
                   ),
