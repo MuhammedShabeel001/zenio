@@ -1,0 +1,24 @@
+{
+    "projects": {
+        "dev": "dev-proj-id",
+        "prod": "prod-proj-id"
+    },
+    "targets": {
+        "prod-proj-id": {
+            "hosting": {
+                "prod": [
+                    "prod-site-id"
+                ]
+            }
+        },
+        "dev-proj-id": {
+            "hosting": {
+                "dev": [
+                    "dev-site-id"
+                ]
+            }
+        }
+    },
+    "etags": {},
+    "dataconnectEmulatorConfig": {}
+}

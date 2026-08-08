@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Download My App</title>
+    <script>
+        function getMobileOperatingSystem() {
+            var userAgent = navigator.userAgent || navigator.vendor || window.opera;
+
+            if (/android/i.test(userAgent)) {
+                return "Android";
+            }
+
+            if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
+                return "iOS";
+            }
+
+            return "unknown";
+        }
+
+        function redirectToStore() {
+            var os = getMobileOperatingSystem();
+            var storeUrl = "";
+
+            if (os === "Android") {
+                // Playstore URL
+                storeUrl = "https://play.google.com/store/apps/details?id=com.example.app";
+            } else if (os === "iOS") {
+                // App Store URL
+                storeUrl = "https://apps.apple.com/in/app/";
+            } else {
+                // Fallback for desktop or unsupported devices
+                storeUrl = "https://example.app";
+            }
+
+            window.location.href = storeUrl;
+        }
+
+        // Redirect when the page loads
+        window.onload = redirectToStore;
+    </script>
+</head>
+
+<body>
+    <h1>Redirecting you to download the app...</h1>
+    <p>If you're not redirected, <a href="#" onclick="redirectToStore()">click here</a>.</p>
+</body>
+
+</html>

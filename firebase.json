@@ -1,0 +1,65 @@
+{
+    "hosting": [
+        {
+            "target": "dev",
+            "rewrites": [
+                {
+                    "source": "**",
+                    "destination": "/index.html"
+                }
+            ],
+            "public": "build/web/development",
+            "ignore": [
+                "firebase.json",
+                "**/.*",
+                "**/node_modules/**"
+            ]
+        },
+        {
+            "target": "prod",
+            "rewrites": [
+                {
+                    "source": "**",
+                    "destination": "/index.html"
+                }
+            ],
+            "public": "build/web/production",
+            "ignore": [
+                "firebase.json",
+                "**/.*",
+                "**/node_modules/**"
+            ]
+        }
+    ],
+    "flutter": {
+        "platforms": {
+            "android": {
+                "default": {
+                    "projectId": "prod-proj-id",
+                    "appId": "1:141463328504:android:828ee3ab12dedb7cc68d0d",
+                    "fileOutput": "android/app/src/main/google-services.json"
+                }
+            },
+            "dart": {
+                "lib/firebase_options_prod.dart": {
+                    "projectId": "prod-proj-id",
+                    "configurations": {
+                        "android": "1:141463328504:android:828ee3ab12dedb7cc68d0d",
+                        "ios": "1:141463328504:ios:74ece5763b9b1cd6c68d0d",
+                        "web": "1:141463328504:web:4ddd56e019d99baac68d0d",
+                        "windows": "1:141463328504:web:4ddd56e019d99baac68d0d"
+                    }
+                },
+                "lib/firebase_options_dev.dart": {
+                    "projectId": "dev-proj-id",
+                    "configurations": {
+                        "android": "1:648584474232:android:ccee636d9e174e758d078d",
+                        "ios": "1:648584474232:ios:1b67b9e8ced001f48d078d",
+                        "web": "1:648584474232:web:4b0ad54e2f47f0b98d078d",
+                        "windows": "1:648584474232:web:4b0ad54e2f47f0b98d078d"
+                    }
+                }
+            }
+        }
+    }
+}

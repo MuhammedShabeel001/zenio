@@ -1,0 +1,17 @@
+{
+  "@@locale": "en",
+  "age": "Age",
+  "cancel": "Cancel",
+  "counterAppBarTitle": "Counter",
+  "@counterAppBarTitle": {
+    "description": "Text shown in the AppBar of the Counter Page"
+  },
+  "date": "Date",
+  "helloHancod": "Hello Hancod!",
+  "phoneNo": "Phone No.",
+  "primary": "Primary",
+  "secondary": "Secondary",
+  "somethingWentWrong": "Something went wrong. Try refreshing the page or checking your internet connection. We'll see you in a moment!",
+  "textForm": "Text form",
+  "toggle": "Toggle"
+}
