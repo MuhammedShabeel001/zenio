@@ -1,0 +1,41 @@
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:zenio/features/transactions/controller/transactions/transactions_state.dart';
+import 'package:zenio/features/transactions/domain/repositories/implementations/transactions_repository.dart';
+
+part 'transactions_notifier.g.dart';
+
+@Riverpod(keepAlive: true)
+class TransactionsNotifier extends _$TransactionsNotifier {
+  @override
+  TransactionsState build() {
+    _loadData();
+    return TransactionsState.initial();
+  }
+
+  Future<void> _loadData() async {
+    state = state.copyWith(isLoading: true);
+    try {
+      final repo = ref.read(transactionsRepositoryRepoProvider);
+      final balance = await repo.getTransactionsBalance();
+      final list = await repo.getTransactions();
+      state = state.copyWith(
+        totalBalance: balance,
+        transactions: list,
+        isLoading: false,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: e.toString(),
+      );
+    }
+  }
+
+  void updatePeriod(String period) {
+    state = state.copyWith(selectedPeriod: period);
+  }
+
+  void updateTimeframe(String timeframe) {
+    state = state.copyWith(selectedTimeframe: timeframe);
+  }
+}

@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:zenio/features/home/controller/home/home_notifier.dart';
 import 'package:zenio/features/home/presentation/widgets/quick_action_item.dart';
 import 'package:zenio/features/home/presentation/widgets/transaction_card.dart';
+import 'package:zenio/features/transactions/transactions.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/widgets/custom_navigation_bar.dart';
 
@@ -343,12 +344,22 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                                   letterSpacing: -0.3,
                                 ),
                               ),
-                              Assets.icons.expense.svg(
-                                width: 22,
-                                height: 22,
-                                colorFilter: const ColorFilter.mode(
-                                  Color(0xFF2CC56F),
-                                  BlendMode.srcIn,
+                              GestureDetector(
+                                onTap: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute<void>(
+                                      builder: (context) =>
+                                          const TransactionsScreenMobile(),
+                                    ),
+                                  );
+                                },
+                                child: Assets.icons.rightArrow.svg(
+                                  width: 22,
+                                  height: 22,
+                                  colorFilter: const ColorFilter.mode(
+                                    Color(0xFF2CC56F),
+                                    BlendMode.srcIn,
+                                  ),
                                 ),
                               ),
                             ],
