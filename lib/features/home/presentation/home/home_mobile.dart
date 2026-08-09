@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:zenio/features/debts/debts.dart';
 import 'package:zenio/features/home/controller/home/home_notifier.dart';
 import 'package:zenio/features/home/presentation/widgets/quick_action_item.dart';
 import 'package:zenio/features/home/presentation/widgets/transaction_card.dart';
@@ -320,6 +321,14 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                                   width: 26,
                                   height: 26,
                                 ),
+                                onTap: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute<void>(
+                                      builder: (context) =>
+                                          const DebtsScreenMobile(),
+                                    ),
+                                  );
+                                },
                               ),
                               QuickActionItem(
                                 label: 'Split',
