@@ -5,8 +5,10 @@ import 'package:zenio/features/debts/debts.dart';
 import 'package:zenio/features/home/controller/home/home_notifier.dart';
 import 'package:zenio/features/home/presentation/widgets/quick_action_item.dart';
 import 'package:zenio/features/home/presentation/widgets/transaction_card.dart';
+import 'package:zenio/features/split/split.dart';
 import 'package:zenio/features/subscriptions/subscriptions.dart';
 import 'package:zenio/features/transactions/transactions.dart';
+import 'package:zenio/features/vault/vault.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/widgets/add_transaction_bottom_sheet.dart';
 import 'package:zenio/shared/widgets/custom_navigation_bar.dart';
@@ -337,6 +339,14 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                                   width: 26,
                                   height: 26,
                                 ),
+                                onTap: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute<void>(
+                                      builder: (context) =>
+                                          const SplitScreenMobile(),
+                                    ),
+                                  );
+                                },
                               ),
                               QuickActionItem(
                                 label: 'Vault',
@@ -345,6 +355,14 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                                   width: 26,
                                   height: 26,
                                 ),
+                                onTap: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute<void>(
+                                      builder: (context) =>
+                                          const VaultScreenMobile(),
+                                    ),
+                                  );
+                                },
                               ),
                             ],
                           ),
