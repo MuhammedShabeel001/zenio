@@ -24,6 +24,8 @@ class AnalyticsScreenMobile extends ConsumerStatefulWidget {
 
 class _AnalyticsScreenMobileState
     extends ConsumerState<AnalyticsScreenMobile> {
+  String? _expandedCategoryId;
+
   String _formatWholePart(double amount) {
     final whole = amount.toInt();
     final formatter = NumberFormat('#,##0');
@@ -180,9 +182,22 @@ class _AnalyticsScreenMobileState
                               ),
                             )
                           else
-                            ...categories
-                                .take(2)
-                                .map((spend) => TopSpentCard(spend: spend)),
+                            ...categories.map((spend) {
+                              final isExpanded = _expandedCategoryId == spend.id;
+                              return TopSpentCard(
+                                spend: spend,
+                                isExpanded: isExpanded,
+                                onTap: () {
+                                  setState(() {
+                                    if (isExpanded) {
+                                      _expandedCategoryId = null;
+                                    } else {
+                                      _expandedCategoryId = spend.id;
+                                    }
+                                  });
+                                },
+                              );
+                            }),
                         ],
                       ),
 

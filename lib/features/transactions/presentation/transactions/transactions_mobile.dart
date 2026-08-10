@@ -17,6 +17,7 @@ class TransactionsScreenMobile extends ConsumerStatefulWidget {
 class _TransactionsScreenMobileState
     extends ConsumerState<TransactionsScreenMobile> {
   String? _openTransactionId;
+  String? _expandedTileId;
   String _formatWholePart(double amount) {
     final whole = amount.toInt();
     final formatter = NumberFormat('#,##0');
@@ -178,6 +179,16 @@ class _TransactionsScreenMobileState
                             key: ValueKey(item.id),
                             transaction: item,
                             isOpen: _openTransactionId == item.id,
+                            isTileExpanded: _expandedTileId == item.id,
+                            onTileTap: () {
+                              setState(() {
+                                if (_expandedTileId == item.id) {
+                                  _expandedTileId = null;
+                                } else {
+                                  _expandedTileId = item.id;
+                                }
+                              });
+                            },
                             onOpen: () {
                               if (_openTransactionId != item.id) {
                                 setState(() {
