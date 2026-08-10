@@ -27,6 +27,7 @@ class HomeScreenMobile extends ConsumerStatefulWidget {
 
 class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
   int _selectedNavIndex = 0;
+  String? _openTransactionId;
 
   String _formatWholePart(double amount) {
     final whole = amount.toInt();
@@ -42,6 +43,7 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(homeNotifierProvider);
+    final notifier = ref.read(homeNotifierProvider.notifier);
     final summary = state.summary;
     final transactions = state.transactions;
 
@@ -427,7 +429,31 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                             )
                           else
                             ...transactions.map(
-                              (tx) => TransactionCard(transaction: tx),
+                              (tx) => TransactionCard(
+                                key: ValueKey(tx.id),
+                                transaction: tx,
+                                isOpen: _openTransactionId == tx.id,
+                                onOpen: () {
+                                  if (_openTransactionId != tx.id) {
+                                    setState(() {
+                                      _openTransactionId = tx.id;
+                                    });
+                                  }
+                                },
+                                onClose: () {
+                                  if (_openTransactionId == tx.id) {
+                                    setState(() {
+                                      _openTransactionId = null;
+                                    });
+                                  }
+                                },
+                                onDelete: () {
+                                  notifier.deleteTransaction(tx.id);
+                                },
+                                onEdit: () {
+                                  AddTransactionBottomSheet.show(context);
+                                },
+                              ),
                             ),
                         ],
                       ),

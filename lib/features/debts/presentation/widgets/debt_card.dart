@@ -3,13 +3,116 @@ import 'package:intl/intl.dart';
 import 'package:zenio/features/debts/domain/models/debt_model.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 
-class DebtCard extends StatelessWidget {
+class DebtCard extends StatefulWidget {
   const DebtCard({
     required this.debt,
+    this.onDelete,
+    this.onEdit,
+    this.isOpen = false,
+    this.onOpen,
+    this.onClose,
     super.key,
   });
 
   final DebtModel debt;
+  final VoidCallback? onDelete;
+  final VoidCallback? onEdit;
+  final bool isOpen;
+  final VoidCallback? onOpen;
+  final VoidCallback? onClose;
+
+  @override
+  State<DebtCard> createState() => _DebtCardState();
+}
+
+class _DebtCardState extends State<DebtCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _animation;
+  double _dragOffset = 0;
+  static const double _maxDragDistance = 136;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 250),
+    );
+
+    _dragOffset = widget.isOpen ? -_maxDragDistance : 0;
+
+    _animation =
+        Tween<double>(begin: _dragOffset, end: _dragOffset).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeOutCubic,
+      ),
+    )..addListener(() {
+            setState(() {
+              _dragOffset = _animation.value;
+            });
+          });
+  }
+
+  @override
+  void didUpdateWidget(DebtCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isOpen != widget.isOpen) {
+      if (!widget.isOpen && _dragOffset != 0) {
+        _animateTo(0);
+      } else if (widget.isOpen && _dragOffset != -_maxDragDistance) {
+        _animateTo(-_maxDragDistance);
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  void _animateTo(double targetOffset) {
+    _animation = Tween<double>(
+      begin: _dragOffset,
+      end: targetOffset,
+    ).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeOutCubic,
+      ),
+    );
+    _animationController.forward(from: 0);
+  }
+
+  void _onHorizontalDragUpdate(DragUpdateDetails details) {
+    if (details.delta.dx < 0 && !widget.isOpen) {
+      widget.onOpen?.call();
+    }
+    setState(() {
+      _dragOffset = (_dragOffset + details.delta.dx)
+          .clamp(-_maxDragDistance, 0);
+    });
+  }
+
+  void _onHorizontalDragEnd(DragEndDetails details) {
+    if (_dragOffset < -_maxDragDistance / 2.5 ||
+        details.velocity.pixelsPerSecond.dx < -300) {
+      _animateTo(-_maxDragDistance);
+      widget.onOpen?.call();
+    } else {
+      _animateTo(0);
+      widget.onClose?.call();
+    }
+  }
+
+  void _close() {
+    if (_dragOffset != 0) {
+      _animateTo(0);
+      widget.onClose?.call();
+    }
+  }
 
   String _formatAmount(double amount) {
     if (amount == amount.toInt()) {
@@ -22,88 +125,201 @@ class DebtCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(
-          color: const Color(0xFFF3F3F5),
-          width: 1.2,
-        ),
-      ),
-      child: Row(
+      height: 76,
+      child: Stack(
+        clipBehavior: Clip.none,
         children: [
-          // Circle Badge with Up Arrow SVG Icon
-          Container(
-            width: 52,
-            height: 52,
-            decoration: const BoxDecoration(
-              color: Color(0xFFF2F2F5),
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Assets.icons.upArrow.svg(
-                width: 20,
-                height: 20,
-                colorFilter: const ColorFilter.mode(
-                  Color(0xFF111111),
-                  BlendMode.srcIn,
-                ),
+          // Background Slide Action Buttons (Delete & Edit)
+          Positioned.fill(
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Delete Button (White Circle + Red Trash Icon)
+                  GestureDetector(
+                    onTap: () {
+                      _close();
+                      widget.onDelete?.call();
+                    },
+                    child: Container(
+                      width: 54,
+                      height: 54,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: const Color(0xFFF3F3F5),
+                          width: 1.2,
+                        ),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x0C000000),
+                            blurRadius: 8,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.delete_outline_rounded,
+                          color: Color(0xFFEF4444),
+                          size: 22,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+
+                  // Edit Button (White Circle + Pencil Edit Icon)
+                  GestureDetector(
+                    onTap: () {
+                      _close();
+                      widget.onEdit?.call();
+                    },
+                    child: Container(
+                      width: 54,
+                      height: 54,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: const Color(0xFFF3F3F5),
+                          width: 1.2,
+                        ),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x0C000000),
+                            blurRadius: 8,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.edit_outlined,
+                          color: Color(0xFF555555),
+                          size: 22,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
-          const SizedBox(width: 14),
 
-          // Person Name & Date Column
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  debt.personName,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF111111),
+          // Foreground Slidable Card Layer
+          AnimatedPositioned(
+            duration: Duration.zero,
+            left: _dragOffset,
+            right: -_dragOffset,
+            top: 0,
+            bottom: 0,
+            child: GestureDetector(
+              onHorizontalDragUpdate: _onHorizontalDragUpdate,
+              onHorizontalDragEnd: _onHorizontalDragEnd,
+              onTap: () {
+                if (_dragOffset < 0) {
+                  _close();
+                }
+              },
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(
+                    color: const Color(0xFFF3F3F5),
+                    width: 1.2,
                   ),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x05000000),
+                      blurRadius: 6,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 3),
-                Text(
-                  debt.date,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w400,
-                    color: Color(0xFF9E9EA5),
-                  ),
+                child: Row(
+                  children: [
+                    // Circle Badge with Up Arrow SVG Icon
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFF2F2F5),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Assets.icons.upArrow.svg(
+                          width: 20,
+                          height: 20,
+                          colorFilter: const ColorFilter.mode(
+                            Color(0xFF111111),
+                            BlendMode.srcIn,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+
+                    // Person Name & Date Column
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            widget.debt.personName,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF111111),
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            widget.debt.date,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w400,
+                              color: Color(0xFF9E9EA5),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Amount + Currency Unit
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Text(
+                          _formatAmount(widget.debt.amount),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF111111),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          widget.debt.currency,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF8E8E93),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
-
-          // Amount + Currency Unit
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Text(
-                _formatAmount(debt.amount),
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF111111),
-                ),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                debt.currency,
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF8E8E93),
-                ),
-              ),
-            ],
           ),
         ],
       ),

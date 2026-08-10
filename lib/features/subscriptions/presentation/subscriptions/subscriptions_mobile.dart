@@ -16,6 +16,7 @@ class SubscriptionsScreenMobile extends ConsumerStatefulWidget {
 
 class _SubscriptionsScreenMobileState
     extends ConsumerState<SubscriptionsScreenMobile> {
+  String? _openSubscriptionId;
   String _formatWholePart(double amount) {
     final whole = amount.toInt();
     final formatter = NumberFormat('#,##0');
@@ -171,7 +172,33 @@ class _SubscriptionsScreenMobileState
                         )
                       else
                         ...subscriptions.map(
-                          (item) => SubscriptionCard(subscription: item),
+                          (item) => SubscriptionCard(
+                            key: ValueKey(item.id),
+                            subscription: item,
+                            isOpen: _openSubscriptionId == item.id,
+                            onOpen: () {
+                              if (_openSubscriptionId != item.id) {
+                                setState(() {
+                                  _openSubscriptionId = item.id;
+                                });
+                              }
+                            },
+                            onClose: () {
+                              if (_openSubscriptionId == item.id) {
+                                setState(() {
+                                  _openSubscriptionId = null;
+                                });
+                              }
+                            },
+                            onDelete: () {
+                              ref
+                                  .read(subscriptionsNotifierProvider.notifier)
+                                  .deleteSubscription(item.id);
+                            },
+                            onEdit: () {
+                              AddTransactionBottomSheet.show(context);
+                            },
+                          ),
                         ),
                     ],
                   ),

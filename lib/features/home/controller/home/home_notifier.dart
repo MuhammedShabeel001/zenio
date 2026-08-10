@@ -74,6 +74,56 @@ class HomeNotifier extends _$HomeNotifier {
     }
   }
 
+  Future<void> deleteTransaction(String id) async {
+    final target = state.transactions.firstWhere(
+      (tx) => tx.id == id,
+      orElse: () => const TransactionModel(
+        id: '',
+        title: '',
+        date: '',
+        amount: 0,
+        isIncome: false,
+        currency: 'INR',
+      ),
+    );
+    if (target.id.isEmpty) return;
+
+    final updatedTxs = state.transactions.where((tx) => tx.id != id).toList();
+    if (_moneyTrackerRepository != null) {
+      await _moneyTrackerRepository!.saveTransactions(updatedTxs);
+    }
+
+    final currentSummary = state.summary;
+    if (currentSummary != null) {
+      final newBalance = target.isIncome
+          ? currentSummary.totalBalance - target.amount
+          : currentSummary.totalBalance + target.amount;
+      final newIncome = target.isIncome
+          ? currentSummary.income - target.amount
+          : currentSummary.income;
+      final newExpense = !target.isIncome
+          ? currentSummary.expense - target.amount
+          : currentSummary.expense;
+
+      final updatedSummary = currentSummary.copyWith(
+        totalBalance: newBalance,
+        income: newIncome,
+        expense: newExpense,
+      );
+
+      if (_moneyTrackerRepository != null) {
+        await _moneyTrackerRepository!.saveSummary(updatedSummary);
+      }
+
+      state = state.copyWith(
+        summary: updatedSummary,
+        transactions: updatedTxs,
+      );
+    } else {
+      state = state.copyWith(transactions: updatedTxs);
+    }
+  }
+
   Future<void> getTasks() async {
     final tasks = await taskRepository.getTasks();
     state = state.copyWith(tasks: tasks);

@@ -14,6 +14,7 @@ class DebtsScreenMobile extends ConsumerStatefulWidget {
 }
 
 class _DebtsScreenMobileState extends ConsumerState<DebtsScreenMobile> {
+  String? _openDebtId;
   String _formatWholePart(double amount) {
     final isNegative = amount < 0;
     final absWhole = amount.abs().toInt();
@@ -170,7 +171,35 @@ class _DebtsScreenMobileState extends ConsumerState<DebtsScreenMobile> {
                           ),
                         )
                       else
-                        ...debts.map((item) => DebtCard(debt: item)),
+                        ...debts.map(
+                          (item) => DebtCard(
+                            key: ValueKey(item.id),
+                            debt: item,
+                            isOpen: _openDebtId == item.id,
+                            onOpen: () {
+                              if (_openDebtId != item.id) {
+                                setState(() {
+                                  _openDebtId = item.id;
+                                });
+                              }
+                            },
+                            onClose: () {
+                              if (_openDebtId == item.id) {
+                                setState(() {
+                                  _openDebtId = null;
+                                });
+                              }
+                            },
+                            onDelete: () {
+                              ref
+                                  .read(debtsNotifierProvider.notifier)
+                                  .deleteDebt(item.id);
+                            },
+                            onEdit: () {
+                              AddTransactionBottomSheet.show(context);
+                            },
+                          ),
+                        ),
                     ],
                   ),
                 ),

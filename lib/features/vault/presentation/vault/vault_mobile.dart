@@ -15,6 +15,7 @@ class VaultScreenMobile extends ConsumerStatefulWidget {
 }
 
 class _VaultScreenMobileState extends ConsumerState<VaultScreenMobile> {
+  String? _openItemId;
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(vaultNotifierProvider);
@@ -118,8 +119,33 @@ class _VaultScreenMobileState extends ConsumerState<VaultScreenMobile> {
                             ),
                           )
                         else
-                          ...state.cards
-                              .map((card) => VaultCardItem(card: card)),
+                          ...state.cards.map(
+                            (card) => VaultCardItem(
+                              key: ValueKey(card.id),
+                              card: card,
+                              isOpen: _openItemId == card.id,
+                              onOpen: () {
+                                if (_openItemId != card.id) {
+                                  setState(() {
+                                    _openItemId = card.id;
+                                  });
+                                }
+                              },
+                              onClose: () {
+                                if (_openItemId == card.id) {
+                                  setState(() {
+                                    _openItemId = null;
+                                  });
+                                }
+                              },
+                              onDelete: () {
+                                notifier.deleteCard(card.id);
+                              },
+                              onEdit: () {
+                                AddTransactionBottomSheet.show(context);
+                              },
+                            ),
+                          ),
                       ] else ...[
                         if (state.notes.isEmpty)
                           const Padding(
@@ -135,8 +161,33 @@ class _VaultScreenMobileState extends ConsumerState<VaultScreenMobile> {
                             ),
                           )
                         else
-                          ...state.notes
-                              .map((note) => VaultNoteItem(note: note)),
+                          ...state.notes.map(
+                            (note) => VaultNoteItem(
+                              key: ValueKey(note.id),
+                              note: note,
+                              isOpen: _openItemId == note.id,
+                              onOpen: () {
+                                if (_openItemId != note.id) {
+                                  setState(() {
+                                    _openItemId = note.id;
+                                  });
+                                }
+                              },
+                              onClose: () {
+                                if (_openItemId == note.id) {
+                                  setState(() {
+                                    _openItemId = null;
+                                  });
+                                }
+                              },
+                              onDelete: () {
+                                notifier.deleteNote(note.id);
+                              },
+                              onEdit: () {
+                                AddTransactionBottomSheet.show(context);
+                              },
+                            ),
+                          ),
                       ],
                     ],
                   ),

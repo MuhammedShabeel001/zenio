@@ -16,6 +16,7 @@ class TransactionsScreenMobile extends ConsumerStatefulWidget {
 
 class _TransactionsScreenMobileState
     extends ConsumerState<TransactionsScreenMobile> {
+  String? _openTransactionId;
   String _formatWholePart(double amount) {
     final whole = amount.toInt();
     final formatter = NumberFormat('#,##0');
@@ -173,7 +174,33 @@ class _TransactionsScreenMobileState
                         )
                       else
                         ...transactions.map(
-                          (item) => TransactionDetailCard(transaction: item),
+                          (item) => TransactionDetailCard(
+                            key: ValueKey(item.id),
+                            transaction: item,
+                            isOpen: _openTransactionId == item.id,
+                            onOpen: () {
+                              if (_openTransactionId != item.id) {
+                                setState(() {
+                                  _openTransactionId = item.id;
+                                });
+                              }
+                            },
+                            onClose: () {
+                              if (_openTransactionId == item.id) {
+                                setState(() {
+                                  _openTransactionId = null;
+                                });
+                              }
+                            },
+                            onDelete: () {
+                              ref
+                                  .read(transactionsNotifierProvider.notifier)
+                                  .deleteTransaction(item.id);
+                            },
+                            onEdit: () {
+                              AddTransactionBottomSheet.show(context);
+                            },
+                          ),
                         ),
                     ],
                   ),

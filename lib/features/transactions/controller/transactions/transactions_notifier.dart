@@ -1,5 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:zenio/features/transactions/controller/transactions/transactions_state.dart';
+import 'package:zenio/features/transactions/domain/models/transaction_detail_model.dart';
 import 'package:zenio/features/transactions/domain/repositories/implementations/transactions_repository.dart';
 
 part 'transactions_notifier.g.dart';
@@ -37,5 +38,33 @@ class TransactionsNotifier extends _$TransactionsNotifier {
 
   void updateTimeframe(String timeframe) {
     state = state.copyWith(selectedTimeframe: timeframe);
+  }
+
+  Future<void> deleteTransaction(String id) async {
+    final target = state.transactions.firstWhere(
+      (tx) => tx.id == id,
+      orElse: () => const TransactionDetailModel(
+        id: '',
+        title: '',
+        date: '',
+        amount: 0,
+        isIncome: false,
+        currency: 'INR',
+      ),
+    );
+    if (target.id.isEmpty) return;
+
+    final updatedTxs = state.transactions.where((tx) => tx.id != id).toList();
+    final repo = ref.read(transactionsRepositoryRepoProvider);
+    await repo.saveTransactions(updatedTxs);
+
+    final newBalance = target.isIncome
+        ? state.totalBalance - target.amount
+        : state.totalBalance + target.amount;
+
+    state = state.copyWith(
+      totalBalance: newBalance,
+      transactions: updatedTxs,
+    );
   }
 }

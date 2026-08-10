@@ -3,13 +3,116 @@ import 'package:intl/intl.dart';
 import 'package:zenio/features/subscriptions/domain/models/subscription_model.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 
-class SubscriptionCard extends StatelessWidget {
+class SubscriptionCard extends StatefulWidget {
   const SubscriptionCard({
     required this.subscription,
+    this.onDelete,
+    this.onEdit,
+    this.isOpen = false,
+    this.onOpen,
+    this.onClose,
     super.key,
   });
 
   final SubscriptionModel subscription;
+  final VoidCallback? onDelete;
+  final VoidCallback? onEdit;
+  final bool isOpen;
+  final VoidCallback? onOpen;
+  final VoidCallback? onClose;
+
+  @override
+  State<SubscriptionCard> createState() => _SubscriptionCardState();
+}
+
+class _SubscriptionCardState extends State<SubscriptionCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _animation;
+  double _dragOffset = 0;
+  static const double _maxDragDistance = 136;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 250),
+    );
+
+    _dragOffset = widget.isOpen ? -_maxDragDistance : 0;
+
+    _animation =
+        Tween<double>(begin: _dragOffset, end: _dragOffset).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeOutCubic,
+      ),
+    )..addListener(() {
+            setState(() {
+              _dragOffset = _animation.value;
+            });
+          });
+  }
+
+  @override
+  void didUpdateWidget(SubscriptionCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isOpen != widget.isOpen) {
+      if (!widget.isOpen && _dragOffset != 0) {
+        _animateTo(0);
+      } else if (widget.isOpen && _dragOffset != -_maxDragDistance) {
+        _animateTo(-_maxDragDistance);
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  void _animateTo(double targetOffset) {
+    _animation = Tween<double>(
+      begin: _dragOffset,
+      end: targetOffset,
+    ).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeOutCubic,
+      ),
+    );
+    _animationController.forward(from: 0);
+  }
+
+  void _onHorizontalDragUpdate(DragUpdateDetails details) {
+    if (details.delta.dx < 0 && !widget.isOpen) {
+      widget.onOpen?.call();
+    }
+    setState(() {
+      _dragOffset = (_dragOffset + details.delta.dx)
+          .clamp(-_maxDragDistance, 0);
+    });
+  }
+
+  void _onHorizontalDragEnd(DragEndDetails details) {
+    if (_dragOffset < -_maxDragDistance / 2.5 ||
+        details.velocity.pixelsPerSecond.dx < -300) {
+      _animateTo(-_maxDragDistance);
+      widget.onOpen?.call();
+    } else {
+      _animateTo(0);
+      widget.onClose?.call();
+    }
+  }
+
+  void _close() {
+    if (_dragOffset != 0) {
+      _animateTo(0);
+      widget.onClose?.call();
+    }
+  }
 
   String _formatAmount(double amount) {
     if (amount == amount.toInt()) {
@@ -22,103 +125,216 @@ class SubscriptionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(
-          color: const Color(0xFFF3F3F5),
-          width: 1.2,
-        ),
-      ),
-      child: Row(
+      height: 76,
+      child: Stack(
+        clipBehavior: Clip.none,
         children: [
-          // Music / App Icon Circle Badge
-          Container(
-            width: 52,
-            height: 52,
-            decoration: const BoxDecoration(
-              color: Color(0xFFF2F2F5),
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Assets.icons.music.svg(
-                width: 22,
-                height: 22,
-                colorFilter: const ColorFilter.mode(
-                  Color(0xFF111111),
-                  BlendMode.srcIn,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 14),
-
-          // Title & Category Column
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  subscription.title,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF111111),
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  subscription.category,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w400,
-                    color: Color(0xFF9E9EA5),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Amount & Due In Subtitle Column
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
+          // Background Slide Action Buttons (Delete & Edit)
+          Positioned.fill(
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    _formatAmount(subscription.amount),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF111111),
+                  // Delete Button (White Circle + Red Trash Icon)
+                  GestureDetector(
+                    onTap: () {
+                      _close();
+                      widget.onDelete?.call();
+                    },
+                    child: Container(
+                      width: 54,
+                      height: 54,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: const Color(0xFFF3F3F5),
+                          width: 1.2,
+                        ),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x0C000000),
+                            blurRadius: 8,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.delete_outline_rounded,
+                          color: Color(0xFFEF4444),
+                          size: 22,
+                        ),
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 4),
-                  Text(
-                    subscription.currency,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF8E8E93),
+                  const SizedBox(width: 12),
+
+                  // Edit Button (White Circle + Pencil Edit Icon)
+                  GestureDetector(
+                    onTap: () {
+                      _close();
+                      widget.onEdit?.call();
+                    },
+                    child: Container(
+                      width: 54,
+                      height: 54,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: const Color(0xFFF3F3F5),
+                          width: 1.2,
+                        ),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x0C000000),
+                            blurRadius: 8,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.edit_outlined,
+                          color: Color(0xFF555555),
+                          size: 22,
+                        ),
+                      ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 3),
-              Text(
-                subscription.dueInText,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w400,
-                  color: Color(0xFF9E9EA5),
+            ),
+          ),
+
+          // Foreground Slidable Card Layer
+          AnimatedPositioned(
+            duration: Duration.zero,
+            left: _dragOffset,
+            right: -_dragOffset,
+            top: 0,
+            bottom: 0,
+            child: GestureDetector(
+              onHorizontalDragUpdate: _onHorizontalDragUpdate,
+              onHorizontalDragEnd: _onHorizontalDragEnd,
+              onTap: () {
+                if (_dragOffset < 0) {
+                  _close();
+                }
+              },
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(
+                    color: const Color(0xFFF3F3F5),
+                    width: 1.2,
+                  ),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x05000000),
+                      blurRadius: 6,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    // Music / App Icon Circle Badge
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFF2F2F5),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Assets.icons.music.svg(
+                          width: 22,
+                          height: 22,
+                          colorFilter: const ColorFilter.mode(
+                            Color(0xFF111111),
+                            BlendMode.srcIn,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+
+                    // Title & Category Column
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            widget.subscription.title,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF111111),
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            widget.subscription.category,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w400,
+                              color: Color(0xFF9E9EA5),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Amount & Due In Subtitle Column
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          children: [
+                            Text(
+                              _formatAmount(widget.subscription.amount),
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF111111),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              widget.subscription.currency,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF8E8E93),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          widget.subscription.dueInText,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w400,
+                            color: Color(0xFF9E9EA5),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-            ],
+            ),
           ),
         ],
       ),

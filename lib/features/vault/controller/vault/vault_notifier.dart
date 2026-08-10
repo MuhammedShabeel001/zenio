@@ -33,4 +33,18 @@ class VaultNotifier extends _$VaultNotifier {
   void setMode(VaultMode mode) {
     state = state.copyWith(mode: mode);
   }
+
+  Future<void> deleteCard(String id) async {
+    final updated = state.cards.where((c) => c.id != id).toList();
+    final repo = ref.read(vaultRepositoryRepoProvider);
+    await repo.saveCards(updated);
+    state = state.copyWith(cards: updated);
+  }
+
+  Future<void> deleteNote(String id) async {
+    final updated = state.notes.where((n) => n.id != id).toList();
+    final repo = ref.read(vaultRepositoryRepoProvider);
+    await repo.saveNotes(updated);
+    state = state.copyWith(notes: updated);
+  }
 }
