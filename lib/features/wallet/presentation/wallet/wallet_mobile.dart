@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
+import 'package:zenio/features/wallet/presentation/widgets/wallet_card_detail_widget.dart';
 import 'package:zenio/features/wallet/presentation/widgets/wallet_card_widget.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/widgets/add_transaction_bottom_sheet.dart';
@@ -21,6 +22,7 @@ class WalletScreenMobile extends ConsumerStatefulWidget {
 
 class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
   late final PageController _pageController;
+  bool _isCardDetailExpanded = false;
 
   @override
   void initState() {
@@ -57,250 +59,441 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
 
     return Scaffold(
       backgroundColor: Colors.black,
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            // Dark Header Section
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Column(
+      body: Stack(
+        children: [
+          SafeArea(
+            bottom: false,
+            child: Column(
+              children: [
+                // Dark Header Section
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      RichText(
-                        text: TextSpan(
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          RichText(
+                            text: TextSpan(
+                              children: [
+                                const TextSpan(
+                                  text: '₹ ',
+                                  style: TextStyle(
+                                    fontSize: 34,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: _formatWholePart(cardBalance),
+                                  style: const TextStyle(
+                                    fontSize: 34,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: _formatDecimalPart(cardBalance),
+                                  style: const TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF7A7A80),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Card balance',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w400,
+                              color: Color(0xFF8E8E93),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      // + Add Pill Button
+                      GestureDetector(
+                        onTap: () {
+                          notifier.topUpBalance(500);
+                        },
+                        behavior: HitTestBehavior.opaque,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 18,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF19191B),
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(
+                              color: const Color(0xFF2C2C2E),
+                              width: 0.8,
+                            ),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                '+',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              SizedBox(width: 6),
+                              Text(
+                                'Add',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Light Curved Content Sheet with Smooth Dissolve Transition
+                Expanded(
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 320),
+                    curve: Curves.easeInOut,
+                    opacity: _isCardDetailExpanded ? 0.0 : 1.0,
+                    child: Container(
+                      width: double.infinity,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFF7F7F7),
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(36),
+                        ),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(36),
+                        ),
+                        child: Stack(
                           children: [
-                            const TextSpan(
-                              text: '₹ ',
-                              style: TextStyle(
-                                fontSize: 34,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                letterSpacing: -0.5,
-                              ),
+                            ListView(
+                              padding: const EdgeInsets.fromLTRB(0, 24, 0, 110),
+                              children: [
+                                // Card Carousel PageView
+                                SizedBox(
+                                  height: 216,
+                                  child: PageView.builder(
+                                    controller: _pageController,
+                                    itemCount: cards.length,
+                                    onPageChanged: notifier.onCardPageChanged,
+                                    itemBuilder: (context, index) {
+                                      final card = cards[index];
+                                      return WalletCardWidget(
+                                        card: card,
+                                        isFrozen:
+                                            isFrozen && index == activeIndex,
+                                        onTap: () {
+                                          setState(() {
+                                            _isCardDetailExpanded = true;
+                                          });
+                                        },
+                                      );
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+
+                                // Page Indicator Dots
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: List.generate(cards.length, (index) {
+                                    final isSelected = index == activeIndex;
+                                    return AnimatedContainer(
+                                      duration: const Duration(milliseconds: 250),
+                                      margin: const EdgeInsets.symmetric(
+                                        horizontal: 4,
+                                      ),
+                                      width: 8,
+                                      height: 8,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: isSelected
+                                            ? const Color(0xFF10B981)
+                                            : const Color(0xFFE0E0E0),
+                                      ),
+                                    );
+                                  }),
+                                ),
+                                const SizedBox(height: 32),
+
+                                // Quick Action Buttons (Top up, Freeze, Details, Settings)
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      _buildActionButton(
+                                        label: 'Top up',
+                                        backgroundColor: const Color(0xFF10B981),
+                                        iconWidget: Assets.icons.add.svg(
+                                          width: 24,
+                                          height: 24,
+                                          colorFilter: const ColorFilter.mode(
+                                            Colors.white,
+                                            BlendMode.srcIn,
+                                          ),
+                                        ),
+                                        onTap: () {
+                                          notifier.topUpBalance(1000);
+                                        },
+                                      ),
+                                      _buildActionButton(
+                                        label: 'Freeze',
+                                        backgroundColor: const Color(0xFFEAEAEA),
+                                        iconWidget: Assets.icons.freeze.svg(
+                                          width: 24,
+                                          height: 24,
+                                        ),
+                                        onTap: notifier.toggleFreezeCard,
+                                      ),
+                                      _buildActionButton(
+                                        label: 'Details',
+                                        backgroundColor: const Color(0xFFEAEAEA),
+                                        iconWidget: Assets.icons.card.svg(
+                                          width: 24,
+                                          height: 24,
+                                        ),
+                                        onTap: () {
+                                          setState(() {
+                                            _isCardDetailExpanded = true;
+                                          });
+                                        },
+                                      ),
+                                      _buildActionButton(
+                                        label: 'Settings',
+                                        backgroundColor: const Color(0xFFEAEAEA),
+                                        iconWidget: Assets.icons.settings.svg(
+                                          width: 24,
+                                          height: 24,
+                                        ),
+                                        onTap: () {},
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
-                            TextSpan(
-                              text: _formatWholePart(cardBalance),
-                              style: const TextStyle(
-                                fontSize: 34,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                letterSpacing: -0.5,
-                              ),
-                            ),
-                            TextSpan(
-                              text: _formatDecimalPart(cardBalance),
-                              style: const TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF7A7A80),
+
+                            // Floating Navigation Bar (Selected Index = 1)
+                            Positioned(
+                              left: 0,
+                              right: 0,
+                              bottom: 0,
+                              child: CustomNavigationBar(
+                                selectedIndex: 1,
+                                onTabSelected: (index) {
+                                  widget.onTabSelected?.call(index);
+                                },
+                                onAddTap: () {
+                                  AddTransactionBottomSheet.show(context);
+                                },
                               ),
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        'Card balance',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w400,
-                          color: Color(0xFF8E8E93),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  // + Add Pill Button
-                  GestureDetector(
-                    onTap: () {
-                      notifier.topUpBalance(500);
-                    },
-                    behavior: HitTestBehavior.opaque,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 18,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF19191B),
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(
-                          color: const Color(0xFF2C2C2E),
-                          width: 0.8,
-                        ),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            '+',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                          SizedBox(width: 6),
-                          Text(
-                            'Add',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
                     ),
                   ),
-                ],
-              ),
-            ),
-
-            // Light Curved Content Sheet
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFF7F7F7),
-                  borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(36),
-                  ),
                 ),
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(36),
-                  ),
-                  child: Stack(
-                    children: [
-                      ListView(
-                        padding: const EdgeInsets.fromLTRB(0, 24, 0, 110),
-                        children: [
-                          // Card Carousel PageView
-                          SizedBox(
-                            height: 216,
-                            child: PageView.builder(
-                              controller: _pageController,
-                              itemCount: cards.length,
-                              onPageChanged: notifier.onCardPageChanged,
-                              itemBuilder: (context, index) {
-                                final card = cards[index];
-                                return WalletCardWidget(
-                                  card: card,
-                                  isFrozen: isFrozen && index == activeIndex,
-                                );
-                              },
-                            ),
-                          ),
-                          const SizedBox(height: 16),
+              ],
+            ),
+          ),
 
-                          // Page Indicator Dots
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: List.generate(cards.length, (index) {
-                              final isSelected = index == activeIndex;
-                              return AnimatedContainer(
-                                duration: const Duration(milliseconds: 250),
-                                margin: const EdgeInsets.symmetric(
-                                  horizontal: 4,
-                                ),
-                                width: 8,
-                                height: 8,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: isSelected
-                                      ? const Color(0xFF10B981)
-                                      : const Color(0xFFE0E0E0),
-                                ),
-                              );
-                            }),
-                          ),
-                          const SizedBox(height: 32),
-
-                          // Quick Action Buttons (Top up, Freeze, Details, Settings)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                            ),
-                            child: Row(
-                              mainAxisAlignment:
-                                  MainAxisAlignment.spaceBetween,
-                              children: [
-                                _buildActionButton(
-                                  label: 'Top up',
-                                  backgroundColor: const Color(0xFF10B981),
-                                  iconWidget: Assets.icons.add.svg(
-                                    width: 24,
-                                    height: 24,
-                                    colorFilter: const ColorFilter.mode(
-                                      Colors.white,
-                                      BlendMode.srcIn,
+          // Card Detail Expanded Overlay View with Fluid Scale & Fade Animation
+          IgnorePointer(
+            ignoring: !_isCardDetailExpanded,
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 320),
+              curve: Curves.easeInOut,
+              opacity: _isCardDetailExpanded ? 1.0 : 0.0,
+              child: GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _isCardDetailExpanded = false;
+                  });
+                },
+                behavior: HitTestBehavior.opaque,
+                child: ColoredBox(
+                  color: Colors.black,
+                  child: SafeArea(
+                    bottom: false,
+                    child: Stack(
+                      children: [
+                        // Top Header (Balance & + Add Pill Button)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  RichText(
+                                    text: TextSpan(
+                                      children: [
+                                        const TextSpan(
+                                          text: '₹ ',
+                                          style: TextStyle(
+                                            fontSize: 34,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                            letterSpacing: -0.5,
+                                          ),
+                                        ),
+                                        TextSpan(
+                                          text: _formatWholePart(cardBalance),
+                                          style: const TextStyle(
+                                            fontSize: 34,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                            letterSpacing: -0.5,
+                                          ),
+                                        ),
+                                        TextSpan(
+                                          text: _formatDecimalPart(cardBalance),
+                                          style: const TextStyle(
+                                            fontSize: 24,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFF7A7A80),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                  onTap: () {
-                                    notifier.topUpBalance(1000);
-                                  },
-                                ),
-                                _buildActionButton(
-                                  label: 'Freeze',
-                                  backgroundColor: const Color(0xFFEAEAEA),
-                                  iconWidget: Assets.icons.freeze.svg(
-                                    width: 24,
-                                    height: 24,
+                                  const SizedBox(height: 4),
+                                  const Text(
+                                    'Card balance',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w400,
+                                      color: Color(0xFF8E8E93),
+                                    ),
                                   ),
-                                  onTap: notifier.toggleFreezeCard,
-                                ),
-                                _buildActionButton(
-                                  label: 'Details',
-                                  backgroundColor: const Color(0xFFEAEAEA),
-                                  iconWidget: Assets.icons.card.svg(
-                                    width: 24,
-                                    height: 24,
+                                ],
+                              ),
+                              GestureDetector(
+                                onTap: () {
+                                  AddTransactionBottomSheet.show(context);
+                                },
+                                behavior: HitTestBehavior.opaque,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 18,
+                                    vertical: 10,
                                   ),
-                                  onTap: () {},
-                                ),
-                                _buildActionButton(
-                                  label: 'Settings',
-                                  backgroundColor: const Color(0xFFEAEAEA),
-                                  iconWidget: Assets.icons.settings.svg(
-                                    width: 24,
-                                    height: 24,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF19191B),
+                                    borderRadius: BorderRadius.circular(24),
+                                    border: Border.all(
+                                      color: const Color(0xFF2C2C2E),
+                                      width: 0.8,
+                                    ),
                                   ),
-                                  onTap: () {},
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        '+',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      SizedBox(width: 6),
+                                      Text(
+                                        'Add',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ],
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // Centered Card Detail Widget with Fluid Scale & Slide Transition
+                        Center(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child: GestureDetector(
+                              onTap: () {}, // Prevent taps inside from dismissing
+                              child: AnimatedSlide(
+                                duration: const Duration(milliseconds: 380),
+                                curve: Curves.fastOutSlowIn,
+                                offset: _isCardDetailExpanded
+                                    ? Offset.zero
+                                    : const Offset(0, 0.06),
+                                child: AnimatedScale(
+                                  duration: const Duration(milliseconds: 380),
+                                  curve: Curves.fastOutSlowIn,
+                                  scale: _isCardDetailExpanded ? 1.0 : 0.88,
+                                  child: cards.isNotEmpty
+                                      ? WalletCardDetailWidget(
+                                          card: cards[activeIndex < cards.length
+                                              ? activeIndex
+                                              : 0],
+                                          isFrozen: isFrozen,
+                                        )
+                                      : const SizedBox.shrink(),
+                                ),
+                              ),
                             ),
                           ),
-                        ],
-                      ),
-
-                      // Floating Navigation Bar (Selected Index = 1)
-                      Positioned(
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        child: CustomNavigationBar(
-                          selectedIndex: 1,
-                          onTabSelected: (index) {
-                            widget.onTabSelected?.call(index);
-                          },
-                          onAddTap: () {
-                            AddTransactionBottomSheet.show(context);
-                          },
                         ),
-                      ),
-                    ],
+
+                        // Floating Navigation Bar
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          child: CustomNavigationBar(
+                            selectedIndex: 1,
+                            onTabSelected: (index) {
+                              widget.onTabSelected?.call(index);
+                            },
+                            onAddTap: () {
+                              AddTransactionBottomSheet.show(context);
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
