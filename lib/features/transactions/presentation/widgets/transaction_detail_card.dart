@@ -40,7 +40,7 @@ class _TransactionDetailCardState extends State<TransactionDetailCard>
   late AnimationController _animationController;
   late Animation<double> _animation;
   double _dragOffset = 0;
-  static const double _maxDragDistance = 136;
+  static const double _maxDragDistance = 146;
   bool _internalTileExpanded = false;
 
   bool get _effectiveIsTileExpanded =>
@@ -56,17 +56,16 @@ class _TransactionDetailCardState extends State<TransactionDetailCard>
 
     _dragOffset = widget.isOpen ? -_maxDragDistance : 0;
 
-    _animation =
-        Tween<double>(begin: _dragOffset, end: _dragOffset).animate(
+    _animation = Tween<double>(begin: _dragOffset, end: _dragOffset).animate(
       CurvedAnimation(
         parent: _animationController,
         curve: Curves.easeOutCubic,
       ),
     )..addListener(() {
-            setState(() {
-              _dragOffset = _animation.value;
-            });
-          });
+        setState(() {
+          _dragOffset = _animation.value;
+        });
+      });
   }
 
   @override
@@ -105,8 +104,8 @@ class _TransactionDetailCardState extends State<TransactionDetailCard>
       widget.onOpen?.call();
     }
     setState(() {
-      _dragOffset = (_dragOffset + details.delta.dx)
-          .clamp(-_maxDragDistance, 0);
+      _dragOffset =
+          (_dragOffset + details.delta.dx).clamp(-_maxDragDistance, 0);
     });
   }
 
@@ -138,13 +137,13 @@ class _TransactionDetailCardState extends State<TransactionDetailCard>
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 5),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           // Background Slide Action Buttons (Delete & Edit)
           Positioned(
-            top: 11,
+            top: 0,
             right: 0,
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -156,33 +155,21 @@ class _TransactionDetailCardState extends State<TransactionDetailCard>
                     widget.onDelete?.call();
                   },
                   child: Container(
-                    width: 54,
-                    height: 54,
+                    width: 70,
+                    height: 70,
                     decoration: BoxDecoration(
                       color: Colors.white,
                       shape: BoxShape.circle,
-                      border: Border.all(
-                        color: const Color(0xFFF3F3F5),
-                        width: 1.2,
-                      ),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x0C000000),
-                          blurRadius: 8,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
                     ),
-                    child: const Center(
-                      child: Icon(
-                        Icons.delete_outline_rounded,
-                        color: Color(0xFFEF4444),
-                        size: 22,
+                    child: Center(
+                      child: Assets.icons.delete.svg(
+                        width: 24,
+                        height: 24,
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 3),
 
                 // Edit Button (White Circle + Pencil Edit Icon)
                 GestureDetector(
@@ -191,28 +178,16 @@ class _TransactionDetailCardState extends State<TransactionDetailCard>
                     widget.onEdit?.call();
                   },
                   child: Container(
-                    width: 54,
-                    height: 54,
+                    width: 70,
+                    height: 70,
                     decoration: BoxDecoration(
                       color: Colors.white,
                       shape: BoxShape.circle,
-                      border: Border.all(
-                        color: const Color(0xFFF3F3F5),
-                        width: 1.2,
-                      ),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x0C000000),
-                          blurRadius: 8,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
                     ),
-                    child: const Center(
-                      child: Icon(
-                        Icons.edit_outlined,
-                        color: Color(0xFF555555),
-                        size: 22,
+                    child: Center(
+                      child: Assets.icons.edit.svg(
+                        width: 24,
+                        height: 24,
                       ),
                     ),
                   ),
@@ -243,22 +218,10 @@ class _TransactionDetailCardState extends State<TransactionDetailCard>
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
                 curve: Curves.fastOutSlowIn,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.fromLTRB(5, 5, 20, 5),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(28),
-                  border: Border.all(
-                    color: const Color(0xFFF3F3F5),
-                    width: 1.2,
-                  ),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x05000000),
-                      blurRadius: 6,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
+                  borderRadius: BorderRadius.circular(32),
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -269,20 +232,30 @@ class _TransactionDetailCardState extends State<TransactionDetailCard>
                       children: [
                         // Direction Arrow Circle Badge (↓ for income, ↑ for expense)
                         Container(
-                          width: 52,
-                          height: 52,
+                          width: 60,
+                          height: 60,
                           decoration: const BoxDecoration(
-                            color: Color(0xFFF2F2F5),
+                            color: Color(0xFFF2F2F2),
                             shape: BoxShape.circle,
                           ),
                           child: Center(
-                            child: Icon(
-                              widget.transaction.isIncome
-                                  ? Icons.arrow_downward_rounded
-                                  : Icons.arrow_upward_rounded,
-                              size: 22,
-                              color: const Color(0xFF111111),
-                            ),
+                            child: widget.transaction.isIncome
+                                ? Assets.icons.downArrow.svg(
+                                    width: 24,
+                                    height: 24,
+                                    colorFilter: const ColorFilter.mode(
+                                      Color(0xFF000000),
+                                      BlendMode.srcIn,
+                                    ),
+                                  )
+                                : Assets.icons.upArrow.svg(
+                                    width: 24,
+                                    height: 24,
+                                    colorFilter: const ColorFilter.mode(
+                                      Color(0xFF000000),
+                                      BlendMode.srcIn,
+                                    ),
+                                  ),
                           ),
                         ),
                         const SizedBox(width: 14),
@@ -298,7 +271,7 @@ class _TransactionDetailCardState extends State<TransactionDetailCard>
                                 style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
-                                  color: Color(0xFF111111),
+                                  color: Color(0xFF000000),
                                 ),
                               ),
                               const SizedBox(height: 3),
@@ -307,7 +280,7 @@ class _TransactionDetailCardState extends State<TransactionDetailCard>
                                 style: const TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w400,
-                                  color: Color(0xFF9E9EA5),
+                                  color: Color(0xFFB2B2B2),
                                 ),
                               ),
                             ],
@@ -324,7 +297,7 @@ class _TransactionDetailCardState extends State<TransactionDetailCard>
                               style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF111111),
+                                color: Color(0xFF000000),
                               ),
                             ),
                             const SizedBox(width: 4),
@@ -350,70 +323,68 @@ class _TransactionDetailCardState extends State<TransactionDetailCard>
                           ? CrossFadeState.showSecond
                           : CrossFadeState.showFirst,
                       firstChild: const SizedBox.shrink(),
-                      secondChild: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 16),
-                          const Text(
-                            'Note :',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w400,
-                              color: Color(0xFF8E8E93),
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            widget.note ??
-                                'The note that you want to add while transaction',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                              color: Color(0xFF111111),
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          const Divider(
-                            color: Color(0xFFECECEC),
-                            height: 1,
-                            thickness: 1,
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                children: [
-                                  Assets.icons.card.svg(
-                                    width: 18,
-                                    height: 18,
-                                    colorFilter: const ColorFilter.mode(
-                                      Color(0xFF111111),
-                                      BlendMode.srcIn,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    widget.bankName ?? 'SBI Bank',
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF111111),
-                                    ),
-                                  ),
-                                ],
+                      secondChild: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 12, 0, 20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Note :',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w400,
+                                color: Color(0xFF8E8E93),
                               ),
-                              Text(
-                                widget.timestamp ?? '12-05-26   12 : 39',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w400,
-                                  color: Color(0xFF8E8E93),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              widget.note ??
+                                  'The note that you want to add while transaction',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: Color(0xFF000000),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            const Divider(
+                              color: Color(0xFFE5E5E5),
+                              height: 1,
+                              thickness: 1,
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    Assets.icons.walletOpen.svg(
+                                      width: 24,
+                                      height: 24,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      widget.bankName ?? 'SBI Bank',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        // fontWeight: FontWeight.bold,
+                                        color: Color(0xFF111111),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                            ],
-                          ),
-                        ],
+                                Text(
+                                  widget.timestamp ?? '12-05-26   12 : 39',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w400,
+                                    color: Color(0xFFB2B2B2),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],

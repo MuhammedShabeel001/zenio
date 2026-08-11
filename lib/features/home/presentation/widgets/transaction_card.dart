@@ -274,7 +274,7 @@ class _TransactionCardState extends State<TransactionCard>
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF111111),
+                            color: Color(0xFF000000),
                           ),
                         ),
                         const SizedBox(width: 4),
