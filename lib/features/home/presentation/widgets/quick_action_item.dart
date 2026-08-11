@@ -23,21 +23,21 @@ class QuickActionItem extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 76,
-            height: 54,
+            width: double.infinity,
+            height: 60,
             decoration: BoxDecoration(
               color: backgroundColor,
-              borderRadius: BorderRadius.circular(27),
+              borderRadius: BorderRadius.circular(30),
             ),
             child: Center(child: icon),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           Text(
             label,
             style: const TextStyle(
-              fontSize: 12,
+              fontSize: 10,
               fontWeight: FontWeight.w500,
-              color: Color(0xFF1F1F1F),
+              color: Colors.black,
             ),
           ),
         ],
