@@ -26,8 +26,7 @@ class AddTransactionBottomSheet extends StatefulWidget {
       _AddTransactionBottomSheetState();
 }
 
-class _AddTransactionBottomSheetState
-    extends State<AddTransactionBottomSheet> {
+class _AddTransactionBottomSheetState extends State<AddTransactionBottomSheet> {
   TransactionType _selectedType = TransactionType.expense;
 
   late TextEditingController _amountController;
@@ -86,16 +85,17 @@ class _AddTransactionBottomSheetState
 
   @override
   Widget build(BuildContext context) {
-    final formattedDate = DateFormat('EEEE, MMMM d, yyyy').format(_selectedDate);
+    final formattedDate =
+        DateFormat('EEEE, MMMM d, yyyy').format(_selectedDate);
 
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(
-          top: Radius.circular(32),
+          top: Radius.circular(30),
         ),
       ),
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+      padding: const EdgeInsets.fromLTRB(10, 16, 10, 40),
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -104,7 +104,7 @@ class _AddTransactionBottomSheetState
             // Top Drag Handle Indicator
             Center(
               child: Container(
-                width: 36,
+                width: 32,
                 height: 4,
                 decoration: BoxDecoration(
                   color: const Color(0xFFD1D1D6),
@@ -112,17 +112,17 @@ class _AddTransactionBottomSheetState
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 26),
 
             // Segmented Mode Switcher (Expense, Income, Transfer)
             Container(
-              height: 52,
-              padding: const EdgeInsets.all(4),
+              height: 60,
+              padding: const EdgeInsets.all(3),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(26),
+                borderRadius: BorderRadius.circular(30),
                 border: Border.all(
-                  color: const Color(0xFFEAEAEA),
+                  color: const Color(0xFFCCCCCC),
                 ),
               ),
               child: Row(
@@ -130,7 +130,7 @@ class _AddTransactionBottomSheetState
                   _buildTabItem(
                     type: TransactionType.expense,
                     label: 'Expense',
-                    activeColor: const Color(0xFFEF4444),
+                    activeColor: const Color(0xFFDD3D34),
                   ),
                   _buildTabItem(
                     type: TransactionType.income,
@@ -140,56 +140,42 @@ class _AddTransactionBottomSheetState
                   _buildTabItem(
                     type: TransactionType.transfer,
                     label: 'Transfer',
-                    activeColor: const Color(0xFF8C43E6),
+                    activeColor: const Color(0xFF8949D5),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 18),
 
             // Amount Input Field
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
               decoration: BoxDecoration(
-                color: const Color(0xFFF4F4F6),
+                color: const Color(0xFFF2F2F2),
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _amountController,
-                      style: const TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF111111),
-                      ),
-                      decoration: const InputDecoration(
-                        isDense: true,
-                        filled: false,
-                        fillColor: Colors.transparent,
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                        disabledBorder: InputBorder.none,
-                        focusedErrorBorder: InputBorder.none,
-                        errorBorder: InputBorder.none,
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                    ),
-                  ),
-                  const Text(
-                    '.0',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF9E9EA5),
-                    ),
-                  ),
-                ],
+              child: TextField(
+                controller: _amountController,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF111111),
+                ),
+                decoration: const InputDecoration(
+                  isDense: true,
+                  filled: false,
+                  fillColor: Colors.transparent,
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  disabledBorder: InputBorder.none,
+                  focusedErrorBorder: InputBorder.none,
+                  errorBorder: InputBorder.none,
+                  contentPadding: EdgeInsets.zero,
+                ),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 6),
 
             // Field 1: Date Selector
             GestureDetector(
@@ -197,9 +183,9 @@ class _AddTransactionBottomSheetState
               behavior: HitTestBehavior.opaque,
               child: Container(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF4F4F6),
+                  color: const Color(0xFFF2F2F2),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -215,8 +201,8 @@ class _AddTransactionBottomSheetState
                         formattedDate,
                         style: const TextStyle(
                           fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: Color(0xFF111111),
+                          fontWeight: FontWeight.w300,
+                          color: Color(0xFF000000),
                         ),
                       ),
                     ),
@@ -232,13 +218,13 @@ class _AddTransactionBottomSheetState
                 ),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 6),
 
             // Field 2: Source Wallet Selector
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 5),
               decoration: BoxDecoration(
-                color: const Color(0xFFF4F4F6),
+                color: const Color(0xFFF2F2F2),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Row(
@@ -257,8 +243,8 @@ class _AddTransactionBottomSheetState
                       child: DropdownButton<String>(
                         value: _sourceWallet,
                         icon: Assets.icons.dropDown.svg(
-                          width: 14,
-                          height: 14,
+                          width: 24,
+                          height: 24,
                           colorFilter: const ColorFilter.mode(
                             Color(0xFF111111),
                             BlendMode.srcIn,
@@ -291,7 +277,7 @@ class _AddTransactionBottomSheetState
                 ],
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 6),
 
             // Field 3: Category OR Destination Wallet (with Swap Button for Transfer)
             if (_selectedType == TransactionType.transfer)
@@ -301,11 +287,11 @@ class _AddTransactionBottomSheetState
                   // Destination Wallet Field
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 6,
+                      horizontal: 30,
+                      vertical: 5,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF4F4F6),
+                      color: const Color(0xFFF2F2F2),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
@@ -324,8 +310,8 @@ class _AddTransactionBottomSheetState
                             child: DropdownButton<String>(
                               value: _destinationWallet,
                               icon: Assets.icons.dropDown.svg(
-                                width: 14,
-                                height: 14,
+                                width: 24,
+                                height: 24,
                                 colorFilter: const ColorFilter.mode(
                                   Color(0xFF111111),
                                   BlendMode.srcIn,
@@ -361,27 +347,20 @@ class _AddTransactionBottomSheetState
 
                   // Floating Circular Swap Button (⇄)
                   Positioned(
-                    right: 18,
-                    top: -24,
+                    right: 60,
+                    top: -26,
                     child: GestureDetector(
                       onTap: _swapWallets,
                       child: Container(
-                        width: 42,
-                        height: 42,
+                        width: 50,
+                        height: 50,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF4F4F6),
+                          color: const Color(0xFFF2F2F2),
                           shape: BoxShape.circle,
                           border: Border.all(
                             color: Colors.white,
-                            width: 3,
+                            width: 5,
                           ),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Color(0x10000000),
-                              blurRadius: 4,
-                              offset: Offset(0, 2),
-                            ),
-                          ],
                         ),
                         child: const Center(
                           child: Icon(
@@ -399,9 +378,9 @@ class _AddTransactionBottomSheetState
               // Category Field for Expense / Income
               Container(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    const EdgeInsets.symmetric(horizontal: 30, vertical: 5),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF4F4F6),
+                  color: const Color(0xFFF2F2F2),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -419,8 +398,8 @@ class _AddTransactionBottomSheetState
                             ),
                           ),
                           icon: Assets.icons.dropDown.svg(
-                            width: 14,
-                            height: 14,
+                            width: 24,
+                            height: 24,
                             colorFilter: const ColorFilter.mode(
                               Color(0xFF111111),
                               BlendMode.srcIn,
@@ -451,13 +430,13 @@ class _AddTransactionBottomSheetState
                   ],
                 ),
               ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 6),
 
             // Field 4: Note Input
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
               decoration: BoxDecoration(
-                color: const Color(0xFFF4F4F6),
+                color: const Color(0xFFF2F2F2),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: TextField(
@@ -472,7 +451,7 @@ class _AddTransactionBottomSheetState
                 decoration: const InputDecoration(
                   hintText: 'Add a note...',
                   hintStyle: TextStyle(
-                    fontSize: 14,
+                    fontSize: 15,
                     fontWeight: FontWeight.w400,
                     color: Color(0xFF9E9EA5),
                   ),
@@ -489,11 +468,11 @@ class _AddTransactionBottomSheetState
                 ),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 6),
 
             // Save Transaction Button
             SizedBox(
-              height: 56,
+              height: 60,
               child: ElevatedButton(
                 onPressed: () {
                   Navigator.of(context).pop();
@@ -538,16 +517,16 @@ class _AddTransactionBottomSheetState
         behavior: HitTestBehavior.opaque,
         child: Container(
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFFF4F4F4) : Colors.transparent,
-            borderRadius: BorderRadius.circular(22),
+            color: isSelected ? const Color(0xFFF2F2F2) : Colors.transparent,
+            borderRadius: BorderRadius.circular(30),
           ),
           child: Center(
             child: Text(
               label,
               style: TextStyle(
-                fontSize: 13,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                color: isSelected ? activeColor : const Color(0xFF9E9EA5),
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w300,
+                color: isSelected ? activeColor : const Color(0xFF808080),
               ),
             ),
           ),
