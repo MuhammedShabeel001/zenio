@@ -62,7 +62,7 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
           children: [
             // Dark Header Section
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              padding: const EdgeInsets.fromLTRB(10, 10, 10, 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -80,7 +80,7 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                                 const TextSpan(
                                   text: '₹ ',
                                   style: TextStyle(
-                                    fontSize: 34,
+                                    fontSize: 32,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.white,
                                     letterSpacing: -0.5,
@@ -89,7 +89,7 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                                 TextSpan(
                                   text: _formatWholePart(totalBalance),
                                   style: const TextStyle(
-                                    fontSize: 34,
+                                    fontSize: 32,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.white,
                                     letterSpacing: -0.5,
@@ -100,7 +100,7 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                                   style: const TextStyle(
                                     fontSize: 24,
                                     fontWeight: FontWeight.bold,
-                                    color: Color(0xFF7A7A80),
+                                    color: Color(0xFF808080),
                                   ),
                                 ),
                               ],
@@ -112,7 +112,7 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w400,
-                              color: Color(0xFF8E8E93),
+                              color: Color(0xFF808080),
                             ),
                           ),
                         ],
@@ -120,15 +120,15 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                       // Currency Badge Pill
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 10,
+                          horizontal: 20,
+                          vertical: 17,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF19191B),
-                          borderRadius: BorderRadius.circular(24),
+                          color: const Color(0xFF1A1A1A),
+                          borderRadius: BorderRadius.circular(30),
                           border: Border.all(
-                            color: const Color(0xFF2C2C2E),
-                            width: 0.8,
+                            color: const Color(0xFF313131),
+                            width: 1,
                           ),
                         ),
                         child: Row(
@@ -137,7 +137,7 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                             const Text(
                               '₹',
                               style: TextStyle(
-                                fontSize: 13,
+                                fontSize: 15,
                                 fontWeight: FontWeight.bold,
                                 color: Color(0xFFE0E0E0),
                               ),
@@ -146,7 +146,7 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                             Text(
                               currency,
                               style: const TextStyle(
-                                fontSize: 13,
+                                fontSize: 15,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,
                               ),
@@ -156,7 +156,7 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
 
                   // Income & Expense Summary Cards
                   Row(
@@ -164,13 +164,14 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                       // Income Card
                       Expanded(
                         child: Container(
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 15, horizontal: 20),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF171719),
-                            borderRadius: BorderRadius.circular(24),
+                            color: const Color(0xFF1a1a1a),
+                            borderRadius: BorderRadius.circular(30),
                             border: Border.all(
-                              color: const Color(0xFF262628),
-                              width: 0.8,
+                              color: const Color(0xFF313131),
+                              width: 1,
                             ),
                           ),
                           child: Column(
@@ -183,14 +184,14 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                                   const Text(
                                     'Income',
                                     style: TextStyle(
-                                      fontSize: 15,
+                                      fontSize: 14,
                                       fontWeight: FontWeight.w500,
-                                      color: Color(0xFFE5E5E5),
+                                      color: Colors.white,
                                     ),
                                   ),
                                   Assets.icons.icome.svg(
-                                    width: 18,
-                                    height: 18,
+                                    width: 24,
+                                    height: 24,
                                   ),
                                 ],
                               ),
@@ -198,7 +199,7 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                               Text(
                                 '₹ ${NumberFormat('#,##0.00').format(income)}',
                                 style: const TextStyle(
-                                  fontSize: 17,
+                                  fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.white,
                                 ),
@@ -207,26 +208,27 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                               Text(
                                 '+ ${incomeChange.toStringAsFixed(2)} %',
                                 style: const TextStyle(
-                                  fontSize: 11,
+                                  fontSize: 10,
                                   fontWeight: FontWeight.w600,
-                                  color: Color(0xFF2CC56F),
+                                  color: Color(0xFF10B981),
                                 ),
                               ),
                             ],
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 10),
                       // Expense Card
                       Expanded(
                         child: Container(
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 15, horizontal: 20),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF171719),
-                            borderRadius: BorderRadius.circular(24),
+                            color: const Color(0xFF1a1a1a),
+                            borderRadius: BorderRadius.circular(30),
                             border: Border.all(
-                              color: const Color(0xFF262628),
-                              width: 0.8,
+                              color: const Color(0xFF313131),
+                              width: 1,
                             ),
                           ),
                           child: Column(
@@ -239,14 +241,14 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                                   const Text(
                                     'Expense',
                                     style: TextStyle(
-                                      fontSize: 15,
+                                      fontSize: 14,
                                       fontWeight: FontWeight.w500,
-                                      color: Color(0xFFE5E5E5),
+                                      color: Colors.white,
                                     ),
                                   ),
                                   Assets.icons.expense.svg(
-                                    width: 18,
-                                    height: 18,
+                                    width: 24,
+                                    height: 24,
                                   ),
                                 ],
                               ),
@@ -254,7 +256,7 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                               Text(
                                 '₹ ${NumberFormat('#,##0.00').format(expense)}',
                                 style: const TextStyle(
-                                  fontSize: 17,
+                                  fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.white,
                                 ),
@@ -263,9 +265,9 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                               Text(
                                 '+ ${expenseChange.toStringAsFixed(2)} %',
                                 style: const TextStyle(
-                                  fontSize: 11,
+                                  fontSize: 10,
                                   fontWeight: FontWeight.w600,
-                                  color: Color(0xFFE53935),
+                                  color: Color(0xFFDD3D34),
                                 ),
                               ),
                             ],
