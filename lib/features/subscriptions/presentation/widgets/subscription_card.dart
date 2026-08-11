@@ -11,6 +11,10 @@ class SubscriptionCard extends StatefulWidget {
     this.isOpen = false,
     this.onOpen,
     this.onClose,
+    this.isTileExpanded,
+    this.onTileTap,
+    this.nextBillingDate,
+    this.billingCycle,
     super.key,
   });
 
@@ -20,6 +24,10 @@ class SubscriptionCard extends StatefulWidget {
   final bool isOpen;
   final VoidCallback? onOpen;
   final VoidCallback? onClose;
+  final bool? isTileExpanded;
+  final VoidCallback? onTileTap;
+  final String? nextBillingDate;
+  final String? billingCycle;
 
   @override
   State<SubscriptionCard> createState() => _SubscriptionCardState();
@@ -31,6 +39,10 @@ class _SubscriptionCardState extends State<SubscriptionCard>
   late Animation<double> _animation;
   double _dragOffset = 0;
   static const double _maxDragDistance = 136;
+  bool _internalTileExpanded = false;
+
+  bool get _effectiveIsTileExpanded =>
+      widget.isTileExpanded ?? _internalTileExpanded;
 
   @override
   void initState() {
@@ -125,106 +137,110 @@ class _SubscriptionCardState extends State<SubscriptionCard>
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      height: 76,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           // Background Slide Action Buttons (Delete & Edit)
-          Positioned.fill(
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Delete Button (White Circle + Red Trash Icon)
-                  GestureDetector(
-                    onTap: () {
-                      _close();
-                      widget.onDelete?.call();
-                    },
-                    child: Container(
-                      width: 54,
-                      height: 54,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: const Color(0xFFF3F3F5),
-                          width: 1.2,
-                        ),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x0C000000),
-                            blurRadius: 8,
-                            offset: Offset(0, 2),
-                          ),
-                        ],
+          Positioned(
+            top: 11,
+            right: 0,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Delete Button (White Circle + Red Trash Icon)
+                GestureDetector(
+                  onTap: () {
+                    _close();
+                    widget.onDelete?.call();
+                  },
+                  child: Container(
+                    width: 54,
+                    height: 54,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: const Color(0xFFF3F3F5),
+                        width: 1.2,
                       ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.delete_outline_rounded,
-                          color: Color(0xFFEF4444),
-                          size: 22,
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x0C000000),
+                          blurRadius: 8,
+                          offset: Offset(0, 2),
                         ),
+                      ],
+                    ),
+                    child: const Center(
+                      child: Icon(
+                        Icons.delete_outline_rounded,
+                        color: Color(0xFFEF4444),
+                        size: 22,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                ),
+                const SizedBox(width: 12),
 
-                  // Edit Button (White Circle + Pencil Edit Icon)
-                  GestureDetector(
-                    onTap: () {
-                      _close();
-                      widget.onEdit?.call();
-                    },
-                    child: Container(
-                      width: 54,
-                      height: 54,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: const Color(0xFFF3F3F5),
-                          width: 1.2,
-                        ),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x0C000000),
-                            blurRadius: 8,
-                            offset: Offset(0, 2),
-                          ),
-                        ],
+                // Edit Button (White Circle + Pencil Edit Icon)
+                GestureDetector(
+                  onTap: () {
+                    _close();
+                    widget.onEdit?.call();
+                  },
+                  child: Container(
+                    width: 54,
+                    height: 54,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: const Color(0xFFF3F3F5),
+                        width: 1.2,
                       ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.edit_outlined,
-                          color: Color(0xFF555555),
-                          size: 22,
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x0C000000),
+                          blurRadius: 8,
+                          offset: Offset(0, 2),
                         ),
+                      ],
+                    ),
+                    child: const Center(
+                      child: Icon(
+                        Icons.edit_outlined,
+                        color: Color(0xFF555555),
+                        size: 22,
                       ),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
 
           // Foreground Slidable Card Layer
-          AnimatedPositioned(
-            duration: Duration.zero,
-            left: _dragOffset,
-            right: -_dragOffset,
-            top: 0,
-            bottom: 0,
+          Transform.translate(
+            offset: Offset(_dragOffset, 0),
             child: GestureDetector(
               onHorizontalDragUpdate: _onHorizontalDragUpdate,
               onHorizontalDragEnd: _onHorizontalDragEnd,
               onTap: () {
                 if (_dragOffset < 0) {
                   _close();
+                } else {
+                  if (widget.onTileTap != null) {
+                    widget.onTileTap!();
+                  } else {
+                    setState(() {
+                      _internalTileExpanded = !_internalTileExpanded;
+                    });
+                  }
                 }
               },
-              child: Container(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.fastOutSlowIn,
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 decoration: BoxDecoration(
@@ -242,94 +258,181 @@ class _SubscriptionCardState extends State<SubscriptionCard>
                     ),
                   ],
                 ),
-                child: Row(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Music / App Icon Circle Badge
-                    Container(
-                      width: 52,
-                      height: 52,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFF2F2F5),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Center(
-                        child: Assets.icons.music.svg(
-                          width: 22,
-                          height: 22,
-                          colorFilter: const ColorFilter.mode(
-                            Color(0xFF111111),
-                            BlendMode.srcIn,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-
-                    // Title & Category Column
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            widget.subscription.title,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF111111),
-                            ),
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            widget.subscription.category,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w400,
-                              color: Color(0xFF9E9EA5),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Amount & Due In Subtitle Column
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      mainAxisSize: MainAxisSize.min,
+                    // Top Row: Music Icon Badge, Title & Category, Amount & Due In Text
+                    Row(
                       children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.baseline,
-                          textBaseline: TextBaseline.alphabetic,
-                          children: [
-                            Text(
-                              _formatAmount(widget.subscription.amount),
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF111111),
+                        // Music / App Icon Circle Badge
+                        Container(
+                          width: 52,
+                          height: 52,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFF2F2F5),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Assets.icons.music.svg(
+                              width: 22,
+                              height: 22,
+                              colorFilter: const ColorFilter.mode(
+                                Color(0xFF111111),
+                                BlendMode.srcIn,
                               ),
                             ),
-                            const SizedBox(width: 4),
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+
+                        // Title & Category Column
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                widget.subscription.title,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF111111),
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                widget.subscription.category,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w400,
+                                  color: Color(0xFF9E9EA5),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // Amount & Due In Subtitle Column
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.baseline,
+                              textBaseline: TextBaseline.alphabetic,
+                              children: [
+                                Text(
+                                  _formatAmount(widget.subscription.amount),
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF111111),
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  widget.subscription.currency,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF8E8E93),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 3),
                             Text(
-                              widget.subscription.currency,
+                              widget.subscription.dueInText,
                               style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF8E8E93),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w400,
+                                color: Color(0xFF9E9EA5),
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 3),
-                        Text(
-                          widget.subscription.dueInText,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w400,
-                            color: Color(0xFF9E9EA5),
-                          ),
-                        ),
                       ],
+                    ),
+
+                    // Expandable Detail Section (Next Billing & Billing Cycle)
+                    AnimatedCrossFade(
+                      duration: const Duration(milliseconds: 300),
+                      firstCurve: Curves.fastOutSlowIn,
+                      secondCurve: Curves.fastOutSlowIn,
+                      crossFadeState: _effectiveIsTileExpanded
+                          ? CrossFadeState.showSecond
+                          : CrossFadeState.showFirst,
+                      firstChild: const SizedBox.shrink(),
+                      secondChild: Padding(
+                        padding: const EdgeInsets.only(top: 16),
+                        child: Row(
+                          children: [
+                            // Left Column: Next Billing
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Next billing',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w400,
+                                      color: Color(0xFF8E8E93),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    widget.nextBillingDate ??
+                                        'August 01 , 2026',
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF111111),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            // Middle Vertical Divider Line
+                            Container(
+                              width: 1,
+                              height: 32,
+                              color: const Color(0xFFECECEC),
+                            ),
+
+                            // Right Column: Billing Cycle
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.only(left: 20),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Billing cycle',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w400,
+                                        color: Color(0xFF8E8E93),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      widget.billingCycle ?? 'Monthly',
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF111111),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ],
                 ),

@@ -17,6 +17,7 @@ class SubscriptionsScreenMobile extends ConsumerStatefulWidget {
 class _SubscriptionsScreenMobileState
     extends ConsumerState<SubscriptionsScreenMobile> {
   String? _openSubscriptionId;
+  String? _expandedTileId;
   String _formatWholePart(double amount) {
     final whole = amount.toInt();
     final formatter = NumberFormat('#,##0');
@@ -176,6 +177,16 @@ class _SubscriptionsScreenMobileState
                             key: ValueKey(item.id),
                             subscription: item,
                             isOpen: _openSubscriptionId == item.id,
+                            isTileExpanded: _expandedTileId == item.id,
+                            onTileTap: () {
+                              setState(() {
+                                if (_expandedTileId == item.id) {
+                                  _expandedTileId = null;
+                                } else {
+                                  _expandedTileId = item.id;
+                                }
+                              });
+                            },
                             onOpen: () {
                               if (_openSubscriptionId != item.id) {
                                 setState(() {
