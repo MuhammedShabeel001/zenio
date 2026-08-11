@@ -15,6 +15,7 @@ class DebtsScreenMobile extends ConsumerStatefulWidget {
 
 class _DebtsScreenMobileState extends ConsumerState<DebtsScreenMobile> {
   String? _openDebtId;
+  String? _expandedTileId;
   String _formatWholePart(double amount) {
     final isNegative = amount < 0;
     final absWhole = amount.abs().toInt();
@@ -176,6 +177,16 @@ class _DebtsScreenMobileState extends ConsumerState<DebtsScreenMobile> {
                             key: ValueKey(item.id),
                             debt: item,
                             isOpen: _openDebtId == item.id,
+                            isTileExpanded: _expandedTileId == item.id,
+                            onTileTap: () {
+                              setState(() {
+                                if (_expandedTileId == item.id) {
+                                  _expandedTileId = null;
+                                } else {
+                                  _expandedTileId = item.id;
+                                }
+                              });
+                            },
                             onOpen: () {
                               if (_openDebtId != item.id) {
                                 setState(() {
