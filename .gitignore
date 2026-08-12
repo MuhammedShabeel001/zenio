@@ -116,3 +116,4 @@ app.*.map.json
 # Generated build_runner files
 *.freezed.dart
 *.g.dart 
+*.hprof
