@@ -43,7 +43,7 @@ class _SubscriptionsScreenMobileState
           children: [
             // Dark Header Section
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              padding: const EdgeInsets.fromLTRB(10, 10, 10, 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -58,7 +58,7 @@ class _SubscriptionsScreenMobileState
                             const TextSpan(
                               text: '₹ ',
                               style: TextStyle(
-                                fontSize: 34,
+                                fontSize: 32,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,
                                 letterSpacing: -0.5,
@@ -67,7 +67,7 @@ class _SubscriptionsScreenMobileState
                             TextSpan(
                               text: _formatWholePart(totalBalance),
                               style: const TextStyle(
-                                fontSize: 34,
+                                fontSize: 32,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,
                                 letterSpacing: -0.5,
@@ -78,7 +78,7 @@ class _SubscriptionsScreenMobileState
                               style: const TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF7A7A80),
+                                color: Color(0xFF808080),
                               ),
                             ),
                           ],
@@ -92,15 +92,15 @@ class _SubscriptionsScreenMobileState
                         },
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 18,
-                            vertical: 10,
+                            horizontal: 20,
+                            vertical: 17,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF19191B),
-                            borderRadius: BorderRadius.circular(24),
+                            color: const Color(0xFF1A1A1A),
+                            borderRadius: BorderRadius.circular(30),
                             border: Border.all(
-                              color: const Color(0xFF2C2C2E),
-                              width: 0.8,
+                              color: const Color(0xFF313131),
+                              width: 1,
                             ),
                           ),
                           child: const Row(
@@ -109,7 +109,7 @@ class _SubscriptionsScreenMobileState
                               Text(
                                 '+',
                                 style: TextStyle(
-                                  fontSize: 14,
+                                  fontSize: 15,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.white,
                                 ),
@@ -118,7 +118,7 @@ class _SubscriptionsScreenMobileState
                               Text(
                                 'Add',
                                 style: TextStyle(
-                                  fontSize: 14,
+                                  fontSize: 15,
                                   fontWeight: FontWeight.w600,
                                   color: Colors.white,
                                 ),
@@ -148,15 +148,15 @@ class _SubscriptionsScreenMobileState
                 decoration: const BoxDecoration(
                   color: Color(0xFFF7F7F7),
                   borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(36),
+                    top: Radius.circular(30),
                   ),
                 ),
                 child: ClipRRect(
                   borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(36),
+                    top: Radius.circular(30),
                   ),
                   child: ListView(
-                    padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
+                    padding: const EdgeInsets.fromLTRB(10, 16, 10, 20),
                     children: [
                       if (subscriptions.isEmpty)
                         const Padding(
@@ -224,14 +224,10 @@ class _SubscriptionsScreenMobileState
 
   Widget _buildFilterPill({required String label}) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: const Color(0xFF19191B),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: const Color(0xFF2C2C2E),
-          width: 0.8,
-        ),
+        color: const Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.circular(30),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -239,19 +235,15 @@ class _SubscriptionsScreenMobileState
           Text(
             label,
             style: const TextStyle(
-              fontSize: 13,
+              fontSize: 14,
               fontWeight: FontWeight.w500,
               color: Color(0xFFD1D1D6),
             ),
           ),
           const SizedBox(width: 8),
           Assets.icons.dropDown.svg(
-            width: 14,
-            height: 14,
-            colorFilter: const ColorFilter.mode(
-              Color(0xFF8E8E93),
-              BlendMode.srcIn,
-            ),
+            width: 24,
+            height: 24,
           ),
         ],
       ),

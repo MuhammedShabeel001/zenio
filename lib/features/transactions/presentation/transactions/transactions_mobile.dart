@@ -158,7 +158,7 @@ class _TransactionsScreenMobileState
                     top: Radius.circular(30),
                   ),
                   child: ListView(
-                    padding: const EdgeInsets.fromLTRB(10, 16, 10, 0),
+                    padding: const EdgeInsets.fromLTRB(10, 16, 10, 20),
                     children: [
                       if (transactions.isEmpty)
                         const Padding(

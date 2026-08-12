@@ -52,13 +52,13 @@ class CustomNavigationBar extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(30),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x0A000000),
-                      blurRadius: 16,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
+                  // boxShadow: const [
+                  //   BoxShadow(
+                  //     color: Color(0x0A000000),
+                  //     blurRadius: 16,
+                  //     offset: Offset(0, 4),
+                  //   ),
+                  // ],
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -81,13 +81,13 @@ class CustomNavigationBar extends StatelessWidget {
                 decoration: const BoxDecoration(
                   color: _activeColor,
                   shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Color(0x3310B981),
-                      blurRadius: 12,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
+                  // boxShadow: [
+                  //   BoxShadow(
+                  //     color: Color(0x3310B981),
+                  //     blurRadius: 12,
+                  //     offset: Offset(0, 4),
+                  //   ),
+                  // ],
                 ),
                 child: Center(
                   child: Assets.icons.add.svg(
@@ -110,13 +110,13 @@ class CustomNavigationBar extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(30),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x0A000000),
-                      blurRadius: 16,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
+                  // boxShadow: const [
+                  //   BoxShadow(
+                  //     color: Color(0x0A000000),
+                  //     blurRadius: 16,
+                  //     offset: Offset(0, 4),
+                  //   ),
+                  // ],
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
