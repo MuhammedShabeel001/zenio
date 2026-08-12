@@ -57,7 +57,7 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
           children: [
             // Dark Header Section (Bill Amount Input)
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+              padding: const EdgeInsets.fromLTRB(10, 10, 10, 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -68,7 +68,7 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
                         const TextSpan(
                           text: '₹ ',
                           style: TextStyle(
-                            fontSize: 34,
+                            fontSize: 32,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                             letterSpacing: -0.5,
@@ -77,7 +77,7 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
                         TextSpan(
                           text: _formatWholePart(state.billAmount),
                           style: const TextStyle(
-                            fontSize: 34,
+                            fontSize: 32,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                             letterSpacing: -0.5,
@@ -88,7 +88,7 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
                           style: const TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF7A7A80),
+                            color: Color(0xFF808080),
                           ),
                         ),
                       ],
@@ -140,18 +140,18 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
                 decoration: const BoxDecoration(
                   color: Color(0xFFF7F7F7),
                   borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(36),
+                    top: Radius.circular(30),
                   ),
                 ),
                 child: ClipRRect(
                   borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(36),
+                    top: Radius.circular(30),
                   ),
                   child: Stack(
                     children: [
                       // Scrollable Form Content
                       ListView(
-                        padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
+                        padding: const EdgeInsets.fromLTRB(10, 20, 10, 0),
                         children: [
                           // Top Mode Switcher Pill (Equal split v / Trip split v)
                           Center(
@@ -160,7 +160,7 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
                               onModeSelected: notifier.setMode,
                             ),
                           ),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 30),
 
                           // Form Card 1: How many people ?
                           _buildCounterCard(
@@ -199,7 +199,7 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
 
                           // Info Note Text
                           Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               const Icon(
                                 Icons.info_outline_rounded,
@@ -207,13 +207,14 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
                                 color: Color(0xFF9E9EA5),
                               ),
                               const SizedBox(width: 8),
-                              Expanded(
+                              Flexible(
                                 child: Text(
                                   isEqualMode
                                       ? 'Standard split divides the amount equally.'
                                       : 'Trip split divides the bill into two halves: one for going and one for returning.',
+                                  textAlign: TextAlign.center,
                                   style: const TextStyle(
-                                    fontSize: 12,
+                                    fontSize: 8,
                                     fontWeight: FontWeight.w400,
                                     color: Color(0xFF9E9EA5),
                                     height: 1.3,
@@ -227,29 +228,22 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
 
                       // Bottom Floating Fixed Summary & Action Bar
                       Positioned(
-                        left: 20,
-                        right: 20,
+                        left: 10,
+                        right: 10,
                         bottom: 24,
                         child: Row(
                           children: [
                             // Summary Capsule Card
                             Expanded(
                               child: Container(
-                                height: 76,
+                                height: 80,
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                  vertical: 14,
+                                  horizontal: 30,
+                                  vertical: 18,
                                 ),
                                 decoration: BoxDecoration(
                                   color: Colors.white,
-                                  borderRadius: BorderRadius.circular(38),
-                                  boxShadow: const [
-                                    BoxShadow(
-                                      color: Color(0x0C000000),
-                                      blurRadius: 16,
-                                      offset: Offset(0, 4),
-                                    ),
-                                  ],
+                                  borderRadius: BorderRadius.circular(40),
                                 ),
                                 child: isEqualMode
                                     ? _buildEqualSummaryContent(
@@ -261,27 +255,20 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
                                       ),
                               ),
                             ),
-                            const SizedBox(width: 12),
+                            const SizedBox(width: 2),
 
                             // Green Circular Share Action Button
                             Container(
-                              width: 64,
-                              height: 64,
+                              width: 80,
+                              height: 80,
                               decoration: const BoxDecoration(
                                 color: Colors.white,
                                 shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Color(0x0C000000),
-                                    blurRadius: 16,
-                                    offset: Offset(0, 4),
-                                  ),
-                                ],
                               ),
                               child: Center(
                                 child: Assets.icons.share.svg(
-                                  width: 22,
-                                  height: 22,
+                                  width: 28,
+                                  height: 28,
                                   colorFilter: const ColorFilter.mode(
                                     Color(0xFF10B981),
                                     BlendMode.srcIn,
@@ -313,7 +300,7 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
     return PopupMenuButton<SplitMode>(
       onSelected: onModeSelected,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(25),
       ),
       color: Colors.white,
       itemBuilder: (context) => [
@@ -341,10 +328,10 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
         ),
       ],
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
-          color: const Color(0xFFEAEAEA),
-          borderRadius: BorderRadius.circular(20),
+          color: const Color(0xFFDEDEDE),
+          borderRadius: BorderRadius.circular(25),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -352,15 +339,15 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
             Text(
               labelText,
               style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF7A7A80),
+                fontSize: 14,
+                fontWeight: FontWeight.w400,
+                color: Color(0xFF6F6F6F),
               ),
             ),
             const SizedBox(width: 6),
             Assets.icons.dropDown.svg(
-              width: 14,
-              height: 14,
+              width: 24,
+              height: 24,
               colorFilter: const ColorFilter.mode(
                 Color(0xFF7A7A80),
                 BlendMode.srcIn,
@@ -379,93 +366,86 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
     required VoidCallback onDecrement,
     required VoidCallback onIncrement,
   }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(28),
-      ),
-      child: Row(
-        children: [
-          // Circle Icon Badge
-          Container(
-            width: 48,
-            height: 48,
-            decoration: const BoxDecoration(
-              color: Color(0xFFF7F7F7),
-              shape: BoxShape.circle,
-            ),
-            child: Center(child: iconWidget),
+    return Row(
+      children: [
+        // Circle Icon Badge
+        Container(
+          width: 56,
+          height: 56,
+          decoration: const BoxDecoration(
+            color: Color(0xFFFFFFFF),
+            shape: BoxShape.circle,
           ),
-          const SizedBox(width: 14),
+          child: Center(child: iconWidget),
+        ),
+        const SizedBox(width: 16),
 
-          // Title
-          Expanded(
-            child: Text(
-              title,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF111111),
-              ),
+        // Title
+        Expanded(
+          child: Text(
+            title,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w400,
+              color: Color(0xFF000000),
             ),
           ),
+        ),
 
-          // Counter Controls (- count +)
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              GestureDetector(
-                onTap: onDecrement,
-                child: Container(
-                  width: 36,
-                  height: 36,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFF2F2F5),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.remove,
-                      size: 18,
-                      color: Color(0xFF111111),
-                    ),
+        // Counter Controls (- count +)
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            GestureDetector(
+              onTap: onDecrement,
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  border: Border.all(color: Color(0xFFD9D9D9), width: 1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Center(
+                  child: Icon(
+                    Icons.remove,
+                    size: 24,
+                    color: Color(0xFF000000),
                   ),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                child: Text(
-                  count.toString(),
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF111111),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              child: Text(
+                count.toString(),
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF000000),
+                ),
+              ),
+            ),
+            GestureDetector(
+              onTap: onIncrement,
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  border: Border.all(color: Color(0xFFD9D9D9), width: 1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Center(
+                  child: Icon(
+                    Icons.add,
+                    size: 24,
+                    color: Color(0xFF000000),
                   ),
                 ),
               ),
-              GestureDetector(
-                onTap: onIncrement,
-                child: Container(
-                  width: 36,
-                  height: 36,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFF2F2F5),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.add,
-                      size: 18,
-                      color: Color(0xFF111111),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -477,7 +457,7 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
         const Text(
           'Each person pay',
           style: TextStyle(
-            fontSize: 13,
+            fontSize: 15,
             fontWeight: FontWeight.w400,
             color: Color(0xFF9E9EA5),
           ),
