@@ -36,7 +36,7 @@ class _DebtCardState extends State<DebtCard>
   late AnimationController _animationController;
   late Animation<double> _animation;
   double _dragOffset = 0;
-  static const double _maxDragDistance = 136;
+  static const double _maxDragDistance = 146;
   bool _internalTileExpanded = false;
 
   bool get _effectiveIsTileExpanded =>
@@ -52,17 +52,16 @@ class _DebtCardState extends State<DebtCard>
 
     _dragOffset = widget.isOpen ? -_maxDragDistance : 0;
 
-    _animation =
-        Tween<double>(begin: _dragOffset, end: _dragOffset).animate(
+    _animation = Tween<double>(begin: _dragOffset, end: _dragOffset).animate(
       CurvedAnimation(
         parent: _animationController,
         curve: Curves.easeOutCubic,
       ),
     )..addListener(() {
-            setState(() {
-              _dragOffset = _animation.value;
-            });
-          });
+        setState(() {
+          _dragOffset = _animation.value;
+        });
+      });
   }
 
   @override
@@ -101,8 +100,8 @@ class _DebtCardState extends State<DebtCard>
       widget.onOpen?.call();
     }
     setState(() {
-      _dragOffset = (_dragOffset + details.delta.dx)
-          .clamp(-_maxDragDistance, 0);
+      _dragOffset =
+          (_dragOffset + details.delta.dx).clamp(-_maxDragDistance, 0);
     });
   }
 
@@ -134,13 +133,13 @@ class _DebtCardState extends State<DebtCard>
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 5),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           // Background Slide Action Buttons (Delete & Edit)
           Positioned(
-            top: 11,
+            top: 0,
             right: 0,
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -152,33 +151,21 @@ class _DebtCardState extends State<DebtCard>
                     widget.onDelete?.call();
                   },
                   child: Container(
-                    width: 54,
-                    height: 54,
+                    width: 70,
+                    height: 70,
                     decoration: BoxDecoration(
                       color: Colors.white,
                       shape: BoxShape.circle,
-                      border: Border.all(
-                        color: const Color(0xFFF3F3F5),
-                        width: 1.2,
-                      ),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x0C000000),
-                          blurRadius: 8,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
                     ),
-                    child: const Center(
-                      child: Icon(
-                        Icons.delete_outline_rounded,
-                        color: Color(0xFFEF4444),
-                        size: 22,
+                    child: Center(
+                      child: Assets.icons.delete.svg(
+                        width: 24,
+                        height: 24,
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 3),
 
                 // Edit Button (White Circle + Pencil Edit Icon)
                 GestureDetector(
@@ -187,28 +174,16 @@ class _DebtCardState extends State<DebtCard>
                     widget.onEdit?.call();
                   },
                   child: Container(
-                    width: 54,
-                    height: 54,
+                    width: 70,
+                    height: 70,
                     decoration: BoxDecoration(
                       color: Colors.white,
                       shape: BoxShape.circle,
-                      border: Border.all(
-                        color: const Color(0xFFF3F3F5),
-                        width: 1.2,
-                      ),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x0C000000),
-                          blurRadius: 8,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
                     ),
-                    child: const Center(
-                      child: Icon(
-                        Icons.edit_outlined,
-                        color: Color(0xFF555555),
-                        size: 22,
+                    child: Center(
+                      child: Assets.icons.edit.svg(
+                        width: 24,
+                        height: 24,
                       ),
                     ),
                   ),
@@ -239,22 +214,10 @@ class _DebtCardState extends State<DebtCard>
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
                 curve: Curves.fastOutSlowIn,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.fromLTRB(5, 5, 20, 5),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(28),
-                  border: Border.all(
-                    color: const Color(0xFFF3F3F5),
-                    width: 1.2,
-                  ),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x05000000),
-                      blurRadius: 6,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
+                  borderRadius: BorderRadius.circular(32),
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -265,18 +228,18 @@ class _DebtCardState extends State<DebtCard>
                       children: [
                         // Circle Badge with Up Arrow SVG Icon
                         Container(
-                          width: 52,
-                          height: 52,
+                          width: 60,
+                          height: 60,
                           decoration: const BoxDecoration(
-                            color: Color(0xFFF2F2F5),
+                            color: Color(0xFFF2F2F2),
                             shape: BoxShape.circle,
                           ),
                           child: Center(
                             child: Assets.icons.upArrow.svg(
-                              width: 20,
-                              height: 20,
+                              width: 24,
+                              height: 24,
                               colorFilter: const ColorFilter.mode(
-                                Color(0xFF111111),
+                                Color(0xFF000000),
                                 BlendMode.srcIn,
                               ),
                             ),
@@ -295,7 +258,7 @@ class _DebtCardState extends State<DebtCard>
                                 style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
-                                  color: Color(0xFF111111),
+                                  color: Color(0xFF000000),
                                 ),
                               ),
                               const SizedBox(height: 3),
@@ -304,7 +267,7 @@ class _DebtCardState extends State<DebtCard>
                                 style: const TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w400,
-                                  color: Color(0xFF9E9EA5),
+                                  color: Color(0xFFB2B2B2),
                                 ),
                               ),
                             ],
@@ -321,7 +284,7 @@ class _DebtCardState extends State<DebtCard>
                               style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF111111),
+                                color: Color(0xFF000000),
                               ),
                             ),
                             const SizedBox(width: 4),
@@ -348,7 +311,7 @@ class _DebtCardState extends State<DebtCard>
                           : CrossFadeState.showFirst,
                       firstChild: const SizedBox.shrink(),
                       secondChild: Padding(
-                        padding: const EdgeInsets.only(top: 16),
+                        padding: const EdgeInsets.fromLTRB(20, 12, 0, 20),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -366,7 +329,7 @@ class _DebtCardState extends State<DebtCard>
                                   'The note that you want to add while transaction',
                               style: const TextStyle(
                                 fontSize: 13,
-                                fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.w400,
                                 color: Color(0xFF111111),
                               ),
                             ),
