@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
+import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
 import 'package:zenio/features/wallet/presentation/widgets/wallet_card_detail_widget.dart';
 import 'package:zenio/features/wallet/presentation/widgets/wallet_card_widget.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
@@ -184,12 +185,7 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                       return Align(
                         alignment: Alignment.topCenter,
                         child: GestureDetector(
-                          onTap: _isCardDetailExpanded ? () {
-                            setState(() {
-                              _isCardDetailExpanded = false;
-                              _pageController = null; // Forces re-initialization with _lastKnownPage
-                            });
-                          } : null,
+                          onTap: null,
                           behavior: HitTestBehavior.opaque,
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 380),
@@ -218,28 +214,16 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                         borderRadius: _isCardDetailExpanded
                             ? BorderRadius.circular(30)
                             : const BorderRadius.vertical(top: Radius.circular(30)),
-                        child: AnimatedSwitcher(
+
+                        child: AnimatedOpacity(
                           duration: const Duration(milliseconds: 380),
-                          switchInCurve: Curves.fastOutSlowIn,
-                          switchOutCurve: Curves.fastOutSlowIn,
-                          layoutBuilder: (Widget? currentChild, List<Widget> previousChildren) {
-                            return Stack(
-                              alignment: Alignment.topCenter,
-                              children: <Widget>[
-                                ...previousChildren,
-                                if (currentChild != null) currentChild,
-                              ],
-                            );
-                          },
-                          child: _isCardDetailExpanded
-                              ? cards.isNotEmpty
-                                  ? WalletCardDetailWidget(
-                                      key: const ValueKey('detail'),
-                                      card: cards[_tappedCardIndex < cards.length ? _tappedCardIndex : 0],
-                                      isFrozen: isFrozen,
-                                    )
-                                  : const SizedBox.shrink()
-                              : ListView(
+                          curve: Curves.fastOutSlowIn,
+                          opacity: _isCardDetailExpanded ? 0.0 : 1.0,
+                          child: IgnorePointer(
+                            ignoring: _isCardDetailExpanded,
+                            child: OverflowBox(
+                              maxWidth: constraints.maxWidth,
+                              child: ListView(
                                   key: const ValueKey('carousel'),
                                   padding: const EdgeInsets.fromLTRB(0, 16, 0, 0),
                                   children: [
@@ -276,16 +260,62 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                                                       ),
                                                     );
                                                   },
-                                                  child: WalletCardWidget(
-                                                    card: card,
-                                                    isFrozen: isFrozen && actualIndex == (activeIndex % cards.length),
-                                                    onTap: () {
-                                                      setState(() {
-                                                        _lastKnownPage = _pageController?.page?.round() ?? index;
-                                                        _tappedCardIndex = actualIndex;
-                                                        _isCardDetailExpanded = true;
-                                                      });
-                                                    },
+                                                  child: Padding(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 5.0),
+                                                    child: Hero(
+                                                      tag: 'wallet_hero_$index',
+                                                      flightShuttleBuilder: (flightContext, animation, flightDirection, fromHeroContext, toHeroContext) {
+                                                        final fromBox = fromHeroContext.findRenderObject() as RenderBox?;
+                                                        final toBox = toHeroContext.findRenderObject() as RenderBox?;
+                                                        debugPrint('============== HERO FLIGHT ================');
+                                                        debugPrint('Direction: $flightDirection');
+                                                        debugPrint('FROM Box: ${fromBox?.size}');
+                                                        debugPrint('TO Box: ${toBox?.size}');
+                                                        
+                                                        return LayoutBuilder(
+                                                          builder: (context, constraints) {
+                                                            debugPrint('Flight Bounds: ${constraints.maxWidth} x ${constraints.maxHeight}');
+                                                            return toHeroContext.widget;
+                                                          }
+                                                        );
+                                                      },
+                                                      child: WalletCardWidget(
+                                                        card: card,
+                                                        isFrozen: isFrozen && actualIndex == (activeIndex % cards.length),
+                                                        onTap: () {
+                                                          setState(() {
+                                                            _lastKnownPage = _pageController?.page?.round() ?? index;
+                                                            _tappedCardIndex = actualIndex;
+                                                            _isCardDetailExpanded = true;
+                                                          });
+                                                          Navigator.push(
+                                                            context,
+                                                            PageRouteBuilder(
+                                                              opaque: false,
+                                                              transitionDuration: const Duration(milliseconds: 380),
+                                                              reverseTransitionDuration: const Duration(milliseconds: 380),
+                                                              pageBuilder: (context, animation, secondaryAnimation) {
+                                                                return WalletCardDetailRoute(
+                                                                  card: card,
+                                                                  isFrozen: isFrozen && actualIndex == (activeIndex % cards.length),
+                                                                  heroTag: 'wallet_hero_$index',
+                                                                  onPop: () {
+                                                                    if (mounted) {
+                                                                      setState(() {
+                                                                        _isCardDetailExpanded = false;
+                                                                      });
+                                                                    }
+                                                                  },
+                                                                );
+                                                              },
+                                                              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                                                                return FadeTransition(opacity: animation, child: child);
+                                                              },
+                                                            ),
+                                                          );
+                                                        },
+                                                      ),
+                                                    ),
                                                   ),
                                                 );
                                               },
@@ -361,13 +391,40 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                                               width: 24,
                                               height: 24,
                                             ),
-                                            onTap: () {
-                                              setState(() {
-                                                _lastKnownPage = _pageController?.page?.round() ?? (1000 * cards.length);
-                                                _tappedCardIndex = activeIndex % cards.length;
-                                                _isCardDetailExpanded = true;
-                                              });
-                                            },
+                                              onTap: () {
+                                                final pageIndex = _pageController?.page?.round() ?? (1000 * cards.length);
+                                                final actualIndex = pageIndex % cards.length;
+                                                setState(() {
+                                                  _lastKnownPage = pageIndex;
+                                                  _tappedCardIndex = actualIndex;
+                                                  _isCardDetailExpanded = true;
+                                                });
+                                                Navigator.push(
+                                                  context,
+                                                  PageRouteBuilder(
+                                                    opaque: false,
+                                                    transitionDuration: const Duration(milliseconds: 380),
+                                                    reverseTransitionDuration: const Duration(milliseconds: 380),
+                                                    pageBuilder: (context, animation, secondaryAnimation) {
+                                                      return WalletCardDetailRoute(
+                                                        card: cards.isNotEmpty ? cards[actualIndex] : cards[0],
+                                                        isFrozen: isFrozen && actualIndex == (activeIndex % cards.length),
+                                                        heroTag: 'wallet_hero_$pageIndex',
+                                                        onPop: () {
+                                                          if (mounted) {
+                                                            setState(() {
+                                                              _isCardDetailExpanded = false;
+                                                            });
+                                                          }
+                                                        },
+                                                      );
+                                                    },
+                                                    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                                                      return FadeTransition(opacity: animation, child: child);
+                                                    },
+                                                  ),
+                                                );
+                                              },
                                           ),
                                           const SizedBox(width: 10), // Exactly 10px gap
                                           _buildActionButton(
@@ -388,8 +445,10 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                               ),
                             ),
                           ),
+                          ),
                         ),
-                      );
+                      ),
+                    );
                     },
                   ),
                 ),
@@ -452,6 +511,92 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
               overflow: TextOverflow.ellipsis,
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class WalletCardDetailRoute extends StatelessWidget {
+  const WalletCardDetailRoute({
+    required this.card,
+    required this.isFrozen,
+    required this.heroTag,
+    required this.onPop,
+    super.key,
+  });
+
+  final WalletCardModel card;
+  final bool isFrozen;
+  final String heroTag;
+  final VoidCallback onPop;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (didPop, dynamic result) {
+        if (didPop) onPop();
+      },
+      child: GestureDetector(
+        onTap: () => Navigator.pop(context),
+      behavior: HitTestBehavior.opaque,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              // Spacer matching the exact size of the header in the main screen
+              Opacity(
+                opacity: 0,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(10, 10, 10, 20),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          RichText(
+                            text: const TextSpan(
+                              children: [
+                                TextSpan(text: '₹ ', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
+                                TextSpan(text: '0', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 48), // matching profile icon height
+                    ],
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: Container(
+                    height: 365,
+                    margin: const EdgeInsets.only(top: 40, left: 24, right: 24),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(30),
+                      child: Material(
+                        type: MaterialType.transparency,
+                        child: WalletCardDetailWidget(
+                          card: card,
+                          isFrozen: isFrozen,
+                          heroTag: heroTag,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          ),
         ),
       ),
     );

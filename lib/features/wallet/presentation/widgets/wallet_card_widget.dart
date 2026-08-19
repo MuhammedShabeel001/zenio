@@ -5,14 +5,12 @@ class WalletCardWidget extends StatelessWidget {
   const WalletCardWidget({
     required this.card,
     this.isFrozen = false,
-    this.marginHorizontal = 5.0,
     this.onTap,
     super.key,
   });
 
   final WalletCardModel card;
   final bool isFrozen;
-  final double marginHorizontal;
   final VoidCallback? onTap;
 
   Color _parseColor(String hex) {
@@ -28,11 +26,12 @@ class WalletCardWidget extends StatelessWidget {
     final startColor = _parseColor(card.gradientStartHex);
     final endColor = _parseColor(card.gradientEndHex);
 
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        margin: EdgeInsets.symmetric(horizontal: marginHorizontal, vertical: 0),
+    return Material(
+      type: MaterialType.transparency,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Container(
         padding: const EdgeInsets.all(33),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
@@ -127,6 +126,7 @@ class WalletCardWidget extends StatelessWidget {
           ],
         ),
       ),
+    ),
     );
   }
 }

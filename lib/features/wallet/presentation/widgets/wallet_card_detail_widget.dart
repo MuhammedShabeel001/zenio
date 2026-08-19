@@ -5,11 +5,13 @@ import 'package:zenio/features/wallet/presentation/widgets/wallet_card_widget.da
 class WalletCardDetailWidget extends StatelessWidget {
   const WalletCardDetailWidget({
     required this.card,
+    required this.heroTag,
     this.isFrozen = false,
     super.key,
   });
 
   final WalletCardModel card;
+  final String heroTag;
   final bool isFrozen;
 
   @override
@@ -25,10 +27,13 @@ class WalletCardDetailWidget extends StatelessWidget {
           // Top Gradient Credit/Debit Card Container
           SizedBox(
             height: 184,
-            child: WalletCardWidget(
-              card: card,
-              isFrozen: isFrozen,
-              marginHorizontal: 0,
+            width: double.infinity,
+            child: Hero(
+              tag: heroTag,
+              child: WalletCardWidget(
+                card: card,
+                isFrozen: isFrozen,
+              ),
             ),
           ),
           const SizedBox(height: 22),
