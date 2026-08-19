@@ -23,6 +23,8 @@ class WalletScreenMobile extends ConsumerStatefulWidget {
 class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
   PageController? _pageController;
   bool _isCardDetailExpanded = false;
+  int _tappedCardIndex = 0;
+  int _lastKnownPage = -1;
 
   @override
   void initState() {
@@ -58,7 +60,7 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
 
     // Dynamically initialize controller to start at a clean multiple of cards.length
     if (_pageController == null && cards.isNotEmpty) {
-      final initialPage = 1000 * cards.length;
+      final initialPage = _lastKnownPage > 0 ? _lastKnownPage : 1000 * cards.length;
       _pageController =
           PageController(initialPage: initialPage, viewportFraction: 0.84);
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -176,19 +178,27 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
 
                 // Main Content Sheet (Morphing into Card Detail)
                 Expanded(
-                  child: GestureDetector(
-                    onTap: _isCardDetailExpanded ? () {
-                      setState(() {
-                        _isCardDetailExpanded = false;
-                      });
-                    } : null,
-                    behavior: HitTestBehavior.opaque,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 380),
-                      curve: Curves.fastOutSlowIn,
-                      margin: _isCardDetailExpanded
-                          ? const EdgeInsets.fromLTRB(24, 20, 24, 120) // Shrink in from edges, leave space for nav bar
-                          : EdgeInsets.zero,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final fullHeight = constraints.maxHeight;
+                      return Align(
+                        alignment: Alignment.topCenter,
+                        child: GestureDetector(
+                          onTap: _isCardDetailExpanded ? () {
+                            setState(() {
+                              _isCardDetailExpanded = false;
+                              _pageController = null; // Forces re-initialization with _lastKnownPage
+                            });
+                          } : null,
+                          behavior: HitTestBehavior.opaque,
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 380),
+                            curve: Curves.fastOutSlowIn,
+                            height: _isCardDetailExpanded ? 365 : fullHeight,
+                            width: double.infinity,
+                            margin: _isCardDetailExpanded
+                                ? const EdgeInsets.only(top: 40, left: 24, right: 24)
+                                : EdgeInsets.zero,
                       decoration: BoxDecoration(
                         color: _isCardDetailExpanded ? Colors.white : const Color(0xFFF7F7F7),
                         borderRadius: _isCardDetailExpanded
@@ -225,7 +235,7 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                               ? cards.isNotEmpty
                                   ? WalletCardDetailWidget(
                                       key: const ValueKey('detail'),
-                                      card: cards[activeIndex % cards.length],
+                                      card: cards[_tappedCardIndex < cards.length ? _tappedCardIndex : 0],
                                       isFrozen: isFrozen,
                                     )
                                   : const SizedBox.shrink()
@@ -271,6 +281,8 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                                                     isFrozen: isFrozen && actualIndex == (activeIndex % cards.length),
                                                     onTap: () {
                                                       setState(() {
+                                                        _lastKnownPage = _pageController?.page?.round() ?? index;
+                                                        _tappedCardIndex = actualIndex;
                                                         _isCardDetailExpanded = true;
                                                       });
                                                     },
@@ -351,6 +363,8 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                                             ),
                                             onTap: () {
                                               setState(() {
+                                                _lastKnownPage = _pageController?.page?.round() ?? (1000 * cards.length);
+                                                _tappedCardIndex = activeIndex % cards.length;
                                                 _isCardDetailExpanded = true;
                                               });
                                             },
@@ -371,9 +385,12 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                                     ),
                                   ],
                                 ),
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
+                      );
+                    },
                   ),
                 ),
               ],

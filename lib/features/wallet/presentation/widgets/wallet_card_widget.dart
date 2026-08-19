@@ -5,12 +5,14 @@ class WalletCardWidget extends StatelessWidget {
   const WalletCardWidget({
     required this.card,
     this.isFrozen = false,
+    this.marginHorizontal = 5.0,
     this.onTap,
     super.key,
   });
 
   final WalletCardModel card;
   final bool isFrozen;
+  final double marginHorizontal;
   final VoidCallback? onTap;
 
   Color _parseColor(String hex) {
@@ -30,7 +32,7 @@ class WalletCardWidget extends StatelessWidget {
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 0),
+        margin: EdgeInsets.symmetric(horizontal: marginHorizontal, vertical: 0),
         padding: const EdgeInsets.all(33),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
