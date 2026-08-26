@@ -146,21 +146,21 @@ class _TopSpentCardState extends State<TopSpentCard> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
         curve: Curves.fastOutSlowIn,
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        margin: const EdgeInsets.only(bottom: 5),
+        padding: const EdgeInsets.fromLTRB(5, 5, 20, 5),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(28),
-          border: Border.all(color: const Color(0xFFF3F3F5), width: 1.2),
-          boxShadow: _effectiveIsExpanded
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.03),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
-              : null,
+          borderRadius: BorderRadius.circular(32),
+          // border: Border.all(color: const Color(0xFFF3F3F5), width: 1.2),
+          //   boxShadow: _effectiveIsExpanded
+          //       ? [
+          //           BoxShadow(
+          //             color: Colors.black.withValues(alpha: 0.03),
+          //             blurRadius: 10,
+          //             offset: const Offset(0, 4),
+          //           ),
+          //         ]
+          //       : null,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -168,8 +168,8 @@ class _TopSpentCardState extends State<TopSpentCard> {
             Row(
               children: [
                 Container(
-                  width: 52,
-                  height: 52,
+                  width: 60,
+                  height: 60,
                   decoration: BoxDecoration(
                     color: _getBadgeBackgroundColor(widget.spend.name),
                     shape: BoxShape.circle,
@@ -178,7 +178,7 @@ class _TopSpentCardState extends State<TopSpentCard> {
                     child: _getIcon(widget.spend.iconName),
                   ),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 17),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -240,7 +240,8 @@ class _TopSpentCardState extends State<TopSpentCard> {
                   : CrossFadeState.showFirst,
               firstChild: const SizedBox.shrink(),
               secondChild: Padding(
-                padding: const EdgeInsets.only(top: 14),
+                padding: const EdgeInsets.fromLTRB(15, 15, 0, 10),
+                // padding: const EdgeInsets.fromLTRB(5, 5, 20, 5),
                 child: Container(
                   height: 6,
                   width: double.infinity,

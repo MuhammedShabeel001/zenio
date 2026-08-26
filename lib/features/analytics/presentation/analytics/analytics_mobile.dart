@@ -22,8 +22,7 @@ class AnalyticsScreenMobile extends ConsumerStatefulWidget {
       _AnalyticsScreenMobileState();
 }
 
-class _AnalyticsScreenMobileState
-    extends ConsumerState<AnalyticsScreenMobile> {
+class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
   String? _expandedCategoryId;
 
   String _formatWholePart(double amount) {
@@ -51,7 +50,7 @@ class _AnalyticsScreenMobileState
           children: [
             // Dark Header Section
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              padding: const EdgeInsets.fromLTRB(10, 10, 10, 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -62,7 +61,7 @@ class _AnalyticsScreenMobileState
                         const TextSpan(
                           text: '₹ ',
                           style: TextStyle(
-                            fontSize: 34,
+                            fontSize: 32,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                             letterSpacing: -0.5,
@@ -71,7 +70,7 @@ class _AnalyticsScreenMobileState
                         TextSpan(
                           text: _formatWholePart(totalBalance),
                           style: const TextStyle(
-                            fontSize: 34,
+                            fontSize: 32,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                             letterSpacing: -0.5,
@@ -82,13 +81,13 @@ class _AnalyticsScreenMobileState
                           style: const TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF7A7A80),
+                            color: Color(0xFF808080),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
 
                   // Filter Dropdown Pills Row (Week v, This Week v)
                   Row(
@@ -109,30 +108,27 @@ class _AnalyticsScreenMobileState
                 decoration: const BoxDecoration(
                   color: Color(0xFFF7F7F7),
                   borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(36),
+                    top: Radius.circular(30),
                   ),
                 ),
                 child: ClipRRect(
                   borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(36),
+                    top: Radius.circular(30),
                   ),
                   child: Stack(
                     children: [
                       ListView(
-                        padding: const EdgeInsets.fromLTRB(20, 24, 20, 110),
+                        padding: const EdgeInsets.fromLTRB(10, 16, 10, 90),
                         children: [
                           // Donut Chart Centered
                           Center(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              child: DonutChartWidget(categories: categories),
-                            ),
+                            child: DonutChartWidget(categories: categories),
                           ),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 10),
 
                           // Category Legend Grid
                           CategoryLegendWidget(categories: categories),
-                          const SizedBox(height: 28),
+                          const SizedBox(height: 20),
 
                           // Top Spent Section Header
                           Row(
@@ -141,7 +137,7 @@ class _AnalyticsScreenMobileState
                               const Text(
                                 'Top Spent',
                                 style: TextStyle(
-                                  fontSize: 22,
+                                  fontSize: 20,
                                   fontWeight: FontWeight.bold,
                                   color: Color(0xFF111111),
                                   letterSpacing: -0.3,
@@ -183,7 +179,8 @@ class _AnalyticsScreenMobileState
                             )
                           else
                             ...categories.map((spend) {
-                              final isExpanded = _expandedCategoryId == spend.id;
+                              final isExpanded =
+                                  _expandedCategoryId == spend.id;
                               return TopSpentCard(
                                 spend: spend,
                                 isExpanded: isExpanded,
@@ -229,14 +226,10 @@ class _AnalyticsScreenMobileState
 
   Widget _buildFilterPill({required String label}) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: const Color(0xFF19191B),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: const Color(0xFF2C2C2E),
-          width: 0.8,
-        ),
+        color: const Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.circular(30),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -244,19 +237,15 @@ class _AnalyticsScreenMobileState
           Text(
             label,
             style: const TextStyle(
-              fontSize: 13,
+              fontSize: 14,
               fontWeight: FontWeight.w500,
               color: Color(0xFFD1D1D6),
             ),
           ),
           const SizedBox(width: 8),
           Assets.icons.dropDown.svg(
-            width: 14,
-            height: 14,
-            colorFilter: const ColorFilter.mode(
-              Color(0xFF8E8E93),
-              BlendMode.srcIn,
-            ),
+            width: 24,
+            height: 24,
           ),
         ],
       ),
