@@ -1,11 +1,10 @@
+import 'package:zenio/shared/providers/providers.dart';
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zenio/features/vault/domain/models/vault_card_model.dart';
 import 'package:zenio/features/vault/domain/models/vault_note_model.dart';
 import 'package:zenio/features/vault/domain/repositories/interfaces/i_vault_repository.dart';
-import 'package:zenio/shared/providers/shared_prefs_provider/shared_prefs_provider.dart';
 
 part 'vault_repository.g.dart';
 
@@ -31,7 +30,7 @@ const List<VaultNoteModel> defaultVaultNotes = [
 class VaultRepository implements IVaultRepository {
   VaultRepository(this._prefs);
 
-  final SharedPreferences? _prefs;
+  final SqlitePrefs? _prefs;
 
   static const String _cardsKey = 'vault_cards_list_v1';
   static const String _notesKey = 'vault_notes_list_v1';
@@ -97,7 +96,7 @@ class VaultRepository implements IVaultRepository {
 
 @Riverpod(keepAlive: true)
 IVaultRepository vaultRepositoryRepo(Ref ref) {
-  final prefsAsync = ref.watch(sharedPrefsProvider);
+  final prefsAsync = ref.watch(sqlitePrefsProvider);
   final prefs = prefsAsync.valueOrNull;
   return VaultRepository(prefs);
 }

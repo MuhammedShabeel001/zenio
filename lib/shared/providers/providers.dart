@@ -7,5 +7,6 @@ export 'ip_config_provider/ip_config_provider.dart';
 export 'locale_provider/locale_provider.dart';
 export 'pdf_platform_provider/pdf_platform_provider.dart';
 export 'router_provider/router_provider.dart';
-export 'shared_prefs_provider/shared_prefs_provider.dart';
 export 'theme_provider/theme_provider.dart';
+export 'package:zenio/shared/services/local_database_service.dart';
+export 'package:zenio/shared/services/sqlite_prefs.dart';

@@ -1,10 +1,9 @@
+import 'package:zenio/shared/providers/providers.dart';
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zenio/features/split/domain/models/split_calculation_model.dart';
 import 'package:zenio/features/split/domain/repositories/interfaces/i_split_repository.dart';
-import 'package:zenio/shared/providers/shared_prefs_provider/shared_prefs_provider.dart';
 
 part 'split_repository.g.dart';
 
@@ -18,7 +17,7 @@ const SplitCalculationModel defaultSplitData = SplitCalculationModel(
 class SplitRepository implements ISplitRepository {
   SplitRepository(this._prefs);
 
-  final SharedPreferences? _prefs;
+  final SqlitePrefs? _prefs;
 
   static const String _splitKey = 'split_calculation_data_v1';
 
@@ -51,7 +50,7 @@ class SplitRepository implements ISplitRepository {
 
 @Riverpod(keepAlive: true)
 ISplitRepository splitRepositoryRepo(Ref ref) {
-  final prefsAsync = ref.watch(sharedPrefsProvider);
+  final prefsAsync = ref.watch(sqlitePrefsProvider);
   final prefs = prefsAsync.valueOrNull;
   return SplitRepository(prefs);
 }

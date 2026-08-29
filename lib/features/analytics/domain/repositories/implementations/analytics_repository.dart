@@ -1,17 +1,16 @@
+import 'package:zenio/shared/providers/providers.dart';
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zenio/features/analytics/domain/models/category_spend/category_spend_model.dart';
 import 'package:zenio/features/analytics/domain/repositories/interfaces/i_analytics_repository.dart';
-import 'package:zenio/shared/providers/shared_prefs_provider/shared_prefs_provider.dart';
 
 part 'analytics_repository.g.dart';
 
 class AnalyticsRepository implements IAnalyticsRepository {
   AnalyticsRepository(this._prefs);
 
-  final SharedPreferences _prefs;
+  final SqlitePrefs _prefs;
 
   static const String _balanceKey = 'analytics_balance';
   static const String _spendsKey = 'analytics_category_spends';
@@ -109,10 +108,10 @@ class AnalyticsRepository implements IAnalyticsRepository {
 
 @Riverpod(keepAlive: true)
 IAnalyticsRepository analyticsRepositoryRepo(Ref ref) {
-  final prefsAsync = ref.watch(sharedPrefsProvider);
+  final prefsAsync = ref.watch(sqlitePrefsProvider);
   final prefs = prefsAsync.valueOrNull;
   if (prefs == null) {
-    throw Exception('SharedPreferences not initialized yet');
+    throw Exception('SqlitePrefs not initialized yet');
   }
   return AnalyticsRepository(prefs);
 }

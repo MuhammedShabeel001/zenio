@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:zenio/features/transactions/domain/models/transaction_detail_model.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
+import 'package:zenio/shared/utils/datetime.dart';
 
 class TransactionDetailCard extends StatefulWidget {
   const TransactionDetailCard({
@@ -276,7 +277,7 @@ class _TransactionDetailCardState extends State<TransactionDetailCard>
                               ),
                               const SizedBox(height: 3),
                               Text(
-                                widget.transaction.date,
+                                widget.transaction.date.toRelativeDate,
                                 style: const TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w400,

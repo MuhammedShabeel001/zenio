@@ -1,10 +1,9 @@
+import 'package:zenio/shared/providers/providers.dart';
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zenio/features/subscriptions/domain/models/subscription_model.dart';
 import 'package:zenio/features/subscriptions/domain/repositories/interfaces/i_subscriptions_repository.dart';
-import 'package:zenio/shared/providers/shared_prefs_provider/shared_prefs_provider.dart';
 
 part 'subscriptions_repository.g.dart';
 
@@ -86,7 +85,7 @@ const List<SubscriptionModel> defaultSubscriptionsList = [
 class SubscriptionsRepository implements ISubscriptionsRepository {
   SubscriptionsRepository(this._prefs);
 
-  final SharedPreferences? _prefs;
+  final SqlitePrefs? _prefs;
 
   static const String _balanceKey = 'subscriptions_page_balance_v3';
   static const String _subscriptionsKey = 'subscriptions_list_key_v3';
@@ -139,7 +138,7 @@ class SubscriptionsRepository implements ISubscriptionsRepository {
 
 @Riverpod(keepAlive: true)
 ISubscriptionsRepository subscriptionsRepositoryRepo(Ref ref) {
-  final prefsAsync = ref.watch(sharedPrefsProvider);
+  final prefsAsync = ref.watch(sqlitePrefsProvider);
   final prefs = prefsAsync.valueOrNull;
   return SubscriptionsRepository(prefs);
 }

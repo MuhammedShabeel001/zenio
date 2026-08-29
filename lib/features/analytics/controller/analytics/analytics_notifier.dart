@@ -1,3 +1,4 @@
+import 'package:zenio/shared/providers/providers.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:zenio/features/analytics/domain/models/category_spend/category_spend_model.dart';
@@ -18,7 +19,7 @@ class AnalyticsNotifier extends _$AnalyticsNotifier {
       _analyticsRepository = ref.watch(analyticsRepositoryRepoProvider);
       Future.microtask(loadAnalyticsData);
     } catch (_) {
-      // SharedPreferences async handling
+      // SqlitePrefs async handling
     }
 
     return AnalyticsState.initial();

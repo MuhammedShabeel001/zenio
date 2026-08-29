@@ -1,10 +1,9 @@
+import 'package:zenio/shared/providers/providers.dart';
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zenio/features/debts/domain/models/debt_model.dart';
 import 'package:zenio/features/debts/domain/repositories/interfaces/i_debts_repository.dart';
-import 'package:zenio/shared/providers/shared_prefs_provider/shared_prefs_provider.dart';
 
 part 'debts_repository.g.dart';
 
@@ -68,7 +67,7 @@ const List<DebtModel> defaultDebtsList = [
 class DebtsRepository implements IDebtsRepository {
   DebtsRepository(this._prefs);
 
-  final SharedPreferences? _prefs;
+  final SqlitePrefs? _prefs;
 
   static const String _balanceKey = 'debts_page_balance_v1';
   static const String _debtsKey = 'debts_list_key_v1';
@@ -118,7 +117,7 @@ class DebtsRepository implements IDebtsRepository {
 
 @Riverpod(keepAlive: true)
 IDebtsRepository debtsRepositoryRepo(Ref ref) {
-  final prefsAsync = ref.watch(sharedPrefsProvider);
+  final prefsAsync = ref.watch(sqlitePrefsProvider);
   final prefs = prefsAsync.valueOrNull;
   return DebtsRepository(prefs);
 }

@@ -1,17 +1,16 @@
+import 'package:zenio/shared/providers/providers.dart';
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zenio/features/settings/domain/models/settings_model.dart';
 import 'package:zenio/features/settings/domain/repositories/interfaces/i_settings_repository.dart';
-import 'package:zenio/shared/providers/shared_prefs_provider/shared_prefs_provider.dart';
 
 part 'settings_repository.g.dart';
 
 class SettingsRepository implements ISettingsRepository {
   SettingsRepository(this._prefs);
 
-  final SharedPreferences _prefs;
+  final SqlitePrefs _prefs;
 
   static const String _settingsKey = 'app_user_settings';
 
@@ -52,10 +51,10 @@ class SettingsRepository implements ISettingsRepository {
 
 @Riverpod(keepAlive: true)
 ISettingsRepository settingsRepositoryRepo(Ref ref) {
-  final prefsAsync = ref.watch(sharedPrefsProvider);
+  final prefsAsync = ref.watch(sqlitePrefsProvider);
   final prefs = prefsAsync.valueOrNull;
   if (prefs == null) {
-    throw Exception('SharedPreferences not initialized yet');
+    throw Exception('SqlitePrefs not initialized yet');
   }
   return SettingsRepository(prefs);
 }

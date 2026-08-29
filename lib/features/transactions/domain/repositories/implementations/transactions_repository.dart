@@ -1,22 +1,22 @@
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zenio/features/transactions/domain/models/transaction_detail_model.dart';
 import 'package:zenio/features/transactions/domain/repositories/interfaces/i_transactions_repository.dart';
-import 'package:zenio/shared/providers/shared_prefs_provider/shared_prefs_provider.dart';
+import 'package:zenio/shared/services/local_database_service.dart';
+import 'package:zenio/shared/providers/providers.dart';
 
 part 'transactions_repository.g.dart';
 
 const List<TransactionDetailModel> defaultTransactionsList = [];
 
 class TransactionsRepository implements ITransactionsRepository {
-  TransactionsRepository(this._prefs);
+  TransactionsRepository(this._prefs, this._dbService);
 
-  final SharedPreferences? _prefs;
+  final SqlitePrefs? _prefs;
+  final LocalDatabaseService _dbService;
 
   static const String _balanceKey = 'transactions_page_balance_v4';
-  static const String _transactionsKey = 'app_unified_transactions_v1';
 
   @override
   Future<double> getTransactionsBalance() async {
@@ -33,20 +33,16 @@ class TransactionsRepository implements ITransactionsRepository {
 
   @override
   Future<List<TransactionDetailModel>> getTransactions() async {
-    final prefs = _prefs;
-    if (prefs == null) return defaultTransactionsList;
-
-    final rawJsonList = prefs.getStringList(_transactionsKey);
-    if (rawJsonList != null && rawJsonList.isNotEmpty) {
-      try {
-        return rawJsonList.map((item) {
-          final map = jsonDecode(item) as Map<String, dynamic>;
-          return TransactionDetailModel.fromJson(map);
+    try {
+      final maps = await _dbService.getTransactionsMap();
+      if (maps.isNotEmpty) {
+        return maps.map((map) {
+          final modMap = Map<String, dynamic>.from(map);
+          modMap['is_income'] = (modMap['is_income'] as int) == 1;
+          return TransactionDetailModel.fromJson(modMap);
         }).toList();
-      } catch (_) {
-        // Fallback to default
       }
-    }
+    } catch (_) {}
 
     await saveTransactions(defaultTransactionsList);
     return defaultTransactionsList;
@@ -56,11 +52,12 @@ class TransactionsRepository implements ITransactionsRepository {
   Future<void> saveTransactions(
     List<TransactionDetailModel> transactions,
   ) async {
-    final prefs = _prefs;
-    if (prefs == null) return;
-    final jsonList =
-        transactions.map((item) => jsonEncode(item.toJson())).toList();
-    await prefs.setStringList(_transactionsKey, jsonList);
+    final maps = transactions.map((item) {
+      final map = item.toJson();
+      map['is_income'] = (map['is_income'] as bool) ? 1 : 0;
+      return map;
+    }).toList();
+    await _dbService.saveTransactionsList(maps);
   }
 
   @override
@@ -73,7 +70,8 @@ class TransactionsRepository implements ITransactionsRepository {
 
 @Riverpod(keepAlive: true)
 ITransactionsRepository transactionsRepositoryRepo(Ref ref) {
-  final prefsAsync = ref.watch(sharedPrefsProvider);
+  final prefsAsync = ref.watch(sqlitePrefsProvider);
+  final dbService = ref.watch(localDatabaseServiceProvider);
   final prefs = prefsAsync.valueOrNull;
-  return TransactionsRepository(prefs);
+  return TransactionsRepository(prefs, dbService);
 }

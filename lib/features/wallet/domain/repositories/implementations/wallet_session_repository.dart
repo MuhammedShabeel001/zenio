@@ -1,18 +1,17 @@
+import 'package:zenio/shared/providers/providers.dart';
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zenio/features/wallet/domain/models/wallet_session_model.dart';
 import 'package:zenio/features/wallet/domain/repositories/interfaces/i_wallet_session_repository.dart';
-import 'package:zenio/shared/providers/shared_prefs_provider/shared_prefs_provider.dart';
 
 part 'wallet_session_repository.g.dart';
 
 class WalletSessionRepository implements IWalletSessionRepository {
   WalletSessionRepository(this._prefs);
 
-  final SharedPreferences? _prefs;
+  final SqlitePrefs? _prefs;
 
   static const String _storageKey = 'wallet_sessions_list_v1';
 
@@ -111,7 +110,7 @@ class WalletSessionRepository implements IWalletSessionRepository {
 
 @Riverpod(keepAlive: true)
 IWalletSessionRepository walletSessionRepositoryRepo(Ref ref) {
-  final prefsAsync = ref.watch(sharedPrefsProvider);
+  final prefsAsync = ref.watch(sqlitePrefsProvider);
   final prefs = prefsAsync.valueOrNull;
   return WalletSessionRepository(prefs);
 }

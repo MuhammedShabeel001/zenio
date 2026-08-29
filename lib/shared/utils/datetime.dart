@@ -37,6 +37,29 @@ extension DateExtension on String {
       DateTimeUtils.apiDateFormatWithoutMilliSecond.parse(this);
 }
 
+extension RelativeDateExtension on String {
+  String get toRelativeDate {
+    try {
+      // Handle the 'dd-MM-yyyy' format used in transactions
+      final date = DateFormat('dd-MM-yyyy').parse(this);
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final yesterday = today.subtract(const Duration(days: 1));
+      final dateToCheck = DateTime(date.year, date.month, date.day);
+
+      if (dateToCheck == today) {
+        return 'Today';
+      } else if (dateToCheck == yesterday) {
+        return 'Yesterday';
+      } else {
+        return this; // Return original if not today or yesterday
+      }
+    } catch (e) {
+      return this; // Fallback to original string if parsing fails
+    }
+  }
+}
+
 extension DateTimeExtension on DateTime {
   String get toFullFormat => DateTimeUtils.fullDateFormat.format(this);
   String get toPdfFullFormat => DateTimeUtils.pdfFullFormat.format(this);

@@ -1,21 +1,21 @@
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zenio/features/home/domain/models/summary/financial_summary_model.dart';
 import 'package:zenio/features/home/domain/models/transaction/transaction_model.dart';
 import 'package:zenio/features/home/domain/repositories/interfaces/money_tracker/i_money_tracker_repository.dart';
-import 'package:zenio/shared/providers/shared_prefs_provider/shared_prefs_provider.dart';
+import 'package:zenio/shared/services/local_database_service.dart';
+import 'package:zenio/shared/providers/providers.dart';
 
 part 'money_tracker_repository.g.dart';
 
 class MoneyTrackerRepository implements IMoneyTrackerRepository {
-  MoneyTrackerRepository(this._prefs);
+  MoneyTrackerRepository(this._prefs, this._dbService);
 
-  final SharedPreferences _prefs;
+  final SqlitePrefs _prefs;
+  final LocalDatabaseService _dbService;
 
   static const String _summaryKey = 'money_tracker_summary_v2';
-  static const String _transactionsKey = 'app_unified_transactions_v1';
 
   @override
   Future<FinancialSummaryModel> getSummary() async {
@@ -43,17 +43,17 @@ class MoneyTrackerRepository implements IMoneyTrackerRepository {
 
   @override
   Future<List<TransactionModel>> getTransactions() async {
-    final rawJsonList = _prefs.getStringList(_transactionsKey);
-    if (rawJsonList != null && rawJsonList.isNotEmpty) {
-      try {
-        return rawJsonList.map((item) {
-          final map = jsonDecode(item) as Map<String, dynamic>;
-          return TransactionModel.fromJson(map);
+    try {
+      final maps = await _dbService.getTransactionsMap();
+      if (maps.isNotEmpty) {
+        return maps.map((map) {
+          // SQL boolean is stored as integer (1/0)
+          final modMap = Map<String, dynamic>.from(map);
+          modMap['is_income'] = (modMap['is_income'] as int) == 1;
+          return TransactionModel.fromJson(modMap);
         }).toList();
-      } catch (_) {
-        // Fallback to initial default data on decode error
       }
-    }
+    } catch (_) {}
 
     final defaultTransactions = <TransactionModel>[];
     await saveTransactions(defaultTransactions);
@@ -67,18 +67,22 @@ class MoneyTrackerRepository implements IMoneyTrackerRepository {
 
   @override
   Future<void> saveTransactions(List<TransactionModel> transactions) async {
-    final jsonList =
-        transactions.map((tx) => jsonEncode(tx.toJson())).toList();
-    await _prefs.setStringList(_transactionsKey, jsonList);
+    final maps = transactions.map((tx) {
+      final map = tx.toJson();
+      map['is_income'] = (map['is_income'] as bool) ? 1 : 0;
+      return map;
+    }).toList();
+    await _dbService.saveTransactionsList(maps);
   }
 }
 
 @Riverpod(keepAlive: true)
 IMoneyTrackerRepository moneyTrackerRepositoryRepo(Ref ref) {
-  final prefsAsync = ref.watch(sharedPrefsProvider);
+  final prefsAsync = ref.watch(sqlitePrefsProvider);
+  final dbService = ref.watch(localDatabaseServiceProvider);
   final prefs = prefsAsync.valueOrNull;
   if (prefs == null) {
-    throw Exception('SharedPreferences not initialized yet');
+    throw Exception('SqlitePrefs not initialized yet');
   }
-  return MoneyTrackerRepository(prefs);
+  return MoneyTrackerRepository(prefs, dbService);
 }

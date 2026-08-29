@@ -1,4 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:zenio/features/home/controller/home/home_notifier.dart';
+// import 'package:zenio/features/home/controller/home/home_state.dart';
 import 'package:zenio/features/transactions/controller/transactions/transactions_state.dart';
 import 'package:zenio/features/transactions/domain/models/transaction_detail_model.dart';
 import 'package:zenio/features/transactions/domain/repositories/implementations/transactions_repository.dart';
@@ -9,27 +11,47 @@ part 'transactions_notifier.g.dart';
 class TransactionsNotifier extends _$TransactionsNotifier {
   @override
   TransactionsState build() {
-    _loadData();
-    return TransactionsState.initial();
-  }
+    ref.listen(homeNotifierProvider, (previous, next) {
+      if (next.status == HomeStatus.success) {
+        final list = next.transactions.map((t) => TransactionDetailModel(
+          id: t.id,
+          title: t.title,
+          date: t.date,
+          amount: t.amount,
+          isIncome: t.isIncome,
+          currency: t.currency,
+          note: t.note,
+          bankName: t.bankName,
+          timestamp: t.timestamp,
+        )).toList();
+        state = state.copyWith(
+          totalBalance: next.summary?.totalBalance ?? 23678.01,
+          transactions: list,
+          isLoading: false,
+        );
+      }
+    });
 
-  Future<void> _loadData() async {
-    state = state.copyWith(isLoading: true);
-    try {
-      final repo = ref.read(transactionsRepositoryRepoProvider);
-      final balance = await repo.getTransactionsBalance();
-      final list = await repo.getTransactions();
-      state = state.copyWith(
-        totalBalance: balance,
-        transactions: list,
-        isLoading: false,
-      );
-    } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        errorMessage: e.toString(),
-      );
-    }
+    final homeState = ref.read(homeNotifierProvider);
+    final list = homeState.transactions.map((t) => TransactionDetailModel(
+      id: t.id,
+      title: t.title,
+      date: t.date,
+      amount: t.amount,
+      isIncome: t.isIncome,
+      currency: t.currency,
+      note: t.note,
+      bankName: t.bankName,
+      timestamp: t.timestamp,
+    )).toList();
+
+    return TransactionsState(
+      totalBalance: homeState.summary?.totalBalance ?? 23678.01,
+      transactions: list,
+      isLoading: homeState.status == HomeStatus.loading,
+      selectedPeriod: 'This week',
+      selectedTimeframe: 'Month',
+    );
   }
 
   void updatePeriod(String period) {
@@ -41,47 +63,12 @@ class TransactionsNotifier extends _$TransactionsNotifier {
   }
 
   Future<void> deleteTransaction(String id) async {
-    final target = state.transactions.firstWhere(
-      (tx) => tx.id == id,
-      orElse: () => const TransactionDetailModel(
-        id: '',
-        title: '',
-        date: '',
-        amount: 0,
-        isIncome: false,
-        currency: 'INR',
-      ),
-    );
-    if (target.id.isEmpty) return;
-
-    final updatedTxs = state.transactions.where((tx) => tx.id != id).toList();
-    final repo = ref.read(transactionsRepositoryRepoProvider);
-    await repo.saveTransactions(updatedTxs);
-
-    final newBalance = target.isIncome
-        ? state.totalBalance - target.amount
-        : state.totalBalance + target.amount;
-
-    state = state.copyWith(
-      totalBalance: newBalance,
-      transactions: updatedTxs,
-    );
+    await ref.read(homeNotifierProvider.notifier).deleteTransaction(id);
   }
 
   Future<void> addTransaction(TransactionDetailModel tx) async {
-    final updatedTxs = [tx, ...state.transactions];
-    final repo = ref.read(transactionsRepositoryRepoProvider);
-    await repo.saveTransactions(updatedTxs);
-
-    final newBalance = tx.isIncome
-        ? state.totalBalance + tx.amount
-        : state.totalBalance - tx.amount;
-
-    await repo.saveTransactionsBalance(newBalance);
-
-    state = state.copyWith(
-      totalBalance: newBalance,
-      transactions: updatedTxs,
-    );
+    // Only required because AddTransactionBottomSheet uses both providers temporarily
+    // but in reality we only need to call homeNotifierProvider.
+    // For safety against double-saving, we will rely on homeNotifierProvider directly.
   }
 }

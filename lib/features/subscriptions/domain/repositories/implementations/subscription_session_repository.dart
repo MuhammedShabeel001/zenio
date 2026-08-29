@@ -1,17 +1,16 @@
+import 'package:zenio/shared/providers/providers.dart';
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zenio/features/subscriptions/domain/models/subscription_session_model.dart';
 import 'package:zenio/features/subscriptions/domain/repositories/interfaces/i_subscription_session_repository.dart';
-import 'package:zenio/shared/providers/shared_prefs_provider/shared_prefs_provider.dart';
 
 part 'subscription_session_repository.g.dart';
 
 class SubscriptionSessionRepository implements ISubscriptionSessionRepository {
   SubscriptionSessionRepository(this._prefs);
 
-  final SharedPreferences? _prefs;
+  final SqlitePrefs? _prefs;
 
   static const String _storageKey = 'subscription_sessions_list_v1';
 
@@ -91,7 +90,7 @@ class SubscriptionSessionRepository implements ISubscriptionSessionRepository {
 
 @Riverpod(keepAlive: true)
 ISubscriptionSessionRepository subscriptionSessionRepositoryRepo(Ref ref) {
-  final prefsAsync = ref.watch(sharedPrefsProvider);
+  final prefsAsync = ref.watch(sqlitePrefsProvider);
   final prefs = prefsAsync.valueOrNull;
   return SubscriptionSessionRepository(prefs);
 }

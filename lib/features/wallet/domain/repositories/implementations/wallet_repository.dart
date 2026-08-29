@@ -1,17 +1,16 @@
+import 'package:zenio/shared/providers/providers.dart';
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
 import 'package:zenio/features/wallet/domain/repositories/interfaces/i_wallet_repository.dart';
-import 'package:zenio/shared/providers/shared_prefs_provider/shared_prefs_provider.dart';
 
 part 'wallet_repository.g.dart';
 
 class WalletRepository implements IWalletRepository {
   WalletRepository(this._prefs);
 
-  final SharedPreferences _prefs;
+  final SqlitePrefs _prefs;
 
   static const String _balanceKey = 'wallet_card_balance';
   static const String _cardsKey = 'wallet_cards_list';
@@ -101,10 +100,10 @@ class WalletRepository implements IWalletRepository {
 
 @Riverpod(keepAlive: true)
 IWalletRepository walletRepositoryRepo(Ref ref) {
-  final prefsAsync = ref.watch(sharedPrefsProvider);
+  final prefsAsync = ref.watch(sqlitePrefsProvider);
   final prefs = prefsAsync.valueOrNull;
   if (prefs == null) {
-    throw Exception('SharedPreferences not initialized yet');
+    throw Exception('SqlitePrefs not initialized yet');
   }
   return WalletRepository(prefs);
 }

@@ -1,3 +1,4 @@
+import 'package:zenio/shared/providers/providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hancod_theme/hancod_theme.dart';
@@ -24,7 +25,7 @@ class App extends ConsumerWidget {
     // This is to load initial country settings, sharedPrefs
     ref
       ..watch(ipConfigProvider)
-      ..watch(sharedPrefsProvider);
+      ..watch(sqlitePrefsProvider);
     return MaterialApp.router(
       routerConfig: appRouter.router,
       debugShowCheckedModeBanner: false,

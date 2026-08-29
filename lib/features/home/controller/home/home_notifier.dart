@@ -1,3 +1,4 @@
+import 'package:zenio/shared/providers/providers.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:zenio/features/home/home.dart';
@@ -19,7 +20,7 @@ class HomeNotifier extends _$HomeNotifier {
       _moneyTrackerRepository = ref.watch(moneyTrackerRepositoryRepoProvider);
       Future.microtask(loadMoneyTrackerData);
     } catch (_) {
-      // Handles async initialization of SharedPreferences
+      // Handles async initialization of SqlitePrefs
     }
 
     return HomeState.initial();

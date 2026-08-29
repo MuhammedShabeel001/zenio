@@ -1,3 +1,4 @@
+import 'package:zenio/shared/providers/providers.dart';
 import 'package:flutter/material.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:zenio/shared/shared.dart';
@@ -10,12 +11,12 @@ class LocaleNotifier extends _$LocaleNotifier {
   Locale build() {
     listenSelf((previous, next) {
       ref
-          .read(sharedPrefsProvider)
+          .read(sqlitePrefsProvider)
           .value
           ?.setString('locale', next.languageCode);
     });
     return Locale(
-      ref.watch(sharedPrefsProvider).value?.getString('locale') ?? 'en',
+      ref.watch(sqlitePrefsProvider).value?.getString('locale') ?? 'en',
     );
   }
 }

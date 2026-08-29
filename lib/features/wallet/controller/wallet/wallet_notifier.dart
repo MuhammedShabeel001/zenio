@@ -1,3 +1,4 @@
+import 'package:zenio/shared/providers/providers.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
@@ -18,7 +19,7 @@ class WalletNotifier extends _$WalletNotifier {
       _walletRepository = ref.watch(walletRepositoryRepoProvider);
       Future.microtask(loadWalletData);
     } catch (_) {
-      // SharedPreferences async handling
+      // SqlitePrefs async handling
     }
 
     return WalletState.initial();
