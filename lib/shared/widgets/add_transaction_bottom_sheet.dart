@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:zenio/features/home/controller/home/home_notifier.dart';
+import 'package:zenio/features/home/domain/models/transaction/transaction_model.dart';
+import 'package:zenio/features/transactions/controller/transactions/transactions_notifier.dart';
+import 'package:zenio/features/transactions/domain/models/transaction_detail_model.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 
 enum TransactionType { expense, income, transfer }
 
-class AddTransactionBottomSheet extends StatefulWidget {
+class AddTransactionBottomSheet extends ConsumerStatefulWidget {
   const AddTransactionBottomSheet({super.key});
 
   static Future<void> show(BuildContext context) {
@@ -22,17 +27,17 @@ class AddTransactionBottomSheet extends StatefulWidget {
   }
 
   @override
-  State<AddTransactionBottomSheet> createState() =>
+  ConsumerState<AddTransactionBottomSheet> createState() =>
       _AddTransactionBottomSheetState();
 }
 
-class _AddTransactionBottomSheetState extends State<AddTransactionBottomSheet> {
+class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottomSheet> {
   TransactionType _selectedType = TransactionType.expense;
 
   late TextEditingController _amountController;
   late TextEditingController _noteController;
 
-  DateTime _selectedDate = DateTime(2026, 7, 14);
+  DateTime _selectedDate = DateTime.now();
   String _sourceWallet = 'Slice';
   String _destinationWallet = 'SBI';
   String? _selectedCategory;
@@ -475,6 +480,46 @@ class _AddTransactionBottomSheetState extends State<AddTransactionBottomSheet> {
               height: 60,
               child: ElevatedButton(
                 onPressed: () {
+                  final amount = double.tryParse(_amountController.text) ?? 0.0;
+                  final note = _noteController.text.trim();
+                  final title = _selectedType == TransactionType.transfer
+                      ? 'Transfer to $_destinationWallet'
+                      : (_selectedCategory ?? 'Transaction');
+                  
+                  final isIncome = _selectedType == TransactionType.income;
+                  final formattedDate = DateFormat('dd-MM-yyyy').format(_selectedDate);
+                  final timeString = DateFormat('HH : mm').format(DateTime.now());
+                  final timestamp = '${DateFormat('yy-MM-dd').format(_selectedDate)}   $timeString';
+                  final bankName = _sourceWallet;
+
+                  final id = DateTime.now().millisecondsSinceEpoch.toString();
+
+                  final txDetail = TransactionDetailModel(
+                    id: id,
+                    title: title,
+                    date: formattedDate,
+                    amount: amount,
+                    isIncome: isIncome,
+                    currency: 'INR',
+                    note: note.isNotEmpty ? note : null,
+                    bankName: bankName,
+                    timestamp: timestamp,
+                  );
+
+                  final txHome = TransactionModel(
+                    id: id,
+                    title: title,
+                    date: formattedDate,
+                    amount: amount,
+                    isIncome: isIncome,
+                    currency: 'INR',
+                    note: note.isNotEmpty ? note : null,
+                    bankName: bankName,
+                    timestamp: timestamp,
+                  );
+
+                  ref.read(transactionsNotifierProvider.notifier).addTransaction(txDetail);
+                  ref.read(homeNotifierProvider.notifier).addTransaction(txHome);
                   Navigator.of(context).pop();
                 },
                 style: ElevatedButton.styleFrom(

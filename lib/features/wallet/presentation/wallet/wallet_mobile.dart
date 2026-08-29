@@ -225,6 +225,7 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                               maxWidth: constraints.maxWidth,
                               child: ListView(
                                   key: const ValueKey('carousel'),
+                                  physics: const NeverScrollableScrollPhysics(),
                                   padding: const EdgeInsets.fromLTRB(0, 16, 0, 0),
                                   children: [
                                     // Card Carousel PageView

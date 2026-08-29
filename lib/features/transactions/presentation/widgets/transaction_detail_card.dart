@@ -328,31 +328,32 @@ class _TransactionDetailCardState extends State<TransactionDetailCard>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'Note :',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w400,
-                                color: Color(0xFF8E8E93),
+                            if (widget.note != null && widget.note!.isNotEmpty) ...[
+                              const Text(
+                                'Note :',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w400,
+                                  color: Color(0xFF8E8E93),
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              widget.note ??
-                                  'The note that you want to add while transaction',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                color: Color(0xFF000000),
+                              const SizedBox(height: 4),
+                              Text(
+                                widget.note!,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xFF000000),
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 16),
-                            const Divider(
-                              color: Color(0xFFE5E5E5),
-                              height: 1,
-                              thickness: 1,
-                            ),
-                            const SizedBox(height: 12),
+                              const SizedBox(height: 16),
+                              const Divider(
+                                color: Color(0xFFE5E5E5),
+                                height: 1,
+                                thickness: 1,
+                              ),
+                              const SizedBox(height: 12),
+                            ],
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [

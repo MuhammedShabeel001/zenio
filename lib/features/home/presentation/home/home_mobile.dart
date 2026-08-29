@@ -478,6 +478,9 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                                       },
                                       onDelete: () {
                                         notifier.deleteTransaction(tx.id);
+                                        ref
+                                            .read(transactionsNotifierProvider.notifier)
+                                            .deleteTransaction(tx.id);
                                       },
                                       onEdit: () {
                                         AddTransactionBottomSheet.show(context);

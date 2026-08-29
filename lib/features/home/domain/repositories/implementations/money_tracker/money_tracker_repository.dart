@@ -14,8 +14,8 @@ class MoneyTrackerRepository implements IMoneyTrackerRepository {
 
   final SharedPreferences _prefs;
 
-  static const String _summaryKey = 'money_tracker_summary';
-  static const String _transactionsKey = 'money_tracker_transactions';
+  static const String _summaryKey = 'money_tracker_summary_v2';
+  static const String _transactionsKey = 'app_unified_transactions_v1';
 
   @override
   Future<FinancialSummaryModel> getSummary() async {
@@ -55,40 +55,7 @@ class MoneyTrackerRepository implements IMoneyTrackerRepository {
       }
     }
 
-    final defaultTransactions = [
-      const TransactionModel(
-        id: '1',
-        title: 'Salary Payment',
-        date: 'Today',
-        amount: 120000,
-        currency: 'INR',
-        isIncome: true,
-      ),
-      const TransactionModel(
-        id: '2',
-        title: 'Food',
-        date: 'Today',
-        amount: 120,
-        currency: 'INR',
-        isIncome: false,
-      ),
-      const TransactionModel(
-        id: '3',
-        title: 'EMI Payment',
-        date: 'Yesterday',
-        amount: 760,
-        currency: 'INR',
-        isIncome: false,
-      ),
-      const TransactionModel(
-        id: '4',
-        title: 'Petrol',
-        date: '20-05-2026',
-        amount: 180,
-        currency: 'INR',
-        isIncome: false,
-      ),
-    ];
+    final defaultTransactions = <TransactionModel>[];
     await saveTransactions(defaultTransactions);
     return defaultTransactions;
   }

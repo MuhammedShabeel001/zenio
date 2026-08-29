@@ -4,4 +4,5 @@ abstract class ITransactionsRepository {
   Future<double> getTransactionsBalance();
   Future<List<TransactionDetailModel>> getTransactions();
   Future<void> saveTransactions(List<TransactionDetailModel> transactions);
+  Future<void> saveTransactionsBalance(double balance);
 }

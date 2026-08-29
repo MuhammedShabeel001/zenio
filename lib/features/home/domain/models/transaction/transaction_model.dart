@@ -12,6 +12,9 @@ sealed class TransactionModel with _$TransactionModel {
     @JsonKey(name: 'amount') required double amount,
     @JsonKey(name: 'currency') required String currency,
     @JsonKey(name: 'is_income') required bool isIncome,
+    @JsonKey(name: 'note') String? note,
+    @JsonKey(name: 'bank_name') String? bankName,
+    @JsonKey(name: 'timestamp') String? timestamp,
   }) = _TransactionModel;
 
   factory TransactionModel.fromJson(Map<String, dynamic> json) =>

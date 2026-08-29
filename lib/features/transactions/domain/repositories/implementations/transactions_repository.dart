@@ -8,96 +8,15 @@ import 'package:zenio/shared/providers/shared_prefs_provider/shared_prefs_provid
 
 part 'transactions_repository.g.dart';
 
-const List<TransactionDetailModel> defaultTransactionsList = [
-  TransactionDetailModel(
-    id: '1',
-    title: 'Salary Payment',
-    date: 'Today',
-    amount: 120000,
-    isIncome: true,
-    currency: 'INR',
-  ),
-  TransactionDetailModel(
-    id: '2',
-    title: 'Food & Coffee',
-    date: 'Today',
-    amount: 120,
-    isIncome: false,
-    currency: 'INR',
-  ),
-  TransactionDetailModel(
-    id: '3',
-    title: 'EMI Payment',
-    date: 'Yesterday',
-    amount: 760,
-    isIncome: false,
-    currency: 'INR',
-  ),
-  TransactionDetailModel(
-    id: '4',
-    title: 'Petrol',
-    date: '20-05-2026',
-    amount: 180,
-    isIncome: false,
-    currency: 'INR',
-  ),
-  TransactionDetailModel(
-    id: '5',
-    title: 'Freelance Payout',
-    date: '18-05-2026',
-    amount: 15000,
-    isIncome: true,
-    currency: 'INR',
-  ),
-  TransactionDetailModel(
-    id: '6',
-    title: 'Grocery Shopping',
-    date: '16-05-2026',
-    amount: 2450,
-    isIncome: false,
-    currency: 'INR',
-  ),
-  TransactionDetailModel(
-    id: '7',
-    title: 'Dinner Outing',
-    date: '15-05-2026',
-    amount: 1100,
-    isIncome: false,
-    currency: 'INR',
-  ),
-  TransactionDetailModel(
-    id: '8',
-    title: 'Electricity Bill',
-    date: '12-05-2026',
-    amount: 890,
-    isIncome: false,
-    currency: 'INR',
-  ),
-  TransactionDetailModel(
-    id: '9',
-    title: 'Investment Return',
-    date: '10-05-2026',
-    amount: 4500,
-    isIncome: true,
-    currency: 'INR',
-  ),
-  TransactionDetailModel(
-    id: '10',
-    title: 'Movie Tickets',
-    date: '08-05-2026',
-    amount: 450,
-    isIncome: false,
-    currency: 'INR',
-  ),
-];
+const List<TransactionDetailModel> defaultTransactionsList = [];
 
 class TransactionsRepository implements ITransactionsRepository {
   TransactionsRepository(this._prefs);
 
   final SharedPreferences? _prefs;
 
-  static const String _balanceKey = 'transactions_page_balance_v3';
-  static const String _transactionsKey = 'transactions_detail_list_v3';
+  static const String _balanceKey = 'transactions_page_balance_v4';
+  static const String _transactionsKey = 'app_unified_transactions_v1';
 
   @override
   Future<double> getTransactionsBalance() async {
@@ -142,6 +61,13 @@ class TransactionsRepository implements ITransactionsRepository {
     final jsonList =
         transactions.map((item) => jsonEncode(item.toJson())).toList();
     await prefs.setStringList(_transactionsKey, jsonList);
+  }
+
+  @override
+  Future<void> saveTransactionsBalance(double balance) async {
+    final prefs = _prefs;
+    if (prefs == null) return;
+    await prefs.setDouble(_balanceKey, balance);
   }
 }
 

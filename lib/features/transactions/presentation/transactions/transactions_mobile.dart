@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:zenio/features/transactions/controller/transactions/transactions_notifier.dart';
 import 'package:zenio/features/transactions/presentation/widgets/transaction_detail_card.dart';
+import 'package:zenio/features/home/home.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/widgets/add_transaction_bottom_sheet.dart';
 
@@ -180,6 +181,9 @@ class _TransactionsScreenMobileState
                             transaction: item,
                             isOpen: _openTransactionId == item.id,
                             isTileExpanded: _expandedTileId == item.id,
+                            note: item.note,
+                            bankName: item.bankName,
+                            timestamp: item.timestamp,
                             onTileTap: () {
                               setState(() {
                                 if (_expandedTileId == item.id) {
@@ -206,6 +210,9 @@ class _TransactionsScreenMobileState
                             onDelete: () {
                               ref
                                   .read(transactionsNotifierProvider.notifier)
+                                  .deleteTransaction(item.id);
+                              ref
+                                  .read(homeNotifierProvider.notifier)
                                   .deleteTransaction(item.id);
                             },
                             onEdit: () {

@@ -10,8 +10,11 @@ abstract class TransactionDetailModel with _$TransactionDetailModel {
     required String title,
     required String date,
     required double amount,
-    required bool isIncome,
-    required String currency,
+    @JsonKey(name: 'is_income') required bool isIncome,
+    @JsonKey(name: 'currency') required String currency,
+    @JsonKey(name: 'note') String? note,
+    @JsonKey(name: 'bank_name') String? bankName,
+    @JsonKey(name: 'timestamp') String? timestamp,
   }) = _TransactionDetailModel;
 
   factory TransactionDetailModel.fromJson(Map<String, dynamic> json) =>

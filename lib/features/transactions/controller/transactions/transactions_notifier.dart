@@ -67,4 +67,21 @@ class TransactionsNotifier extends _$TransactionsNotifier {
       transactions: updatedTxs,
     );
   }
+
+  Future<void> addTransaction(TransactionDetailModel tx) async {
+    final updatedTxs = [tx, ...state.transactions];
+    final repo = ref.read(transactionsRepositoryRepoProvider);
+    await repo.saveTransactions(updatedTxs);
+
+    final newBalance = tx.isIncome
+        ? state.totalBalance + tx.amount
+        : state.totalBalance - tx.amount;
+
+    await repo.saveTransactionsBalance(newBalance);
+
+    state = state.copyWith(
+      totalBalance: newBalance,
+      transactions: updatedTxs,
+    );
+  }
 }
