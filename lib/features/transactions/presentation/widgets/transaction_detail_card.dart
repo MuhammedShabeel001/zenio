@@ -240,8 +240,8 @@ class _TransactionDetailCardState extends State<TransactionDetailCard>
                             shape: BoxShape.circle,
                           ),
                           child: Center(
-                            child: widget.transaction.isIncome
-                                ? Assets.icons.downArrow.svg(
+                            child: widget.transaction.title.startsWith('Transfer to')
+                                ? Assets.icons.swap.svg(
                                     width: 24,
                                     height: 24,
                                     colorFilter: const ColorFilter.mode(
@@ -249,14 +249,23 @@ class _TransactionDetailCardState extends State<TransactionDetailCard>
                                       BlendMode.srcIn,
                                     ),
                                   )
-                                : Assets.icons.upArrow.svg(
-                                    width: 24,
-                                    height: 24,
-                                    colorFilter: const ColorFilter.mode(
-                                      Color(0xFF000000),
-                                      BlendMode.srcIn,
-                                    ),
-                                  ),
+                                : widget.transaction.isIncome
+                                    ? Assets.icons.downArrow.svg(
+                                        width: 24,
+                                        height: 24,
+                                        colorFilter: const ColorFilter.mode(
+                                          Color(0xFF000000),
+                                          BlendMode.srcIn,
+                                        ),
+                                      )
+                                    : Assets.icons.upArrow.svg(
+                                        width: 24,
+                                        height: 24,
+                                        colorFilter: const ColorFilter.mode(
+                                          Color(0xFF000000),
+                                          BlendMode.srcIn,
+                                        ),
+                                      ),
                           ),
                         ),
                         const SizedBox(width: 14),

@@ -41,6 +41,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
   String _sourceWallet = 'Slice';
   String _destinationWallet = 'SBI';
   String? _selectedCategory;
+  double _swapTurns = 0.0;
 
   final List<String> _wallets = ['Slice', 'SBI', 'HDFC', 'Cash'];
   final List<String> _categories = [
@@ -71,6 +72,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
       final temp = _sourceWallet;
       _sourceWallet = _destinationWallet;
       _destinationWallet = temp;
+      _swapTurns += 0.5;
     });
   }
 
@@ -367,11 +369,19 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                             width: 5,
                           ),
                         ),
-                        child: const Center(
-                          child: Icon(
-                            Icons.swap_vert_rounded,
-                            size: 22,
-                            color: Color(0xFF8C43E6),
+                        child: Center(
+                          child: AnimatedRotation(
+                            turns: _swapTurns,
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeInOut,
+                            child: Assets.icons.swap.svg(
+                              width: 22,
+                              height: 22,
+                              colorFilter: const ColorFilter.mode(
+                                Color(0xFF8C43E6),
+                                BlendMode.srcIn,
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -490,7 +500,9 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                   final formattedDate = DateFormat('dd-MM-yyyy').format(_selectedDate);
                   final timeString = DateFormat('HH : mm').format(DateTime.now());
                   final timestamp = '${DateFormat('yy-MM-dd').format(_selectedDate)}   $timeString';
-                  final bankName = _sourceWallet;
+                  final bankName = _selectedType == TransactionType.transfer
+                      ? '$_sourceWallet -> $_destinationWallet'
+                      : _sourceWallet;
 
                   final id = DateTime.now().millisecondsSinceEpoch.toString();
 
