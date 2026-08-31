@@ -47,12 +47,26 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
     final summary = state.summary;
     final transactions = state.transactions;
 
-    final totalBalance = summary?.totalBalance ?? 23678.01;
-    final income = summary?.income ?? 23678.01;
-    final incomeChange = summary?.incomeChangePercentage ?? 12.06;
-    final expense = summary?.expense ?? 23678.01;
-    final expenseChange = summary?.expenseChangePercentage ?? 12.06;
+    final totalBalance = summary?.totalBalance ?? 0.0;
+    final income = summary?.income ?? 0.0;
+    final incomeChange = summary?.incomeChangePercentage ?? 0.0;
+    final expense = summary?.expense ?? 0.0;
+    final expenseChange = summary?.expenseChangePercentage ?? 0.0;
     final currency = summary?.selectedCurrency ?? 'INR';
+
+    final formattedIncomeChange = incomeChange >= 0
+        ? '+ ${incomeChange.toStringAsFixed(2)} %'
+        : '- ${incomeChange.abs().toStringAsFixed(2)} %';
+    final incomeChangeColor = incomeChange >= 0
+        ? const Color(0xFF10B981)
+        : const Color(0xFFDD3D34);
+
+    final formattedExpenseChange = expenseChange >= 0
+        ? '+ ${expenseChange.toStringAsFixed(2)} %'
+        : '- ${expenseChange.abs().toStringAsFixed(2)} %';
+    final expenseChangeColor = expenseChange >= 0
+        ? const Color(0xFFDD3D34)
+        : const Color(0xFF10B981);
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -207,11 +221,11 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                               ),
                               const SizedBox(height: 6),
                               Text(
-                                '+ ${incomeChange.toStringAsFixed(2)} %',
-                                style: const TextStyle(
+                                formattedIncomeChange,
+                                style: TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w600,
-                                  color: Color(0xFF10B981),
+                                  color: incomeChangeColor,
                                 ),
                               ),
                             ],
@@ -265,11 +279,11 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                               ),
                               const SizedBox(height: 6),
                               Text(
-                                '+ ${expenseChange.toStringAsFixed(2)} %',
-                                style: const TextStyle(
+                                formattedExpenseChange,
+                                style: TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w600,
-                                  color: Color(0xFFDD3D34),
+                                  color: expenseChangeColor,
                                 ),
                               ),
                             ],

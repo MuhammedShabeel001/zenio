@@ -1,5 +1,6 @@
 import 'package:zenio/shared/providers/providers.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:intl/intl.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:zenio/features/home/home.dart';
 
@@ -30,13 +31,12 @@ class HomeNotifier extends _$HomeNotifier {
     if (_moneyTrackerRepository == null) return;
     state = state.copyWith(status: HomeStatus.loading);
     try {
-      final summary = await _moneyTrackerRepository!.getSummary();
       final transactions = await _moneyTrackerRepository!.getTransactions();
       state = state.copyWith(
         status: HomeStatus.success,
-        summary: summary,
         transactions: transactions,
       );
+      await _recalculateSummary(transactions);
     } catch (e) {
       state = state.copyWith(status: HomeStatus.error);
     }
@@ -47,32 +47,8 @@ class HomeNotifier extends _$HomeNotifier {
     final updatedTxs = [newTx, ...state.transactions];
     await _moneyTrackerRepository!.saveTransactions(updatedTxs);
 
-    final currentSummary = state.summary;
-    if (currentSummary != null) {
-      final newBalance = newTx.isIncome
-          ? currentSummary.totalBalance + newTx.amount
-          : currentSummary.totalBalance - newTx.amount;
-      final newIncome = newTx.isIncome
-          ? currentSummary.income + newTx.amount
-          : currentSummary.income;
-      final newExpense = !newTx.isIncome
-          ? currentSummary.expense + newTx.amount
-          : currentSummary.expense;
-
-      final updatedSummary = currentSummary.copyWith(
-        totalBalance: newBalance,
-        income: newIncome,
-        expense: newExpense,
-      );
-
-      await _moneyTrackerRepository!.saveSummary(updatedSummary);
-      state = state.copyWith(
-        summary: updatedSummary,
-        transactions: updatedTxs,
-      );
-    } else {
-      state = state.copyWith(transactions: updatedTxs);
-    }
+    state = state.copyWith(transactions: updatedTxs);
+    await _recalculateSummary(updatedTxs);
   }
 
   Future<void> deleteTransaction(String id) async {
@@ -94,35 +70,81 @@ class HomeNotifier extends _$HomeNotifier {
       await _moneyTrackerRepository!.saveTransactions(updatedTxs);
     }
 
-    final currentSummary = state.summary;
-    if (currentSummary != null) {
-      final newBalance = target.isIncome
-          ? currentSummary.totalBalance - target.amount
-          : currentSummary.totalBalance + target.amount;
-      final newIncome = target.isIncome
-          ? currentSummary.income - target.amount
-          : currentSummary.income;
-      final newExpense = !target.isIncome
-          ? currentSummary.expense - target.amount
-          : currentSummary.expense;
+    state = state.copyWith(transactions: updatedTxs);
+    await _recalculateSummary(updatedTxs);
+  }
 
-      final updatedSummary = currentSummary.copyWith(
-        totalBalance: newBalance,
-        income: newIncome,
-        expense: newExpense,
-      );
+  Future<void> _recalculateSummary(List<TransactionModel> txs) async {
+    final now = DateTime.now();
+    final currentMonth = DateTime(now.year, now.month);
+    final previousMonth = DateTime(now.year, now.month - 1);
 
-      if (_moneyTrackerRepository != null) {
-        await _moneyTrackerRepository!.saveSummary(updatedSummary);
+    double thisMonthIncome = 0;
+    double thisMonthExpense = 0;
+    double lastMonthIncome = 0;
+    double lastMonthExpense = 0;
+    double totalBalance = 0;
+
+    for (final tx in txs) {
+      final isTransfer = tx.title.startsWith('Transfer to');
+      if (isTransfer) continue;
+
+      if (tx.isIncome) {
+        totalBalance += tx.amount;
+      } else {
+        totalBalance -= tx.amount;
       }
 
-      state = state.copyWith(
-        summary: updatedSummary,
-        transactions: updatedTxs,
-      );
-    } else {
-      state = state.copyWith(transactions: updatedTxs);
+      DateTime txDate;
+      try {
+        txDate = DateFormat('dd-MM-yyyy').parse(tx.date);
+      } catch (_) {
+        continue;
+      }
+
+      if (txDate.year == currentMonth.year && txDate.month == currentMonth.month) {
+        if (tx.isIncome) {
+          thisMonthIncome += tx.amount;
+        } else {
+          thisMonthExpense += tx.amount;
+        }
+      } else if (txDate.year == previousMonth.year && txDate.month == previousMonth.month) {
+        if (tx.isIncome) {
+          lastMonthIncome += tx.amount;
+        } else {
+          lastMonthExpense += tx.amount;
+        }
+      }
     }
+
+    double incomeChange = 0;
+    if (lastMonthIncome > 0) {
+      incomeChange = ((thisMonthIncome - lastMonthIncome) / lastMonthIncome) * 100;
+    } else if (thisMonthIncome > 0) {
+      incomeChange = 100;
+    }
+
+    double expenseChange = 0;
+    if (lastMonthExpense > 0) {
+      expenseChange = ((thisMonthExpense - lastMonthExpense) / lastMonthExpense) * 100;
+    } else if (thisMonthExpense > 0) {
+      expenseChange = 100;
+    }
+
+    final newSummary = FinancialSummaryModel(
+      totalBalance: totalBalance,
+      income: thisMonthIncome,
+      incomeChangePercentage: incomeChange,
+      expense: thisMonthExpense,
+      expenseChangePercentage: expenseChange,
+      selectedCurrency: state.summary?.selectedCurrency ?? 'INR',
+    );
+
+    if (_moneyTrackerRepository != null) {
+      await _moneyTrackerRepository!.saveSummary(newSummary);
+    }
+
+    state = state.copyWith(summary: newSummary);
   }
 
   Future<void> getTasks() async {
