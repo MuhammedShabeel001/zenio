@@ -54,9 +54,9 @@ class WalletCardDetailWidget extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
-                  '1234  5678  1234  5678',
-                  style: TextStyle(
+                Text(
+                  card.cardNumber,
+                  style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF111111),
@@ -70,10 +70,10 @@ class WalletCardDetailWidget extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    const Column(
+                    Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
+                        const Text(
                           'Created On :',
                           style: TextStyle(
                             fontSize: 13,
@@ -81,10 +81,10 @@ class WalletCardDetailWidget extends StatelessWidget {
                             color: Color(0xFF9E9EA5),
                           ),
                         ),
-                        SizedBox(height: 4),
+                        const SizedBox(height: 4),
                         Text(
-                          'June 12 , 2026',
-                          style: TextStyle(
+                          card.createdAt ?? 'Unknown',
+                          style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF111111),

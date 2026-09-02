@@ -56,10 +56,18 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
 
     final balance = double.tryParse(_balanceController.text.trim()) ?? 0.0;
 
-    final randomNum = Random().nextInt(9000) + 1000;
-    final cardNo = '**** **** **** $randomNum';
+    final r = Random();
+    final p1 = (r.nextInt(9000) + 1000).toString();
+    final p2 = (r.nextInt(9000) + 1000).toString();
+    final p3 = (r.nextInt(9000) + 1000).toString();
+    final p4 = (r.nextInt(9000) + 1000).toString();
+    final cardNo = '$p1  $p2  $p3  $p4';
 
     final selectedImage = _cardImages[_selectedImageIndex];
+
+    final now = DateTime.now();
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    final formattedDate = '${months[now.month - 1]} ${now.day} , ${now.year}';
 
     final newCard = WalletCardModel(
       id: DateTime.now().toIso8601String(),
@@ -68,6 +76,8 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
       cardType: _selectedType,
       gradientStartHex: 'image:$selectedImage',
       gradientEndHex: 'image:$selectedImage',
+      balance: balance,
+      createdAt: formattedDate,
     );
 
     ref.read(walletNotifierProvider.notifier).addCard(newCard, balance);

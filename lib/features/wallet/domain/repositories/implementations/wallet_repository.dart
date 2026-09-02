@@ -40,50 +40,7 @@ class WalletRepository implements IWalletRepository {
       }
     }
 
-    final defaultCards = [
-      const WalletCardModel(
-        id: '1',
-        bankName: 'SBI',
-        cardNumber: '****  ****  ****  ****',
-        cardType: 'DEBIT CARD',
-        gradientStartHex: '0xFF031B4E',
-        gradientEndHex: '0xFF1B59C9',
-      ),
-      const WalletCardModel(
-        id: '2',
-        bankName: 'HDFC',
-        cardNumber: '****  ****  ****  ****',
-        cardType: 'CREDIT CARD',
-        gradientStartHex: '0xFF881B5A',
-        gradientEndHex: '0xFFD81B60',
-      ),
-      const WalletCardModel(
-        id: '3',
-        bankName: 'ICICI',
-        cardNumber: '****  ****  ****  ****',
-        cardType: 'DEBIT CARD',
-        gradientStartHex: '0xFF1B4D2E',
-        gradientEndHex: '0xFF2E7D32',
-      ),
-      const WalletCardModel(
-        id: '4',
-        bankName: 'AXIS',
-        cardNumber: '****  ****  ****  ****',
-        cardType: 'CREDIT CARD',
-        gradientStartHex: '0xFF4A148C',
-        gradientEndHex: '0xFF7B1FA2',
-      ),
-      const WalletCardModel(
-        id: '5',
-        bankName: 'KOTAK',
-        cardNumber: '****  ****  ****  ****',
-        cardType: 'DEBIT CARD',
-        gradientStartHex: '0xFFB71C1C',
-        gradientEndHex: '0xFFE53935',
-      ),
-    ];
-    await saveCards(defaultCards);
-    return defaultCards;
+    return [];
   }
 
   @override

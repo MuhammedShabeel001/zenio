@@ -232,122 +232,89 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                                     // Card Carousel PageView
                                     SizedBox(
                                       height: 200,
-                                      child: _pageController == null
+                                      child: _pageController == null || cards.isEmpty
                                           ? const SizedBox.shrink()
-                                          : PageView.builder(
-                                              controller: _pageController,
-                                              onPageChanged: notifier.onCardPageChanged,
-                                              itemBuilder: (context, index) {
-                                                if (cards.isEmpty) return const SizedBox.shrink();
-                                                final actualIndex = index % cards.length;
-                                                final card = cards[actualIndex];
+                                          : cards.length == 1
+                                              ? Padding(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                                                  child: _buildCardItem(
+                                                    index: 0,
+                                                    actualIndex: 0,
+                                                    card: cards[0],
+                                                    isFrozen: isFrozen,
+                                                    height: 200.0,
+                                                    heroTag: 'wallet_hero_0',
+                                                  ),
+                                                )
+                                              : PageView.builder(
+                                                  controller: _pageController,
+                                                  onPageChanged: notifier.onCardPageChanged,
+                                                  itemBuilder: (context, index) {
+                                                    final actualIndex = index % cards.length;
+                                                    final card = cards[actualIndex];
 
-                                                return AnimatedBuilder(
-                                                  animation: _pageController!,
-                                                  builder: (context, child) {
-                                                    double height = 200.0;
-                                                    if (_pageController!.position.haveDimensions) {
-                                                      double distance = (_pageController!.page! - index).abs();
-                                                      // Center = 200, Side = 175
-                                                      height = 200.0 - (distance * 25.0).clamp(0.0, 25.0);
-                                                    } else {
-                                                      height = index == _pageController!.initialPage ? 200.0 : 175.0;
-                                                    }
-                                                    return Align(
-                                                      alignment: Alignment.center,
-                                                      child: SizedBox(
-                                                        height: height,
-                                                        width: double.infinity,
-                                                        child: child,
+                                                    return AnimatedBuilder(
+                                                      animation: _pageController!,
+                                                      builder: (context, child) {
+                                                        double height = 200.0;
+                                                        if (_pageController!.position.haveDimensions) {
+                                                          double distance = (_pageController!.page! - index).abs();
+                                                          // Center = 200, Side = 175
+                                                          height = 200.0 - (distance * 25.0).clamp(0.0, 25.0);
+                                                        } else {
+                                                          height = index == _pageController!.initialPage ? 200.0 : 175.0;
+                                                        }
+                                                        return Align(
+                                                          alignment: Alignment.center,
+                                                          child: SizedBox(
+                                                            height: height,
+                                                            width: double.infinity,
+                                                            child: child,
+                                                          ),
+                                                        );
+                                                      },
+                                                      child: Padding(
+                                                        padding: const EdgeInsets.symmetric(horizontal: 5.0),
+                                                        child: _buildCardItem(
+                                                          index: index,
+                                                          actualIndex: actualIndex,
+                                                          card: card,
+                                                          isFrozen: isFrozen,
+                                                          height: 200.0, // Height is handled by AnimatedBuilder above
+                                                          heroTag: 'wallet_hero_$index',
+                                                        ),
                                                       ),
                                                     );
                                                   },
-                                                  child: Padding(
-                                                    padding: const EdgeInsets.symmetric(horizontal: 5.0),
-                                                    child: Hero(
-                                                      tag: 'wallet_hero_$index',
-                                                      flightShuttleBuilder: (flightContext, animation, flightDirection, fromHeroContext, toHeroContext) {
-                                                        final fromBox = fromHeroContext.findRenderObject() as RenderBox?;
-                                                        final toBox = toHeroContext.findRenderObject() as RenderBox?;
-                                                        debugPrint('============== HERO FLIGHT ================');
-                                                        debugPrint('Direction: $flightDirection');
-                                                        debugPrint('FROM Box: ${fromBox?.size}');
-                                                        debugPrint('TO Box: ${toBox?.size}');
-                                                        
-                                                        return LayoutBuilder(
-                                                          builder: (context, constraints) {
-                                                            debugPrint('Flight Bounds: ${constraints.maxWidth} x ${constraints.maxHeight}');
-                                                            return toHeroContext.widget;
-                                                          }
-                                                        );
-                                                      },
-                                                      child: WalletCardWidget(
-                                                        card: card,
-                                                        isFrozen: isFrozen && actualIndex == (activeIndex % cards.length),
-                                                        onTap: () {
-                                                          setState(() {
-                                                            _lastKnownPage = _pageController?.page?.round() ?? index;
-                                                            _tappedCardIndex = actualIndex;
-                                                            _isCardDetailExpanded = true;
-                                                          });
-                                                          Navigator.push(
-                                                            context,
-                                                            PageRouteBuilder(
-                                                              opaque: false,
-                                                              transitionDuration: const Duration(milliseconds: 380),
-                                                              reverseTransitionDuration: const Duration(milliseconds: 380),
-                                                              pageBuilder: (context, animation, secondaryAnimation) {
-                                                                return WalletCardDetailRoute(
-                                                                  card: card,
-                                                                  isFrozen: isFrozen && actualIndex == (activeIndex % cards.length),
-                                                                  heroTag: 'wallet_hero_$index',
-                                                                  onPop: () {
-                                                                    if (mounted) {
-                                                                      setState(() {
-                                                                        _isCardDetailExpanded = false;
-                                                                      });
-                                                                    }
-                                                                  },
-                                                                );
-                                                              },
-                                                              transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                                                                return FadeTransition(opacity: animation, child: child);
-                                                              },
-                                                            ),
-                                                          );
-                                                        },
-                                                      ),
-                                                    ),
-                                                  ),
-                                                );
-                                              },
-                                            ),
+                                                ),
                                     ),
                                     const SizedBox(height: 15),
 
                                     // Page Indicator Dots
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: List.generate(cards.length, (index) {
-                                        final actualActiveIndex = cards.isEmpty ? 0 : activeIndex % cards.length;
-                                        final isSelected = index == actualActiveIndex;
-                                        return AnimatedContainer(
-                                          duration: const Duration(milliseconds: 250),
-                                          margin: const EdgeInsets.symmetric(
-                                            horizontal: 2.5,
-                                          ),
-                                          width: 10,
-                                          height: 10,
-                                          decoration: BoxDecoration(
-                                            shape: BoxShape.circle,
-                                            color: isSelected
-                                                ? const Color(0xFF10B981)
-                                                : const Color(0xFFE3E3E3),
-                                          ),
-                                        );
-                                      }),
-                                    ),
-                                    const SizedBox(height: 55),
+                                    if (cards.length > 1)
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: List.generate(cards.length, (index) {
+                                          final actualActiveIndex = cards.isEmpty ? 0 : activeIndex % cards.length;
+                                          final isSelected = index == actualActiveIndex;
+                                          return AnimatedContainer(
+                                            duration: const Duration(milliseconds: 250),
+                                            margin: const EdgeInsets.symmetric(
+                                              horizontal: 2.5,
+                                            ),
+                                            width: 10,
+                                            height: 10,
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              color: isSelected
+                                                  ? const Color(0xFF10B981)
+                                                  : const Color(0xFFE3E3E3),
+                                            ),
+                                          );
+                                        }),
+                                      ),
+                                    if (cards.length > 1) const SizedBox(height: 55),
+                                    if (cards.length <= 1) const SizedBox(height: 65),
 
                                     // Quick Action Buttons (Top up, Freeze, Details, Settings)
                                     Padding(
@@ -369,9 +336,10 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                                                 BlendMode.srcIn,
                                               ),
                                             ),
-                                            onTap: () {
-                                              notifier.topUpBalance(1000);
-                                            },
+                                              onTap: () {
+                                                if (cards.isEmpty) return;
+                                                notifier.topUpBalance(1000);
+                                              },
                                           ),
                                           const SizedBox(width: 10), // Exactly 10px gap
                                           _buildActionButton(
@@ -382,7 +350,10 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                                               width: 24,
                                               height: 24,
                                             ),
-                                            onTap: notifier.toggleFreezeCard,
+                                              onTap: () {
+                                                if (cards.isEmpty) return;
+                                                notifier.toggleFreezeCard();
+                                              },
                                           ),
                                           const SizedBox(width: 10), // Exactly 10px gap
                                           _buildActionButton(
@@ -394,7 +365,8 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                                               height: 24,
                                             ),
                                               onTap: () {
-                                                final pageIndex = _pageController?.page?.round() ?? (1000 * cards.length);
+                                                if (cards.isEmpty) return;
+                                                final pageIndex = _pageController?.page?.round() ?? 0;
                                                 final actualIndex = pageIndex % cards.length;
                                                 setState(() {
                                                   _lastKnownPage = pageIndex;
@@ -409,7 +381,7 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                                                     reverseTransitionDuration: const Duration(milliseconds: 380),
                                                     pageBuilder: (context, animation, secondaryAnimation) {
                                                       return WalletCardDetailRoute(
-                                                        card: cards.isNotEmpty ? cards[actualIndex] : cards[0],
+                                                        card: cards[actualIndex],
                                                         isFrozen: isFrozen && actualIndex == (activeIndex % cards.length),
                                                         heroTag: 'wallet_hero_$pageIndex',
                                                         onPop: () {
@@ -437,7 +409,9 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                                               width: 24,
                                               height: 24,
                                             ),
-                                            onTap: () {},
+                                            onTap: () {
+                                              notifier.clearWallets();
+                                            },
                                           ),
                                         ],
                                       ),
@@ -474,6 +448,64 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildCardItem({
+    required int index,
+    required int actualIndex,
+    required WalletCardModel card,
+    required bool isFrozen,
+    required double height,
+    required String heroTag,
+  }) {
+    final state = ref.watch(walletNotifierProvider);
+    final activeIndex = state.activeCardIndex;
+    return Hero(
+      tag: heroTag,
+      flightShuttleBuilder: (flightContext, animation, flightDirection, fromHeroContext, toHeroContext) {
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            return toHeroContext.widget;
+          }
+        );
+      },
+      child: WalletCardWidget(
+        card: card,
+        isFrozen: isFrozen && actualIndex == (activeIndex % state.cards.length),
+        onTap: () {
+          setState(() {
+            _lastKnownPage = _pageController?.page?.round() ?? index;
+            _tappedCardIndex = actualIndex;
+            _isCardDetailExpanded = true;
+          });
+          Navigator.push(
+            context,
+            PageRouteBuilder(
+              opaque: false,
+              transitionDuration: const Duration(milliseconds: 380),
+              reverseTransitionDuration: const Duration(milliseconds: 380),
+              pageBuilder: (context, animation, secondaryAnimation) {
+                return WalletCardDetailRoute(
+                  card: card,
+                  isFrozen: isFrozen && actualIndex == (activeIndex % state.cards.length),
+                  heroTag: heroTag,
+                  onPop: () {
+                    if (mounted) {
+                      setState(() {
+                        _isCardDetailExpanded = false;
+                      });
+                    }
+                  },
+                );
+              },
+              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                return FadeTransition(opacity: animation, child: child);
+              },
+            ),
+          );
+        },
       ),
     );
   }

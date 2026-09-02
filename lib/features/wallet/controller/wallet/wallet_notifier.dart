@@ -74,4 +74,15 @@ class WalletNotifier extends _$WalletNotifier {
       activeCardIndex: updatedCards.length - 1,
     );
   }
+
+  Future<void> clearWallets() async {
+    if (_walletRepository == null) return;
+    await _walletRepository!.saveCards([]);
+    await _walletRepository!.saveCardBalance(0.0);
+    state = state.copyWith(
+      cards: [],
+      cardBalance: 0.0,
+      activeCardIndex: 0,
+    );
+  }
 }

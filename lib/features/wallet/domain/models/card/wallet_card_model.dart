@@ -12,6 +12,8 @@ sealed class WalletCardModel with _$WalletCardModel {
     @JsonKey(name: 'card_type') required String cardType,
     @JsonKey(name: 'gradient_start') required String gradientStartHex,
     @JsonKey(name: 'gradient_end') required String gradientEndHex,
+    @JsonKey(name: 'balance') @Default(0.0) double balance,
+    @JsonKey(name: 'created_at') String? createdAt,
   }) = _WalletCardModel;
 
   factory WalletCardModel.fromJson(Map<String, dynamic> json) =>
