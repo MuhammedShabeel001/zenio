@@ -15,9 +15,9 @@ abstract class DebtsState with _$DebtsState {
   }) = _DebtsState;
 
   factory DebtsState.initial() => const DebtsState(
-        totalBalance: -268.01,
+        totalBalance: 0.0,
         debts: defaultDebtsList,
-        selectedFilter: 'Debts',
+        selectedFilter: 'All',
         isLoading: false,
       );
 }

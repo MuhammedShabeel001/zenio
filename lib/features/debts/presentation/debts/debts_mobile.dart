@@ -32,8 +32,22 @@ class _DebtsScreenMobileState extends ConsumerState<DebtsScreenMobile> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(debtsNotifierProvider);
-    final totalBalance = state.totalBalance;
     final debts = state.debts;
+
+    final filteredDebts = debts.where((debt) {
+      if (state.selectedFilter == 'I Owe') return debt.isOwed;
+      if (state.selectedFilter == 'I Own') return !debt.isOwed;
+      return true;
+    }).toList();
+
+    double totalBalance = 0.0;
+    for (final debt in filteredDebts) {
+      if (debt.isOwed) {
+        totalBalance -= debt.amount;
+      } else {
+        totalBalance += debt.amount;
+      }
+    }
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -158,7 +172,7 @@ class _DebtsScreenMobileState extends ConsumerState<DebtsScreenMobile> {
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(10, 16, 10, 20),
                     children: [
-                      if (debts.isEmpty)
+                      if (filteredDebts.isEmpty)
                         const Padding(
                           padding: EdgeInsets.symmetric(vertical: 40),
                           child: Center(
@@ -172,7 +186,7 @@ class _DebtsScreenMobileState extends ConsumerState<DebtsScreenMobile> {
                           ),
                         )
                       else
-                        ...debts.map(
+                        ...filteredDebts.map(
                           (item) => DebtCard(
                             key: ValueKey(item.id),
                             debt: item,
@@ -223,29 +237,51 @@ class _DebtsScreenMobileState extends ConsumerState<DebtsScreenMobile> {
   }
 
   Widget _buildFilterPill({required String label}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
-        borderRadius: BorderRadius.circular(30),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: Color(0xFFD1D1D6),
+    return PopupMenuButton<String>(
+      onSelected: (value) {
+        ref.read(debtsNotifierProvider.notifier).updateFilter(value);
+      },
+      itemBuilder: (context) => [
+        const PopupMenuItem(
+          value: 'All',
+          child: Text('All', style: TextStyle(color: Colors.white)),
+        ),
+        const PopupMenuItem(
+          value: 'I Owe',
+          child: Text('I Owe', style: TextStyle(color: Colors.white)),
+        ),
+        const PopupMenuItem(
+          value: 'I Own',
+          child: Text('I Own', style: TextStyle(color: Colors.white)),
+        ),
+      ],
+      offset: const Offset(0, 40),
+      color: const Color(0xFF1A1A1A),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1A1A1A),
+          borderRadius: BorderRadius.circular(30),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label == 'Debts' ? 'All' : label,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFFD1D1D6),
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          Assets.icons.dropDown.svg(
-            width: 24,
-            height: 24,
-          ),
-        ],
+            const SizedBox(width: 8),
+            Assets.icons.dropDown.svg(
+              width: 24,
+              height: 24,
+            ),
+          ],
+        ),
       ),
     );
   }
