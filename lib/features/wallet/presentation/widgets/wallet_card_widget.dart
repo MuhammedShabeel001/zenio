@@ -35,18 +35,19 @@ class WalletCardWidget extends StatelessWidget {
         padding: const EdgeInsets.all(33),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [startColor, endColor],
-          ),
-          // boxShadow: [
-          //   BoxShadow(
-          //     color: startColor.withValues(alpha: 0.35),
-          //     blurRadius: 16,
-          //     offset: const Offset(0, 8),
-          //   ),
-          // ],
+          image: card.gradientStartHex.startsWith('image:')
+              ? DecorationImage(
+                  image: AssetImage(card.gradientStartHex.replaceFirst('image:', '')),
+                  fit: BoxFit.cover,
+                )
+              : null,
+          gradient: card.gradientStartHex.startsWith('image:')
+              ? null
+              : LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [startColor, endColor],
+                ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

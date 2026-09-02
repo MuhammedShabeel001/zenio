@@ -7,6 +7,7 @@ import 'package:zenio/features/wallet/presentation/widgets/wallet_card_detail_wi
 import 'package:zenio/features/wallet/presentation/widgets/wallet_card_widget.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/widgets/add_transaction_bottom_sheet.dart';
+import 'package:zenio/features/wallet/presentation/widgets/add_wallet_bottom_sheet.dart';
 import 'package:zenio/shared/widgets/custom_navigation_bar.dart';
 
 class WalletScreenMobile extends ConsumerStatefulWidget {
@@ -134,7 +135,7 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                       // + Add Pill Button
                       GestureDetector(
                         onTap: () {
-                          AddTransactionBottomSheet.show(context);
+                          AddWalletBottomSheet.show(context);
                         },
                         child: Container(
                           padding: const EdgeInsets.symmetric(

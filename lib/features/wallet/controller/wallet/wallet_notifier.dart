@@ -55,4 +55,23 @@ class WalletNotifier extends _$WalletNotifier {
   void toggleFreezeCard() {
     state = state.copyWith(isFrozen: !state.isFrozen);
   }
+
+  Future<void> addCard(WalletCardModel card, double initialBalance) async {
+    if (_walletRepository == null) return;
+    
+    // Add the new card to the list
+    final updatedCards = List<WalletCardModel>.from(state.cards)..add(card);
+    await _walletRepository!.saveCards(updatedCards);
+    
+    // Update the total balance if initial balance is provided
+    final newBalance = state.cardBalance + initialBalance;
+    await _walletRepository!.saveCardBalance(newBalance);
+    
+    state = state.copyWith(
+      cards: updatedCards,
+      cardBalance: newBalance,
+      // Focus on the newly added card
+      activeCardIndex: updatedCards.length - 1,
+    );
+  }
 }
