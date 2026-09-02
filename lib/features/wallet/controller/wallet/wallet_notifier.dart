@@ -25,15 +25,22 @@ class WalletNotifier extends _$WalletNotifier {
     return WalletState.initial();
   }
 
+  double _calculateTotalBalance(List<WalletCardModel> cards) {
+    return cards.where((c) => !c.isFrozen).fold(0.0, (sum, c) => sum + c.balance);
+  }
+
   Future<void> loadWalletData() async {
     if (_walletRepository == null) return;
     state = state.copyWith(status: WalletStatus.loading);
     try {
-      final balance = await _walletRepository!.getCardBalance();
       final cards = await _walletRepository!.getCards();
+      final totalBalance = _calculateTotalBalance(cards);
+      // Ensure the saved balance matches computed balance
+      await _walletRepository!.saveCardBalance(totalBalance);
+      
       state = state.copyWith(
         status: WalletStatus.success,
-        cardBalance: balance,
+        cardBalance: totalBalance,
         cards: cards,
       );
     } catch (e) {
@@ -45,15 +52,56 @@ class WalletNotifier extends _$WalletNotifier {
     state = state.copyWith(activeCardIndex: index);
   }
 
-  Future<void> topUpBalance(double amount) async {
+  Future<void> updateCardBalance(int index, double amount, {required String mode}) async {
     if (_walletRepository == null) return;
-    final newBalance = state.cardBalance + amount;
-    await _walletRepository!.saveCardBalance(newBalance);
-    state = state.copyWith(cardBalance: newBalance);
+    
+    final card = state.cards[index];
+    double newCardBalance;
+    
+    if (mode == 'set') {
+      newCardBalance = amount;
+    } else if (mode == 'add') {
+      newCardBalance = card.balance + amount;
+    } else if (mode == 'subtract') {
+      newCardBalance = card.balance - amount;
+    } else {
+      return;
+    }
+    
+    final updatedCard = card.copyWith(balance: newCardBalance);
+    final updatedCards = List<WalletCardModel>.from(state.cards);
+    updatedCards[index] = updatedCard;
+    
+    await _walletRepository!.saveCards(updatedCards);
+    
+    final totalBalance = _calculateTotalBalance(updatedCards);
+    await _walletRepository!.saveCardBalance(totalBalance);
+    
+    state = state.copyWith(
+      cards: updatedCards,
+      cardBalance: totalBalance,
+    );
   }
 
-  void toggleFreezeCard() {
-    state = state.copyWith(isFrozen: !state.isFrozen);
+  Future<void> toggleFreezeCard() async {
+    if (_walletRepository == null || state.cards.isEmpty) return;
+    
+    final actualIndex = state.activeCardIndex % state.cards.length;
+    final card = state.cards[actualIndex];
+    final updatedCard = card.copyWith(isFrozen: !card.isFrozen);
+    
+    final updatedCards = List<WalletCardModel>.from(state.cards);
+    updatedCards[actualIndex] = updatedCard;
+    
+    await _walletRepository!.saveCards(updatedCards);
+    
+    final totalBalance = _calculateTotalBalance(updatedCards);
+    await _walletRepository!.saveCardBalance(totalBalance);
+    
+    state = state.copyWith(
+      cards: updatedCards,
+      cardBalance: totalBalance,
+    );
   }
 
   Future<void> addCard(WalletCardModel card, double initialBalance) async {
@@ -63,13 +111,12 @@ class WalletNotifier extends _$WalletNotifier {
     final updatedCards = List<WalletCardModel>.from(state.cards)..add(card);
     await _walletRepository!.saveCards(updatedCards);
     
-    // Update the total balance if initial balance is provided
-    final newBalance = state.cardBalance + initialBalance;
-    await _walletRepository!.saveCardBalance(newBalance);
+    final totalBalance = _calculateTotalBalance(updatedCards);
+    await _walletRepository!.saveCardBalance(totalBalance);
     
     state = state.copyWith(
       cards: updatedCards,
-      cardBalance: newBalance,
+      cardBalance: totalBalance,
       // Focus on the newly added card
       activeCardIndex: updatedCards.length - 1,
     );

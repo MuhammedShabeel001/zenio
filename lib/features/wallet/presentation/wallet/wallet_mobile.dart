@@ -8,6 +8,7 @@ import 'package:zenio/features/wallet/presentation/widgets/wallet_card_widget.da
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/widgets/add_transaction_bottom_sheet.dart';
 import 'package:zenio/features/wallet/presentation/widgets/add_wallet_bottom_sheet.dart';
+import 'package:zenio/features/wallet/presentation/widgets/top_up_wallet_bottom_sheet.dart';
 import 'package:zenio/shared/widgets/custom_navigation_bar.dart';
 
 class WalletScreenMobile extends ConsumerStatefulWidget {
@@ -39,6 +40,14 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
     super.dispose();
   }
 
+  int _getActiveCardIndex(int length) {
+    if (length == 0) return 0;
+    if (length == 1 || _pageController == null || !_pageController!.hasClients) {
+      return 0;
+    }
+    return (_pageController!.page?.round() ?? 0) % length;
+  }
+
   String _formatWholePart(double amount) {
     final whole = amount.toInt();
     final formatter = NumberFormat('#,##0');
@@ -55,10 +64,14 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
     final state = ref.watch(walletNotifierProvider);
     final notifier = ref.read(walletNotifierProvider.notifier);
 
-    final cardBalance = state.cardBalance;
     final cards = state.cards;
     final activeIndex = state.activeCardIndex;
-    final isFrozen = state.isFrozen;
+    
+    double displayBalance = 0.0;
+    if (cards.isNotEmpty) {
+      final actualIndex = _getActiveCardIndex(cards.length);
+      displayBalance = cards[actualIndex].balance;
+    }
 
     // Dynamically initialize controller to start at a clean multiple of cards.length
     if (_pageController == null && cards.isNotEmpty) {
@@ -101,7 +114,7 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                                   ),
                                 ),
                                 TextSpan(
-                                  text: _formatWholePart(cardBalance),
+                                  text: _formatWholePart(displayBalance),
                                   style: const TextStyle(
                                     fontSize: 32,
                                     fontWeight: FontWeight.bold,
@@ -110,7 +123,7 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                                   ),
                                 ),
                                 TextSpan(
-                                  text: _formatDecimalPart(cardBalance),
+                                  text: _formatDecimalPart(displayBalance),
                                   style: const TextStyle(
                                     fontSize: 24,
                                     fontWeight: FontWeight.bold,
@@ -241,7 +254,7 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                                                     index: 0,
                                                     actualIndex: 0,
                                                     card: cards[0],
-                                                    isFrozen: isFrozen,
+                                                    isFrozen: cards[0].isFrozen,
                                                     height: 200.0,
                                                     heroTag: 'wallet_hero_0',
                                                   ),
@@ -279,7 +292,7 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                                                           index: index,
                                                           actualIndex: actualIndex,
                                                           card: card,
-                                                          isFrozen: isFrozen,
+                                                          isFrozen: card.isFrozen,
                                                           height: 200.0, // Height is handled by AnimatedBuilder above
                                                           heroTag: 'wallet_hero_$index',
                                                         ),
@@ -338,7 +351,8 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                                             ),
                                               onTap: () {
                                                 if (cards.isEmpty) return;
-                                                notifier.topUpBalance(1000);
+                                                final actualIndex = _getActiveCardIndex(cards.length);
+                                                EditWalletBalanceBottomSheet.show(context, actualIndex);
                                               },
                                           ),
                                           const SizedBox(width: 10), // Exactly 10px gap
@@ -366,7 +380,7 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                                             ),
                                               onTap: () {
                                                 if (cards.isEmpty) return;
-                                                final pageIndex = _pageController?.page?.round() ?? 0;
+                                                final pageIndex = (_pageController?.hasClients == true) ? _pageController!.page!.round() : 0;
                                                 final actualIndex = pageIndex % cards.length;
                                                 setState(() {
                                                   _lastKnownPage = pageIndex;
@@ -382,7 +396,7 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                                                     pageBuilder: (context, animation, secondaryAnimation) {
                                                       return WalletCardDetailRoute(
                                                         card: cards[actualIndex],
-                                                        isFrozen: isFrozen && actualIndex == (activeIndex % cards.length),
+                                                        isFrozen: cards[actualIndex].isFrozen,
                                                         heroTag: 'wallet_hero_$pageIndex',
                                                         onPop: () {
                                                           if (mounted) {
@@ -476,7 +490,7 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
         isFrozen: isFrozen && actualIndex == (activeIndex % state.cards.length),
         onTap: () {
           setState(() {
-            _lastKnownPage = _pageController?.page?.round() ?? index;
+            _lastKnownPage = (_pageController?.hasClients == true) ? _pageController!.page!.round() : index;
             _tappedCardIndex = actualIndex;
             _isCardDetailExpanded = true;
           });

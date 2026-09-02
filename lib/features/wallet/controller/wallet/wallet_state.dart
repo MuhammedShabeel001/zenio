@@ -15,7 +15,6 @@ sealed class WalletState with _$WalletState {
     @Default('INR') String selectedCurrency,
     @Default([]) List<WalletCardModel> cards,
     @Default(0) int activeCardIndex,
-    @Default(false) bool isFrozen,
   }) = _WalletState;
 
   factory WalletState.initial() => const WalletState();

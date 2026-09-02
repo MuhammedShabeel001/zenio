@@ -100,11 +100,11 @@ class WalletCardWidget extends StatelessWidget {
               ],
             ),
 
-            // Middle Masked Card Number -> Now showing Balance
+            // Middle Masked Card Number
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 12),
               child: Text(
-                isFrozen ? '****  FROZEN  ****' : '₹ ${card.balance.toStringAsFixed(2)}',
+                isFrozen ? '****  FROZEN  ****' : '**** **** **** ${card.cardNumber.length >= 4 ? card.cardNumber.substring(card.cardNumber.length - 4) : card.cardNumber}',
                 style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,

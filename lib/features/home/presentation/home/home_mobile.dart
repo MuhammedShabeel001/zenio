@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:zenio/features/debts/debts.dart';
 import 'package:zenio/features/home/controller/home/home_notifier.dart';
+import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
 import 'package:zenio/features/home/presentation/widgets/quick_action_item.dart';
 import 'package:zenio/features/home/presentation/widgets/transaction_card.dart';
 import 'package:zenio/features/split/split.dart';
@@ -47,7 +48,8 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
     final summary = state.summary;
     final transactions = state.transactions;
 
-    final totalBalance = summary?.totalBalance ?? 0.0;
+    final walletState = ref.watch(walletNotifierProvider);
+    final totalBalance = walletState.cardBalance;
     final income = summary?.income ?? 0.0;
     final incomeChange = summary?.incomeChangePercentage ?? 0.0;
     final expense = summary?.expense ?? 0.0;
