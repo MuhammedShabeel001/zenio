@@ -48,7 +48,7 @@ class TransactionsNotifier extends _$TransactionsNotifier {
           final txDate = DateFormat('dd-MM-yyyy').parse(tx.date);
           if (timeframe.toLowerCase() == 'this week') {
             return txDate.isAfter(startOfWeek.subtract(const Duration(days: 1)));
-          } else if (timeframe.toLowerCase() == 'past week') {
+          } else if (timeframe.toLowerCase() == 'last week') {
             return txDate.isAfter(startOfPastWeek.subtract(const Duration(days: 1))) &&
                 txDate.isBefore(endOfPastWeek.add(const Duration(days: 1)));
           }
