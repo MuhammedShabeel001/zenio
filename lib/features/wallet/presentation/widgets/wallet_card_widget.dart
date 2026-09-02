@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
+import 'package:zenio/shared/utils/assets.gen.dart';
 
 class WalletCardWidget extends StatelessWidget {
   const WalletCardWidget({
@@ -104,7 +105,7 @@ class WalletCardWidget extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 12),
               child: Text(
-                isFrozen ? '****  FROZEN  ****' : '**** **** **** ${card.cardNumber.length >= 4 ? card.cardNumber.substring(card.cardNumber.length - 4) : card.cardNumber}',
+                '**** **** **** ${card.cardNumber.length >= 4 ? card.cardNumber.substring(card.cardNumber.length - 4) : card.cardNumber}',
                 style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -114,15 +115,29 @@ class WalletCardWidget extends StatelessWidget {
               ),
             ),
 
-            // Bottom Card Type
-            Text(
-              card.cardType.toUpperCase(),
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: Colors.white.withValues(alpha: 0.8),
-                letterSpacing: 1.8,
-              ),
+            // Bottom Row (Card Type & Frozen Icon)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  card.cardType.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white.withValues(alpha: 0.8),
+                    letterSpacing: 1.8,
+                  ),
+                ),
+                if (isFrozen)
+                  Assets.icons.freeze.svg(
+                    width: 24,
+                    height: 24,
+                    colorFilter: const ColorFilter.mode(
+                      Colors.white,
+                      BlendMode.srcIn,
+                    ),
+                  ),
+              ],
             ),
           ],
         ),

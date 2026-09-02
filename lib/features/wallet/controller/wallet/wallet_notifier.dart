@@ -122,6 +122,41 @@ class WalletNotifier extends _$WalletNotifier {
     );
   }
 
+  Future<void> editCard(int index, WalletCardModel newCard) async {
+    if (_walletRepository == null) return;
+    final updatedCards = List<WalletCardModel>.from(state.cards);
+    updatedCards[index] = newCard;
+    await _walletRepository!.saveCards(updatedCards);
+    final totalBalance = _calculateTotalBalance(updatedCards);
+    await _walletRepository!.saveCardBalance(totalBalance);
+    state = state.copyWith(
+      cards: updatedCards,
+      cardBalance: totalBalance,
+    );
+  }
+
+  Future<void> deleteCard(int index) async {
+    if (_walletRepository == null) return;
+    final updatedCards = List<WalletCardModel>.from(state.cards)..removeAt(index);
+    await _walletRepository!.saveCards(updatedCards);
+    final totalBalance = _calculateTotalBalance(updatedCards);
+    await _walletRepository!.saveCardBalance(totalBalance);
+    
+    // Adjust activeCardIndex if necessary
+    int newActiveIndex = state.activeCardIndex;
+    if (updatedCards.isEmpty) {
+      newActiveIndex = 0;
+    } else if (newActiveIndex >= updatedCards.length) {
+      newActiveIndex = updatedCards.length - 1;
+    }
+    
+    state = state.copyWith(
+      cards: updatedCards,
+      cardBalance: totalBalance,
+      activeCardIndex: newActiveIndex,
+    );
+  }
+
   Future<void> clearWallets() async {
     if (_walletRepository == null) return;
     await _walletRepository!.saveCards([]);

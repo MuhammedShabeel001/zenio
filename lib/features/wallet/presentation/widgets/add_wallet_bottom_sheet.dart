@@ -7,14 +7,24 @@ import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart'
 import 'package:zenio/shared/utils/assets.gen.dart';
 
 class AddWalletBottomSheet extends ConsumerStatefulWidget {
-  const AddWalletBottomSheet({super.key});
+  const AddWalletBottomSheet({
+    this.editingCard,
+    this.editingIndex,
+    super.key,
+  });
 
-  static void show(BuildContext context) {
+  final WalletCardModel? editingCard;
+  final int? editingIndex;
+
+  static void show(BuildContext context, {WalletCardModel? editingCard, int? editingIndex}) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => const AddWalletBottomSheet(),
+      builder: (context) => AddWalletBottomSheet(
+        editingCard: editingCard,
+        editingIndex: editingIndex,
+      ),
     );
   }
 
@@ -44,6 +54,28 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.editingCard != null) {
+      final card = widget.editingCard!;
+      _nameController.text = card.bankName;
+      _balanceController.text = card.balance.toStringAsFixed(2);
+      if (_walletTypes.contains(card.cardType)) {
+        _selectedType = card.cardType;
+      }
+      
+      String imgPath = card.gradientStartHex;
+      if (imgPath.startsWith('image:')) {
+        imgPath = imgPath.substring(6);
+      }
+      final index = _cardImages.indexOf(imgPath);
+      if (index != -1) {
+        _selectedImageIndex = index;
+      }
+    }
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
     _balanceController.dispose();
@@ -55,6 +87,7 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
     if (name.isEmpty) return;
 
     final balance = double.tryParse(_balanceController.text.trim()) ?? 0.0;
+    final isEditing = widget.editingCard != null;
 
     final r = Random();
     final p1 = (r.nextInt(9000) + 1000).toString();
@@ -70,17 +103,23 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
     final formattedDate = '${months[now.month - 1]} ${now.day} , ${now.year}';
 
     final newCard = WalletCardModel(
-      id: DateTime.now().toIso8601String(),
+      id: isEditing ? widget.editingCard!.id : DateTime.now().toIso8601String(),
       bankName: name,
-      cardNumber: cardNo,
+      cardNumber: isEditing ? widget.editingCard!.cardNumber : cardNo,
       cardType: _selectedType,
       gradientStartHex: 'image:$selectedImage',
       gradientEndHex: 'image:$selectedImage',
-      balance: balance,
-      createdAt: formattedDate,
+      balance: isEditing ? widget.editingCard!.balance : balance,
+      createdAt: isEditing ? widget.editingCard!.createdAt : formattedDate,
+      isFrozen: isEditing ? widget.editingCard!.isFrozen : false,
     );
 
-    ref.read(walletNotifierProvider.notifier).addCard(newCard, balance);
+    if (isEditing && widget.editingIndex != null) {
+      ref.read(walletNotifierProvider.notifier).editCard(widget.editingIndex!, newCard);
+    } else {
+      ref.read(walletNotifierProvider.notifier).addCard(newCard, balance);
+    }
+    
     Navigator.of(context).pop();
   }
 
@@ -193,11 +232,12 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: TextField(
                 controller: _balanceController,
+                readOnly: widget.editingCard != null,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black,
+                  color: widget.editingCard != null ? Colors.black54 : Colors.black,
                 ),
                 decoration: const InputDecoration(
                   hintText: '0.00',
@@ -261,7 +301,7 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
             ),
             const SizedBox(height: 32),
 
-            // Create wallet button
+            // Create wallet / Save changes button
             ElevatedButton(
               onPressed: _onCreateWallet,
               style: ElevatedButton.styleFrom(
@@ -273,9 +313,9 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
                 ),
                 elevation: 0,
               ),
-              child: const Text(
-                'Create wallet',
-                style: TextStyle(
+              child: Text(
+                widget.editingCard != null ? 'Save changes' : 'Create wallet',
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),

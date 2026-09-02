@@ -8,6 +8,7 @@ import 'package:zenio/features/wallet/presentation/widgets/wallet_card_widget.da
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/widgets/add_transaction_bottom_sheet.dart';
 import 'package:zenio/features/wallet/presentation/widgets/add_wallet_bottom_sheet.dart';
+import 'package:zenio/features/wallet/presentation/widgets/wallet_settings_bottom_sheet.dart';
 import 'package:zenio/features/wallet/presentation/widgets/top_up_wallet_bottom_sheet.dart';
 import 'package:zenio/shared/widgets/custom_navigation_bar.dart';
 
@@ -68,9 +69,11 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
     final activeIndex = state.activeCardIndex;
     
     double displayBalance = 0.0;
+    bool isActiveCardFrozen = false;
     if (cards.isNotEmpty) {
       final actualIndex = _getActiveCardIndex(cards.length);
       displayBalance = cards[actualIndex].balance;
+      isActiveCardFrozen = cards[actualIndex].isFrozen;
     }
 
     // Dynamically initialize controller to start at a clean multiple of cards.length
@@ -358,11 +361,18 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                                           const SizedBox(width: 10), // Exactly 10px gap
                                           _buildActionButton(
                                             label: 'Freeze',
-                                            backgroundColor:
-                                                const Color(0xFFEAEAEA),
+                                            backgroundColor: isActiveCardFrozen
+                                                ? const Color(0xFF10B981)
+                                                : const Color(0xFFEAEAEA),
                                             iconWidget: Assets.icons.freeze.svg(
                                               width: 24,
                                               height: 24,
+                                              colorFilter: isActiveCardFrozen
+                                                  ? const ColorFilter.mode(
+                                                      Colors.white,
+                                                      BlendMode.srcIn,
+                                                    )
+                                                  : null,
                                             ),
                                               onTap: () {
                                                 if (cards.isEmpty) return;
@@ -424,7 +434,9 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                                               height: 24,
                                             ),
                                             onTap: () {
-                                              notifier.clearWallets();
+                                              if (cards.isEmpty) return;
+                                              final actualIndex = _getActiveCardIndex(cards.length);
+                                              WalletSettingsBottomSheet.show(context, cards[actualIndex], actualIndex);
                                             },
                                           ),
                                         ],

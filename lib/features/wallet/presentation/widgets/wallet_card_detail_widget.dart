@@ -94,17 +94,18 @@ class WalletCardDetailWidget extends StatelessWidget {
                     ),
 
                     // Snowflake Icon on Right Side
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 2, right: 6),
-                      child: Assets.icons.freeze.svg(
-                        width: 28,
-                        height: 28,
-                        colorFilter: const ColorFilter.mode(
-                          Color(0xFFD1D1D6),
-                          BlendMode.srcIn,
+                    if (isFrozen)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 2, right: 6),
+                        child: Assets.icons.freeze.svg(
+                          width: 28,
+                          height: 28,
+                          colorFilter: const ColorFilter.mode(
+                            Color(0xFFD1D1D6),
+                            BlendMode.srcIn,
+                          ),
                         ),
                       ),
-                    ),
                   ],
                 ),
                 const SizedBox(height: 6),
