@@ -35,6 +35,30 @@ class DebtsNotifier extends _$DebtsNotifier {
     state = state.copyWith(selectedFilter: filter);
   }
 
+  double _calculateBalance(List<DebtModel> debts) {
+    double balance = 0.0;
+    for (final debt in debts) {
+      if (debt.isOwed) {
+        balance -= debt.amount;
+      } else {
+        balance += debt.amount;
+      }
+    }
+    return balance;
+  }
+
+  Future<void> addDebt(DebtModel debt) async {
+    final updated = [...state.debts, debt];
+    final repo = ref.read(debtsRepositoryRepoProvider);
+    await repo.saveDebts(updated);
+
+    final newBalance = _calculateBalance(updated);
+    state = state.copyWith(
+      totalBalance: newBalance,
+      debts: updated,
+    );
+  }
+
   Future<void> deleteDebt(String id) async {
     final target = state.debts.firstWhere(
       (debt) => debt.id == id,
@@ -54,7 +78,7 @@ class DebtsNotifier extends _$DebtsNotifier {
     final repo = ref.read(debtsRepositoryRepoProvider);
     await repo.saveDebts(updated);
 
-    final newBalance = state.totalBalance + target.amount;
+    final newBalance = _calculateBalance(updated);
     state = state.copyWith(
       totalBalance: newBalance,
       debts: updated,

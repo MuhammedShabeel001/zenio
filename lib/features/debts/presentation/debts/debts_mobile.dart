@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:zenio/features/debts/controller/debts/debts_notifier.dart';
 import 'package:zenio/features/debts/presentation/widgets/debt_card.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
-import 'package:zenio/shared/widgets/add_transaction_bottom_sheet.dart';
+import 'package:zenio/features/debts/presentation/widgets/add_debt_bottom_sheet.dart';
 
 class DebtsScreenMobile extends ConsumerStatefulWidget {
   const DebtsScreenMobile({super.key});
@@ -88,7 +88,7 @@ class _DebtsScreenMobileState extends ConsumerState<DebtsScreenMobile> {
                       // + Add Button Pill
                       GestureDetector(
                         onTap: () {
-                          AddTransactionBottomSheet.show(context);
+                          AddDebtBottomSheet.show(context);
                         },
                         child: Container(
                           padding: const EdgeInsets.symmetric(
@@ -207,7 +207,7 @@ class _DebtsScreenMobileState extends ConsumerState<DebtsScreenMobile> {
                                   .deleteDebt(item.id);
                             },
                             onEdit: () {
-                              AddTransactionBottomSheet.show(context);
+                                AddDebtBottomSheet.show(context);
                             },
                           ),
                         ),

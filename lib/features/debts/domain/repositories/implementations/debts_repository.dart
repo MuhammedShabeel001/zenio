@@ -7,82 +7,28 @@ import 'package:zenio/features/debts/domain/repositories/interfaces/i_debts_repo
 
 part 'debts_repository.g.dart';
 
-const List<DebtModel> defaultDebtsList = [
-  DebtModel(
-    id: '1',
-    personName: 'Majid',
-    date: '12 June 2026',
-    amount: 120,
-    currency: 'INR',
-    isOwed: true,
-    iconName: 'up_arrow',
-  ),
-  DebtModel(
-    id: '2',
-    personName: 'Majid',
-    date: '12 June 2026',
-    amount: 120,
-    currency: 'INR',
-    isOwed: true,
-    iconName: 'up_arrow',
-  ),
-  DebtModel(
-    id: '3',
-    personName: 'Alex',
-    date: '08 June 2026',
-    amount: 450,
-    currency: 'INR',
-    isOwed: true,
-    iconName: 'up_arrow',
-  ),
-  DebtModel(
-    id: '4',
-    personName: 'Sarah',
-    date: '02 June 2026',
-    amount: 850,
-    currency: 'INR',
-    isOwed: true,
-    iconName: 'up_arrow',
-  ),
-  DebtModel(
-    id: '5',
-    personName: 'Rahul',
-    date: '28 May 2026',
-    amount: 1200,
-    currency: 'INR',
-    isOwed: true,
-    iconName: 'up_arrow',
-  ),
-  DebtModel(
-    id: '6',
-    personName: 'David',
-    date: '20 May 2026',
-    amount: 340,
-    currency: 'INR',
-    isOwed: true,
-    iconName: 'up_arrow',
-  ),
-];
+const List<DebtModel> defaultDebtsList = [];
 
 class DebtsRepository implements IDebtsRepository {
   DebtsRepository(this._prefs);
 
   final SqlitePrefs? _prefs;
 
-  static const String _balanceKey = 'debts_page_balance_v1';
-  static const String _debtsKey = 'debts_list_key_v1';
+  static const String _balanceKey = 'debts_page_balance_v2';
+  static const String _debtsKey = 'debts_list_key_v2';
 
   @override
   Future<double> getDebtsBalance() async {
-    final prefs = _prefs;
-    if (prefs == null) return -268.01;
-    final balance = prefs.getDouble(_balanceKey);
-    if (balance != null) {
-      return balance;
+    final debts = await getDebts();
+    double balance = 0.0;
+    for (final debt in debts) {
+      if (debt.isOwed) {
+        balance -= debt.amount;
+      } else {
+        balance += debt.amount;
+      }
     }
-    const defaultBalance = -268.01;
-    await prefs.setDouble(_balanceKey, defaultBalance);
-    return defaultBalance;
+    return balance;
   }
 
   @override

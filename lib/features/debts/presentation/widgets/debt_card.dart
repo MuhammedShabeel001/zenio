@@ -124,10 +124,13 @@ class _DebtCardState extends State<DebtCard>
   }
 
   String _formatAmount(double amount) {
+    String formatted;
     if (amount == amount.toInt()) {
-      return amount.toInt().toString();
+      formatted = amount.toInt().toString();
+    } else {
+      formatted = NumberFormat('#,##0.00').format(amount);
     }
-    return NumberFormat('#,##0.00').format(amount);
+    return widget.debt.isOwed ? '- $formatted' : '+ $formatted';
   }
 
   @override
@@ -202,6 +205,10 @@ class _DebtCardState extends State<DebtCard>
                 if (_dragOffset < 0) {
                   _close();
                 } else {
+                  final hasNote = widget.debt.note != null && widget.debt.note!.trim().isNotEmpty;
+                  final hasDesc = widget.description != null && widget.description!.trim().isNotEmpty;
+                  if (!hasNote && !hasDesc) return;
+
                   if (widget.onTileTap != null) {
                     widget.onTileTap!();
                   } else {
@@ -235,14 +242,23 @@ class _DebtCardState extends State<DebtCard>
                             shape: BoxShape.circle,
                           ),
                           child: Center(
-                            child: Assets.icons.upArrow.svg(
-                              width: 24,
-                              height: 24,
-                              colorFilter: const ColorFilter.mode(
-                                Color(0xFF000000),
-                                BlendMode.srcIn,
-                              ),
-                            ),
+                            child: widget.debt.iconName == 'down_arrow'
+                                ? Assets.icons.downArrow.svg(
+                                    width: 24,
+                                    height: 24,
+                                    colorFilter: const ColorFilter.mode(
+                                      Color(0xFF000000),
+                                      BlendMode.srcIn,
+                                    ),
+                                  )
+                                : Assets.icons.upArrow.svg(
+                                    width: 24,
+                                    height: 24,
+                                    colorFilter: const ColorFilter.mode(
+                                      Color(0xFF000000),
+                                      BlendMode.srcIn,
+                                    ),
+                                  ),
                           ),
                         ),
                         const SizedBox(width: 14),
@@ -325,8 +341,9 @@ class _DebtCardState extends State<DebtCard>
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              widget.description ??
-                                  'The note that you want to add while transaction',
+                              (widget.debt.note?.isNotEmpty ?? false)
+                                  ? widget.debt.note!
+                                  : (widget.description ?? ''),
                               style: const TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w400,

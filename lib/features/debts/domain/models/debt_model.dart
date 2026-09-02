@@ -13,6 +13,7 @@ abstract class DebtModel with _$DebtModel {
     required String currency,
     required bool isOwed,
     required String iconName,
+    String? note,
   }) = _DebtModel;
 
   factory DebtModel.fromJson(Map<String, dynamic> json) =>
