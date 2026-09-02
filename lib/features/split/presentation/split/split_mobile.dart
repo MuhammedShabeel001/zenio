@@ -47,6 +47,23 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
     final state = ref.watch(splitNotifierProvider);
     final notifier = ref.read(splitNotifierProvider.notifier);
 
+    ref.listen(splitNotifierProvider, (previous, next) {
+      if (previous?.billAmount != next.billAmount) {
+        final parsed = double.tryParse(_billAmountController.text) ?? 0.0;
+        if (parsed != next.billAmount) {
+          // Update controller if the state changed externally (e.g. from loading saved data)
+          if (next.billAmount == 0) {
+            _billAmountController.text = '';
+          } else {
+            // Check if it's an integer to remove trailing .0 if needed
+            _billAmountController.text = next.billAmount == next.billAmount.toInt()
+                ? next.billAmount.toInt().toString()
+                : next.billAmount.toString();
+          }
+        }
+      }
+    });
+
     final isEqualMode = state.mode == SplitMode.equal;
 
     return Scaffold(
@@ -61,72 +78,64 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Amount Display
-                  RichText(
-                    text: TextSpan(
-                      children: [
-                        const TextSpan(
-                          text: '₹ ',
-                          style: TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                        TextSpan(
-                          text: _formatWholePart(state.billAmount),
-                          style: const TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                        TextSpan(
-                          text: _formatDecimalPart(state.billAmount),
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF808080),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-
                   // Bill Amount TextField
-                  TextField(
-                    controller: _billAmountController,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    style: const TextStyle(
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      const Text(
+                        '₹ ',
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      Expanded(
+                        child: TextField(
+                          controller: _billAmountController,
+                          autofocus: true,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          style: const TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            letterSpacing: -0.5,
+                          ),
+                          onChanged: (val) {
+                            final parsed = double.tryParse(val) ?? 0.0;
+                            notifier.setBillAmount(parsed);
+                          },
+                          decoration: const InputDecoration(
+                            hintText: '0.00',
+                            hintStyle: TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF808080),
+                              letterSpacing: -0.5,
+                            ),
+                            isDense: true,
+                            contentPadding: EdgeInsets.zero,
+                            filled: false,
+                            fillColor: Colors.transparent,
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            disabledBorder: InputBorder.none,
+                            focusedErrorBorder: InputBorder.none,
+                            errorBorder: InputBorder.none,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Enter bill amount',
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w400,
                       color: Color(0xFF7A7A80),
-                    ),
-                    onChanged: (val) {
-                      final parsed = double.tryParse(val) ?? 0.0;
-                      notifier.setBillAmount(parsed);
-                    },
-                    decoration: const InputDecoration(
-                      hintText: 'Enter bill amount',
-                      hintStyle: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w400,
-                        color: Color(0xFF7A7A80),
-                      ),
-                      isDense: true,
-                      filled: false,
-                      fillColor: Colors.transparent,
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                      disabledBorder: InputBorder.none,
-                      focusedErrorBorder: InputBorder.none,
-                      errorBorder: InputBorder.none,
-                      contentPadding: EdgeInsets.zero,
                     ),
                   ),
                 ],
@@ -300,9 +309,10 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
     return PopupMenuButton<SplitMode>(
       onSelected: onModeSelected,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(25),
+        borderRadius: BorderRadius.circular(12),
       ),
-      color: Colors.white,
+      color: const Color(0xFF1A1A1A),
+      offset: const Offset(0, 40),
       itemBuilder: (context) => [
         const PopupMenuItem(
           value: SplitMode.equal,
@@ -311,7 +321,7 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w500,
-              color: Color(0xFF111111),
+              color: Colors.white,
             ),
           ),
         ),
@@ -322,7 +332,7 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w500,
-              color: Color(0xFF111111),
+              color: Colors.white,
             ),
           ),
         ),
@@ -330,8 +340,8 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
-          color: const Color(0xFFDEDEDE),
-          borderRadius: BorderRadius.circular(25),
+          color: const Color(0xFF1A1A1A),
+          borderRadius: BorderRadius.circular(30),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -340,18 +350,14 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
               labelText,
               style: const TextStyle(
                 fontSize: 14,
-                fontWeight: FontWeight.w400,
-                color: Color(0xFF6F6F6F),
+                fontWeight: FontWeight.w500,
+                color: Color(0xFFD1D1D6),
               ),
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: 8),
             Assets.icons.dropDown.svg(
               width: 24,
               height: 24,
-              colorFilter: const ColorFilter.mode(
-                Color(0xFF7A7A80),
-                BlendMode.srcIn,
-              ),
             ),
           ],
         ),
