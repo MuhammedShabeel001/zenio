@@ -13,8 +13,6 @@ class SubscriptionCard extends StatefulWidget {
     this.onClose,
     this.isTileExpanded,
     this.onTileTap,
-    this.nextBillingDate,
-    this.billingCycle,
     super.key,
   });
 
@@ -26,8 +24,6 @@ class SubscriptionCard extends StatefulWidget {
   final VoidCallback? onClose;
   final bool? isTileExpanded;
   final VoidCallback? onTileTap;
-  final String? nextBillingDate;
-  final String? billingCycle;
 
   @override
   State<SubscriptionCard> createState() => _SubscriptionCardState();
@@ -134,6 +130,22 @@ class _SubscriptionCardState extends State<SubscriptionCard>
 
   @override
   Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final difference = widget.subscription.nextBillingDate.difference(now).inDays;
+    
+    String computedDueInText;
+    if (difference == 0) {
+      computedDueInText = 'Today';
+    } else if (difference == 1) {
+      computedDueInText = 'Tomorrow';
+    } else if (difference < 0) {
+      computedDueInText = 'Overdue by ${difference.abs()} days';
+    } else {
+      computedDueInText = 'In $difference days';
+    }
+
+    final formattedNextBillingDate = DateFormat('MMMM dd, yyyy').format(widget.subscription.nextBillingDate);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 5),
       child: Stack(
@@ -302,7 +314,7 @@ class _SubscriptionCardState extends State<SubscriptionCard>
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              widget.subscription.dueInText,
+                              computedDueInText,
                               style: const TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w400,
@@ -342,8 +354,7 @@ class _SubscriptionCardState extends State<SubscriptionCard>
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    widget.nextBillingDate ??
-                                        'August 01 , 2026',
+                                    formattedNextBillingDate,
                                     style: const TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w400,
@@ -378,7 +389,7 @@ class _SubscriptionCardState extends State<SubscriptionCard>
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      widget.billingCycle ?? 'Monthly',
+                                      widget.subscription.billingCycle,
                                       style: const TextStyle(
                                         fontSize: 13,
                                         fontWeight: FontWeight.w400,

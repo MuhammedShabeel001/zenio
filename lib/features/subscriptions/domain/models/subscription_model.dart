@@ -11,7 +11,8 @@ abstract class SubscriptionModel with _$SubscriptionModel {
     required String category,
     required double amount,
     required String currency,
-    required String dueInText,
+    required DateTime nextBillingDate,
+    required String billingCycle,
     required String iconName,
   }) = _SubscriptionModel;
 

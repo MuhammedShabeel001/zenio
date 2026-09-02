@@ -39,13 +39,14 @@ class SubscriptionsNotifier extends _$SubscriptionsNotifier {
   Future<void> deleteSubscription(String id) async {
     final target = state.subscriptions.firstWhere(
       (sub) => sub.id == id,
-      orElse: () => const SubscriptionModel(
+      orElse: () => SubscriptionModel(
         id: '',
         title: '',
         category: '',
         amount: 0,
         currency: 'INR',
-        dueInText: '',
+        nextBillingDate: DateTime.now(),
+        billingCycle: 'Monthly',
         iconName: '',
       ),
     );
@@ -58,6 +59,18 @@ class SubscriptionsNotifier extends _$SubscriptionsNotifier {
     final newBalance = state.totalBalance - target.amount;
     state = state.copyWith(
       totalBalance: newBalance < 0 ? 0 : newBalance,
+      subscriptions: updated,
+    );
+  }
+
+  Future<void> addSubscription(SubscriptionModel sub) async {
+    final updated = [...state.subscriptions, sub];
+    final repo = ref.read(subscriptionsRepositoryRepoProvider);
+    await repo.saveSubscriptions(updated);
+
+    final newBalance = state.totalBalance + sub.amount;
+    state = state.copyWith(
+      totalBalance: newBalance,
       subscriptions: updated,
     );
   }

@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:zenio/features/subscriptions/controller/subscriptions/subscriptions_notifier.dart';
 import 'package:zenio/features/subscriptions/presentation/widgets/subscription_card.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
-import 'package:zenio/shared/widgets/add_transaction_bottom_sheet.dart';
+import 'package:zenio/features/subscriptions/presentation/widgets/add_subscription_bottom_sheet.dart';
 
 class SubscriptionsScreenMobile extends ConsumerStatefulWidget {
   const SubscriptionsScreenMobile({super.key});
@@ -88,7 +88,7 @@ class _SubscriptionsScreenMobileState
                       // + Add Button Pill
                       GestureDetector(
                         onTap: () {
-                          AddTransactionBottomSheet.show(context);
+                          AddSubscriptionBottomSheet.show(context);
                         },
                         child: Container(
                           padding: const EdgeInsets.symmetric(
@@ -207,7 +207,7 @@ class _SubscriptionsScreenMobileState
                                   .deleteSubscription(item.id);
                             },
                             onEdit: () {
-                              AddTransactionBottomSheet.show(context);
+                              AddSubscriptionBottomSheet.show(context);
                             },
                           ),
                         ),

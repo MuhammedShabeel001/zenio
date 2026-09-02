@@ -7,80 +7,7 @@ import 'package:zenio/features/subscriptions/domain/repositories/interfaces/i_su
 
 part 'subscriptions_repository.g.dart';
 
-const List<SubscriptionModel> defaultSubscriptionsList = [
-  SubscriptionModel(
-    id: '1',
-    title: 'Spotify Premium',
-    category: 'Entertainment',
-    amount: 120,
-    currency: 'INR',
-    dueInText: 'Within 3 days',
-    iconName: 'music',
-  ),
-  SubscriptionModel(
-    id: '2',
-    title: 'Netflix 4K',
-    category: 'Entertainment',
-    amount: 649,
-    currency: 'INR',
-    dueInText: 'In 5 days',
-    iconName: 'music',
-  ),
-  SubscriptionModel(
-    id: '3',
-    title: 'YouTube Premium',
-    category: 'Entertainment',
-    amount: 149,
-    currency: 'INR',
-    dueInText: 'In 12 days',
-    iconName: 'music',
-  ),
-  SubscriptionModel(
-    id: '4',
-    title: 'Apple iCloud+',
-    category: 'Utilities',
-    amount: 219,
-    currency: 'INR',
-    dueInText: 'In 18 days',
-    iconName: 'music',
-  ),
-  SubscriptionModel(
-    id: '5',
-    title: 'ChatGPT Plus',
-    category: 'Productivity',
-    amount: 1999,
-    currency: 'INR',
-    dueInText: 'In 22 days',
-    iconName: 'music',
-  ),
-  SubscriptionModel(
-    id: '6',
-    title: 'Amazon Prime',
-    category: 'Entertainment',
-    amount: 299,
-    currency: 'INR',
-    dueInText: 'In 25 days',
-    iconName: 'music',
-  ),
-  SubscriptionModel(
-    id: '7',
-    title: 'Figma Pro',
-    category: 'Productivity',
-    amount: 1250,
-    currency: 'INR',
-    dueInText: 'In 28 days',
-    iconName: 'music',
-  ),
-  SubscriptionModel(
-    id: '8',
-    title: 'Gym Membership',
-    category: 'Health & Fitness',
-    amount: 1500,
-    currency: 'INR',
-    dueInText: 'In 30 days',
-    iconName: 'music',
-  ),
-];
+const List<SubscriptionModel> defaultSubscriptionsList = [];
 
 class SubscriptionsRepository implements ISubscriptionsRepository {
   SubscriptionsRepository(this._prefs);
@@ -93,12 +20,12 @@ class SubscriptionsRepository implements ISubscriptionsRepository {
   @override
   Future<double> getSubscriptionsBalance() async {
     final prefs = _prefs;
-    if (prefs == null) return 2678.01;
+    if (prefs == null) return 0.0;
     final balance = prefs.getDouble(_balanceKey);
     if (balance != null) {
       return balance;
     }
-    const defaultBalance = 2678.01;
+    const defaultBalance = 0.0;
     await prefs.setDouble(_balanceKey, defaultBalance);
     return defaultBalance;
   }
