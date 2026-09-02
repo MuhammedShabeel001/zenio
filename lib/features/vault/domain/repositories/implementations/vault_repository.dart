@@ -8,32 +8,17 @@ import 'package:zenio/features/vault/domain/repositories/interfaces/i_vault_repo
 
 part 'vault_repository.g.dart';
 
-const List<VaultCardModel> defaultVaultCards = [
-  VaultCardModel(
-    id: '1',
-    cardType: 'Credit',
-    cardNumber: '4802 2215 1183 4289',
-    expiry: '12 / 28',
-    cvv: '2345',
-  ),
-];
+const List<VaultCardModel> defaultVaultCards = [];
 
-const List<VaultNoteModel> defaultVaultNotes = [
-  VaultNoteModel(
-    id: '1',
-    date: '12 June 2026',
-    content:
-        'It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution',
-  ),
-];
+const List<VaultNoteModel> defaultVaultNotes = [];
 
 class VaultRepository implements IVaultRepository {
   VaultRepository(this._prefs);
 
   final SqlitePrefs? _prefs;
 
-  static const String _cardsKey = 'vault_cards_list_v1';
-  static const String _notesKey = 'vault_notes_list_v1';
+  static const String _cardsKey = 'vault_cards_list_v2';
+  static const String _notesKey = 'vault_notes_list_v2';
 
   @override
   Future<List<VaultCardModel>> getCards() async {

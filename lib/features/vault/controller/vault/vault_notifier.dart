@@ -1,6 +1,8 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:zenio/features/vault/controller/vault/vault_state.dart';
 import 'package:zenio/features/vault/domain/repositories/implementations/vault_repository.dart';
+import 'package:zenio/features/vault/domain/models/vault_card_model.dart';
+import 'package:zenio/features/vault/domain/models/vault_note_model.dart';
 
 part 'vault_notifier.g.dart';
 
@@ -43,6 +45,19 @@ class VaultNotifier extends _$VaultNotifier {
 
   Future<void> deleteNote(String id) async {
     final updated = state.notes.where((n) => n.id != id).toList();
+    final repo = ref.read(vaultRepositoryRepoProvider);
+    await repo.saveNotes(updated);
+    state = state.copyWith(notes: updated);
+  }
+  Future<void> addCard(VaultCardModel card) async {
+    final updated = List<VaultCardModel>.from(state.cards)..add(card);
+    final repo = ref.read(vaultRepositoryRepoProvider);
+    await repo.saveCards(updated);
+    state = state.copyWith(cards: updated);
+  }
+
+  Future<void> addNote(VaultNoteModel note) async {
+    final updated = List<VaultNoteModel>.from(state.notes)..add(note);
     final repo = ref.read(vaultRepositoryRepoProvider);
     await repo.saveNotes(updated);
     state = state.copyWith(notes: updated);

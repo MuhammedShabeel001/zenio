@@ -5,7 +5,7 @@ import 'package:zenio/features/vault/controller/vault/vault_state.dart';
 import 'package:zenio/features/vault/presentation/widgets/vault_card_item.dart';
 import 'package:zenio/features/vault/presentation/widgets/vault_note_item.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
-import 'package:zenio/shared/widgets/add_transaction_bottom_sheet.dart';
+import 'package:zenio/features/vault/presentation/widgets/add_vault_item_bottom_sheet.dart';
 
 class VaultScreenMobile extends ConsumerStatefulWidget {
   const VaultScreenMobile({super.key});
@@ -44,7 +44,7 @@ class _VaultScreenMobileState extends ConsumerState<VaultScreenMobile> {
                   // + Add Action Button Pill
                   GestureDetector(
                     onTap: () {
-                      AddTransactionBottomSheet.show(context);
+                      AddVaultItemBottomSheet.show(context, state.mode);
                     },
                     child: Container(
                       padding: const EdgeInsets.symmetric(
@@ -142,7 +142,7 @@ class _VaultScreenMobileState extends ConsumerState<VaultScreenMobile> {
                                 notifier.deleteCard(card.id);
                               },
                               onEdit: () {
-                                AddTransactionBottomSheet.show(context);
+                                AddVaultItemBottomSheet.show(context, VaultMode.cards);
                               },
                             ),
                           ),
@@ -184,7 +184,7 @@ class _VaultScreenMobileState extends ConsumerState<VaultScreenMobile> {
                                 notifier.deleteNote(note.id);
                               },
                               onEdit: () {
-                                AddTransactionBottomSheet.show(context);
+                                AddVaultItemBottomSheet.show(context, VaultMode.notes);
                               },
                             ),
                           ),
@@ -208,43 +208,24 @@ class _VaultScreenMobileState extends ConsumerState<VaultScreenMobile> {
 
     return PopupMenuButton<VaultMode>(
       onSelected: onModeSelected,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      color: Colors.white,
       itemBuilder: (context) => [
         const PopupMenuItem(
           value: VaultMode.cards,
-          child: Text(
-            'Cards',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: Color(0xFF111111),
-            ),
-          ),
+          child: Text('Cards', style: TextStyle(color: Colors.white)),
         ),
         const PopupMenuItem(
           value: VaultMode.notes,
-          child: Text(
-            'Notes',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: Color(0xFF111111),
-            ),
-          ),
+          child: Text('Notes', style: TextStyle(color: Colors.white)),
         ),
       ],
+      offset: const Offset(0, 40),
+      color: const Color(0xFF1A1A1A),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
-          color: const Color(0xFF19191B),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: const Color(0xFF2C2C2E),
-            width: 0.8,
-          ),
+          color: const Color(0xFF1A1A1A),
+          borderRadius: BorderRadius.circular(30),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -252,19 +233,15 @@ class _VaultScreenMobileState extends ConsumerState<VaultScreenMobile> {
             Text(
               labelText,
               style: const TextStyle(
-                fontSize: 13,
+                fontSize: 14,
                 fontWeight: FontWeight.w500,
                 color: Color(0xFFD1D1D6),
               ),
             ),
             const SizedBox(width: 8),
             Assets.icons.dropDown.svg(
-              width: 14,
-              height: 14,
-              colorFilter: const ColorFilter.mode(
-                Color(0xFF8E8E93),
-                BlendMode.srcIn,
-              ),
+              width: 24,
+              height: 24,
             ),
           ],
         ),
