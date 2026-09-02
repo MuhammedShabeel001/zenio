@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:zenio/features/subscriptions/controller/subscriptions/subscriptions_notifier.dart';
+import 'package:zenio/features/subscriptions/presentation/widgets/add_subscription_bottom_sheet.dart';
 import 'package:zenio/features/subscriptions/presentation/widgets/subscription_card.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
-import 'package:zenio/features/subscriptions/presentation/widgets/add_subscription_bottom_sheet.dart';
 
 class SubscriptionsScreenMobile extends ConsumerStatefulWidget {
   const SubscriptionsScreenMobile({super.key});
@@ -100,7 +100,6 @@ class _SubscriptionsScreenMobileState
                             borderRadius: BorderRadius.circular(30),
                             border: Border.all(
                               color: const Color(0xFF313131),
-                              width: 1,
                             ),
                           ),
                           child: const Row(
@@ -131,10 +130,10 @@ class _SubscriptionsScreenMobileState
                   ),
                   const SizedBox(height: 16),
 
-                  // Bottom Row: Filter Dropdown Pill (All v)
+                  // Bottom Row: Filter Dropdown Pill
                   Row(
                     children: [
-                      _buildFilterPill(label: state.selectedFilter),
+                      _buildFilterPicker(state.selectedFilter),
                     ],
                   ),
                 ],
@@ -247,6 +246,44 @@ class _SubscriptionsScreenMobileState
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildFilterPicker(String currentFilter) {
+    return PopupMenuButton<String>(
+      offset: const Offset(0, 45),
+      elevation: 8,
+      onSelected: (value) {
+        ref.read(subscriptionsNotifierProvider.notifier).updateFilter(value);
+      },
+      itemBuilder: (context) => [
+        const PopupMenuItem(
+          value: 'All',
+          child: Text('All', style: TextStyle(color: Color(0xFFD1D1D6), fontSize: 14, fontWeight: FontWeight.w500)),
+        ),
+        const PopupMenuItem(
+          value: 'Daily',
+          child: Text('Daily', style: TextStyle(color: Color(0xFFD1D1D6), fontSize: 14, fontWeight: FontWeight.w500)),
+        ),
+        const PopupMenuItem(
+          value: 'Weekly',
+          child: Text('Weekly', style: TextStyle(color: Color(0xFFD1D1D6), fontSize: 14, fontWeight: FontWeight.w500)),
+        ),
+        const PopupMenuItem(
+          value: 'Monthly',
+          child: Text('Monthly', style: TextStyle(color: Color(0xFFD1D1D6), fontSize: 14, fontWeight: FontWeight.w500)),
+        ),
+        const PopupMenuItem(
+          value: 'Yearly',
+          child: Text('Yearly', style: TextStyle(color: Color(0xFFD1D1D6), fontSize: 14, fontWeight: FontWeight.w500)),
+        ),
+      ],
+      color: const Color(0xFF1A1A1A),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: const BorderSide(color: Color(0xFF313131)),
+      ),
+      child: _buildFilterPill(label: currentFilter),
     );
   }
 }

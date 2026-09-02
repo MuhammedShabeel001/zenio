@@ -14,10 +14,12 @@ abstract class SubscriptionsState with _$SubscriptionsState {
     String? errorMessage,
   }) = _SubscriptionsState;
 
-  factory SubscriptionsState.initial() => const SubscriptionsState(
-        totalBalance: 2678.01,
-        subscriptions: defaultSubscriptionsList,
-        selectedFilter: 'All',
-        isLoading: false,
-      );
+  factory SubscriptionsState.initial() {
+    return const SubscriptionsState(
+      totalBalance: 0,
+      subscriptions: defaultSubscriptionsList,
+      selectedFilter: 'All',
+      isLoading: false,
+    );
+  }
 }

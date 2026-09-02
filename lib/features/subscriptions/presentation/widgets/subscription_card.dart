@@ -167,7 +167,7 @@ class _SubscriptionCardState extends State<SubscriptionCard>
                   child: Container(
                     width: 70,
                     height: 70,
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       color: Colors.white,
                       shape: BoxShape.circle,
                     ),
@@ -190,7 +190,7 @@ class _SubscriptionCardState extends State<SubscriptionCard>
                   child: Container(
                     width: 70,
                     height: 70,
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       color: Colors.white,
                       shape: BoxShape.circle,
                     ),

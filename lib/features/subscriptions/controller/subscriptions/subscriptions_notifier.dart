@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:zenio/features/subscriptions/controller/subscriptions/subscriptions_state.dart';
 import 'package:zenio/features/subscriptions/domain/models/subscription_model.dart';
@@ -9,7 +10,10 @@ part 'subscriptions_notifier.g.dart';
 class SubscriptionsNotifier extends _$SubscriptionsNotifier {
   @override
   SubscriptionsState build() {
-    _loadData();
+    try {
+      ref.watch(subscriptionsRepositoryRepoProvider);
+      Future.microtask(_loadData);
+    } catch (_) {}
     return SubscriptionsState.initial();
   }
 
@@ -17,11 +21,14 @@ class SubscriptionsNotifier extends _$SubscriptionsNotifier {
     state = state.copyWith(isLoading: true);
     try {
       final repo = ref.read(subscriptionsRepositoryRepoProvider);
-      final balance = await repo.getSubscriptionsBalance();
       final list = await repo.getSubscriptions();
+      
+      final filteredList = _filterSubscriptions(list, state.selectedFilter);
+      final balance = _calculateTotalBalance(filteredList);
+
       state = state.copyWith(
         totalBalance: balance,
-        subscriptions: list,
+        subscriptions: filteredList,
         isLoading: false,
       );
     } catch (e) {
@@ -32,46 +39,46 @@ class SubscriptionsNotifier extends _$SubscriptionsNotifier {
     }
   }
 
+  List<SubscriptionModel> _filterSubscriptions(
+    List<SubscriptionModel> allSubscriptions,
+    String filter,
+  ) {
+    if (filter.toLowerCase() == 'all') {
+      return allSubscriptions;
+    }
+    return allSubscriptions.where((sub) {
+      return sub.billingCycle.toLowerCase() == filter.toLowerCase();
+    }).toList();
+  }
+
+  double _calculateTotalBalance(List<SubscriptionModel> subs) {
+    double total = 0;
+    for (final sub in subs) {
+      total += sub.amount;
+    }
+    return total;
+  }
+
   void updateFilter(String filter) {
     state = state.copyWith(selectedFilter: filter);
+    unawaited(_loadData());
   }
 
   Future<void> deleteSubscription(String id) async {
-    final target = state.subscriptions.firstWhere(
-      (sub) => sub.id == id,
-      orElse: () => SubscriptionModel(
-        id: '',
-        title: '',
-        category: '',
-        amount: 0,
-        currency: 'INR',
-        nextBillingDate: DateTime.now(),
-        billingCycle: 'Monthly',
-        iconName: '',
-      ),
-    );
-    if (target.id.isEmpty) return;
-
-    final updated = state.subscriptions.where((sub) => sub.id != id).toList();
     final repo = ref.read(subscriptionsRepositoryRepoProvider);
+    final allList = await repo.getSubscriptions();
+    final updated = allList.where((sub) => sub.id != id).toList();
+    
     await repo.saveSubscriptions(updated);
-
-    final newBalance = state.totalBalance - target.amount;
-    state = state.copyWith(
-      totalBalance: newBalance < 0 ? 0 : newBalance,
-      subscriptions: updated,
-    );
+    unawaited(_loadData());
   }
 
   Future<void> addSubscription(SubscriptionModel sub) async {
-    final updated = [...state.subscriptions, sub];
     final repo = ref.read(subscriptionsRepositoryRepoProvider);
+    final allList = await repo.getSubscriptions();
+    final updated = [...allList, sub];
+    
     await repo.saveSubscriptions(updated);
-
-    final newBalance = state.totalBalance + sub.amount;
-    state = state.copyWith(
-      totalBalance: newBalance,
-      subscriptions: updated,
-    );
+    unawaited(_loadData());
   }
 }
