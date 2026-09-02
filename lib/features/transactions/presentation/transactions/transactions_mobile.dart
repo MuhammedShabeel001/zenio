@@ -132,12 +132,12 @@ class _TransactionsScreenMobileState
                   ),
                   const SizedBox(height: 20),
 
-                  // Bottom Row: Filter Dropdown Pills (Week v, This Week v)
+                  // Bottom Row: Filter Dropdown Pills
                   Row(
                     children: [
-                      _buildFilterPill(label: state.selectedPeriod),
+                      _buildPeriodPicker(state.selectedPeriod),
                       const SizedBox(width: 10),
-                      _buildFilterPill(label: state.selectedTimeframe),
+                      _buildTimeframePicker(state.selectedPeriod, state.selectedTimeframe),
                     ],
                   ),
                 ],
@@ -256,6 +256,80 @@ class _TransactionsScreenMobileState
           ),
         ],
       ),
+    );
+  }
+  Widget _buildPeriodPicker(String currentPeriod) {
+    return PopupMenuButton<String>(
+      onSelected: (value) {
+        ref.read(transactionsNotifierProvider.notifier).updatePeriod(value);
+      },
+      itemBuilder: (context) => [
+        const PopupMenuItem(value: 'Daily', child: Text('Daily', style: TextStyle(color: Colors.white))),
+        const PopupMenuItem(value: 'Weekly', child: Text('Weekly', style: TextStyle(color: Colors.white))),
+        const PopupMenuItem(value: 'Monthly', child: Text('Monthly', style: TextStyle(color: Colors.white))),
+        const PopupMenuItem(value: 'Custom', child: Text('Custom', style: TextStyle(color: Colors.white))),
+      ],
+      color: const Color(0xFF2C2C2E),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: _buildFilterPill(label: currentPeriod),
+    );
+  }
+
+  Widget _buildTimeframePicker(String period, String timeframe) {
+    if (period.toLowerCase() == 'custom') {
+      return GestureDetector(
+        onTap: () async {
+          final DateTimeRange? picked = await showDateRangePicker(
+            context: context,
+            firstDate: DateTime(2000),
+            lastDate: DateTime.now(),
+            builder: (context, child) {
+              return Theme(
+                data: ThemeData.dark().copyWith(
+                  colorScheme: const ColorScheme.dark(
+                    primary: Colors.white,
+                    onPrimary: Colors.black,
+                    surface: Color(0xFF1A1A1A),
+                    onSurface: Colors.white,
+                  ),
+                ),
+                child: child!,
+              );
+            },
+          );
+          if (picked != null) {
+            final start = DateFormat('dd MMM').format(picked.start);
+            final end = DateFormat('dd MMM').format(picked.end);
+            ref.read(transactionsNotifierProvider.notifier).updateTimeframe('$start - $end');
+          }
+        },
+        child: _buildFilterPill(label: timeframe),
+      );
+    }
+
+    List<String> options = [];
+    if (period.toLowerCase() == 'daily') {
+      options = ['Today', 'Yesterday'];
+    } else if (period.toLowerCase() == 'weekly') {
+      options = ['This week', 'Past week'];
+    } else if (period.toLowerCase() == 'monthly') {
+      options = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+      ];
+    }
+
+    return PopupMenuButton<String>(
+      onSelected: (value) {
+        ref.read(transactionsNotifierProvider.notifier).updateTimeframe(value);
+      },
+      itemBuilder: (context) => options.map((opt) => PopupMenuItem(
+        value: opt, 
+        child: Text(opt, style: const TextStyle(color: Colors.white)),
+      )).toList(),
+      color: const Color(0xFF2C2C2E),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: _buildFilterPill(label: timeframe),
     );
   }
 }

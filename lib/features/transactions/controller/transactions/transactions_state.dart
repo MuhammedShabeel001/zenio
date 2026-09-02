@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:intl/intl.dart';
 import 'package:zenio/features/transactions/domain/models/transaction_detail_model.dart';
 import 'package:zenio/features/transactions/domain/repositories/implementations/transactions_repository.dart';
 
@@ -15,11 +16,13 @@ abstract class TransactionsState with _$TransactionsState {
     String? errorMessage,
   }) = _TransactionsState;
 
-  factory TransactionsState.initial() => const TransactionsState(
-        totalBalance: 2678.01,
-        transactions: defaultTransactionsList,
-        selectedPeriod: 'Week',
-        selectedTimeframe: 'This Week',
-        isLoading: false,
-      );
+  factory TransactionsState.initial() {
+    return TransactionsState(
+      totalBalance: 2678.01,
+      transactions: defaultTransactionsList,
+      selectedPeriod: 'Monthly',
+      selectedTimeframe: DateFormat('MMMM').format(DateTime.now()),
+      isLoading: false,
+    );
+  }
 }
