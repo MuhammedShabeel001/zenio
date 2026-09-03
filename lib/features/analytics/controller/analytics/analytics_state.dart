@@ -13,8 +13,8 @@ sealed class AnalyticsState with _$AnalyticsState {
     @Default(AnalyticsStatus.initial) AnalyticsStatus status,
     @Default(2678.01) double totalBalance,
     @Default('INR') String selectedCurrency,
-    @Default('Week') String selectedPeriod,
-    @Default('This Week') String selectedTimeframe,
+    @Default('Monthly') String selectedPeriod,
+    @Default('September') String selectedTimeframe,
     @Default([]) List<CategorySpendModel> categorySpends,
   }) = _AnalyticsState;
 

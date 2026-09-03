@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hancod_theme/hancod_theme.dart';
 import 'package:intl/intl.dart';
 import 'package:zenio/features/split/controller/split/split_notifier.dart';
+import 'package:zenio/features/split/controller/split/split_state.dart';
 import 'package:zenio/features/split/domain/models/split_calculation_model.dart';
+import 'package:zenio/features/split/domain/services/split_share_service.dart';
+import 'package:zenio/shared/utils/alert.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 
 class SplitScreenMobile extends ConsumerStatefulWidget {
@@ -27,19 +32,30 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
     super.dispose();
   }
 
-  String _formatWholePart(double amount) {
-    final whole = amount.toInt();
-    final formatter = NumberFormat('#,##0');
-    return formatter.format(whole);
-  }
-
-  String _formatDecimalPart(double amount) {
-    final decimal = ((amount - amount.toInt()).abs() * 100).round();
-    return '.${decimal.toString().padLeft(2, '0')}';
-  }
-
   String _formatCurrencyValue(double amount) {
     return '₹ ${NumberFormat('#,##0.00').format(amount)}';
+  }
+
+  Future<void> _handleShare(BuildContext buttonContext, SplitState state) async {
+    if (state.billAmount <= 0) {
+      Alert.showSnackBar(
+        'Please enter a bill amount to share',
+        type: SnackBarType.warning,
+      );
+      return;
+    }
+
+    final box = buttonContext.findRenderObject() as RenderBox?;
+    final origin = box != null
+        ? box.localToGlobal(Offset.zero) & box.size
+        : null;
+
+    await HapticFeedback.lightImpact();
+
+    await SplitShareService.share(
+      state: state,
+      sharePositionOrigin: origin,
+    );
   }
 
   @override
@@ -267,23 +283,32 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
                             const SizedBox(width: 2),
 
                             // Green Circular Share Action Button
-                            Container(
-                              width: 80,
-                              height: 80,
-                              decoration: const BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Center(
-                                child: Assets.icons.share.svg(
-                                  width: 28,
-                                  height: 28,
-                                  colorFilter: const ColorFilter.mode(
-                                    Color(0xFF10B981),
-                                    BlendMode.srcIn,
+                            Builder(
+                              builder: (buttonContext) {
+                                return Material(
+                                  color: Colors.white,
+                                  shape: const CircleBorder(),
+                                  clipBehavior: Clip.antiAlias,
+                                  child: InkWell(
+                                    customBorder: const CircleBorder(),
+                                    onTap: () => _handleShare(buttonContext, state),
+                                    child: SizedBox(
+                                      width: 80,
+                                      height: 80,
+                                      child: Center(
+                                        child: Assets.icons.share.svg(
+                                          width: 28,
+                                          height: 28,
+                                          colorFilter: const ColorFilter.mode(
+                                            Color(0xFF10B981),
+                                            BlendMode.srcIn,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ),
+                                );
+                              },
                             ),
                           ],
                         ),

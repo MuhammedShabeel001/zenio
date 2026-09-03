@@ -20,12 +20,14 @@ class DonutChartWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (categories.isEmpty) {
-      return const SizedBox(
+    final total = categories.fold<double>(0, (sum, c) => sum + c.amount);
+    
+    if (categories.isEmpty || total == 0) {
+      return SizedBox(
         width: 220,
         height: 220,
-        child: Center(
-          child: CircularProgressIndicator(),
+        child: CustomPaint(
+          painter: _EmptyDonutPainter(),
         ),
       );
     }
@@ -144,3 +146,27 @@ class _ExactCustomDonutPainter extends CustomPainter {
     return oldDelegate.values != values || oldDelegate.colors != colors;
   }
 }
+
+class _EmptyDonutPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    const outerRadius = 92.0;
+    const thickness = 34.0;
+    const innerRadius = outerRadius - thickness; // 58.0
+
+    // Average radius for the stroke to be centered
+    const drawRadius = (outerRadius + innerRadius) / 2;
+
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = thickness
+      ..color = const Color(0xFFF0F0F0); // Light grey for empty state
+
+    canvas.drawCircle(center, drawRadius, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
