@@ -90,8 +90,14 @@ class TopSpentCard extends StatelessWidget {
   Color _getCategoryColor(CategorySpendModel spend) {
     if (spend.colorHex.isNotEmpty) {
       try {
-        final hex = spend.colorHex.replaceAll('#', '');
-        return Color(int.parse('0xFF$hex'));
+        var clean = spend.colorHex.replaceAll('#', '').trim();
+        if (clean.startsWith('0x') || clean.startsWith('0X')) {
+          return Color(int.parse(clean));
+        }
+        if (clean.length == 6) {
+          clean = 'FF$clean';
+        }
+        return Color(int.parse('0x$clean'));
       } catch (_) {}
     }
     final lower = spend.name.toLowerCase();
