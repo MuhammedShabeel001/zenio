@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:zenio/features/splash/presentation/widgets/animated_zenio_logo.dart';
 import 'package:zenio/features/splash/splash.dart';
 
 void main() {
@@ -13,8 +14,9 @@ void main() {
 
       // Verify that the 'by aureo' subtitle text is present in the tree
       expect(find.text('by aureo'), findsOneWidget);
+      expect(find.byType(AnimatedZenioLogo), findsOneWidget);
 
-      // Allow animation to progress
+      // Allow animation to progress through reveal and shine sweep
       await tester.pump(const Duration(milliseconds: 500));
       await tester.pump(const Duration(milliseconds: 1000));
     });
@@ -31,6 +33,7 @@ void main() {
       );
 
       expect(find.text('by aureo'), findsOneWidget);
+      expect(find.byType(AnimatedZenioLogo), findsOneWidget);
       await tester.pump(const Duration(milliseconds: 1000));
     });
 
@@ -46,6 +49,7 @@ void main() {
       );
 
       expect(find.text('by aureo'), findsOneWidget);
+      expect(find.byType(AnimatedZenioLogo), findsOneWidget);
       await tester.pump(const Duration(milliseconds: 1000));
     });
   });

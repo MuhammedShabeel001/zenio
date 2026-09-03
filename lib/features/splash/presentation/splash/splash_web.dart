@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hancod_theme/hancod_theme.dart';
+import 'package:zenio/features/splash/presentation/widgets/animated_zenio_logo.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/utils/router.dart';
 
@@ -15,8 +16,6 @@ class SplashScreenWeb extends StatefulWidget {
 class _SplashScreenWebState extends State<SplashScreenWeb>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
-  late final Animation<double> _logoFade;
-  late final Animation<double> _logoScale;
   late final Animation<Offset> _bottomCardSlide;
   late final Animation<double> _bottomCardFade;
   late final Animation<double> _subtitleFade;
@@ -30,19 +29,7 @@ class _SplashScreenWebState extends State<SplashScreenWeb>
 
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1400),
-    );
-
-    _logoFade = CurvedAnimation(
-      parent: _controller,
-      curve: const Interval(0, 0.6, curve: Curves.easeOutCubic),
-    );
-
-    _logoScale = Tween<double>(begin: 0.92, end: 1).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0, 0.7, curve: Curves.easeOutCubic),
-      ),
+      duration: const Duration(milliseconds: 1700),
     );
 
     _bottomCardSlide = Tween<Offset>(
@@ -51,23 +38,23 @@ class _SplashScreenWebState extends State<SplashScreenWeb>
     ).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: const Interval(0.3, 0.85, curve: Curves.easeOutCubic),
+        curve: const Interval(0.42, 0.88, curve: Curves.easeOutCubic),
       ),
     );
 
     _bottomCardFade = CurvedAnimation(
       parent: _controller,
-      curve: const Interval(0.3, 0.8, curve: Curves.easeOut),
+      curve: const Interval(0.42, 0.82, curve: Curves.easeOut),
     );
 
     _subtitleFade = CurvedAnimation(
       parent: _controller,
-      curve: const Interval(0.55, 1, curve: Curves.easeOut),
+      curve: const Interval(0.60, 1, curve: Curves.easeOut),
     );
 
     _controller.forward();
 
-    _navigationTimer = Timer(const Duration(milliseconds: 2300), _navigateToHome);
+    _navigationTimer = Timer(const Duration(milliseconds: 2600), _navigateToHome);
   }
 
   void _navigateToHome() {
@@ -101,15 +88,8 @@ class _SplashScreenWebState extends State<SplashScreenWeb>
                   children: [
                     Expanded(
                       child: Center(
-                        child: FadeTransition(
-                          opacity: _logoFade,
-                          child: ScaleTransition(
-                            scale: _logoScale,
-                            child: Assets.images.appLogo.svg(
-                              width: 130,
-                              height: 137,
-                            ),
-                          ),
+                        child: AnimatedZenioLogo(
+                          animation: _controller,
                         ),
                       ),
                     ),

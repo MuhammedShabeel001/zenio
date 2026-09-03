@@ -49,12 +49,14 @@ unlinked_spec.ds
 **/android/captures/
 **/android/local.properties
 **/android/**/GeneratedPluginRegistrant.java
-# **/android/key.properties
+**/android/key.properties
+key.properties
 **/android/.idea/
 **/android/app/debug
 **/android/app/profile
 **/android/app/release
 *.jks
+*.keystore
 
 # iOS/XCode related
 **/ios/**/*.mode1v3
