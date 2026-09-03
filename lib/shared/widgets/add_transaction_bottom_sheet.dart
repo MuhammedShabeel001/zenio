@@ -5,6 +5,7 @@ import 'package:zenio/features/home/controller/home/home_notifier.dart';
 import 'package:zenio/features/home/domain/models/transaction/transaction_model.dart';
 import 'package:zenio/features/transactions/controller/transactions/transactions_notifier.dart';
 import 'package:zenio/features/transactions/domain/models/transaction_detail_model.dart';
+import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 
 enum TransactionType { expense, income, transfer }
@@ -38,12 +39,11 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
   late TextEditingController _noteController;
 
   DateTime _selectedDate = DateTime.now();
-  String _sourceWallet = 'Slice';
-  String _destinationWallet = 'SBI';
+  String? _sourceWallet;
+  String? _destinationWallet;
   String? _selectedCategory;
   double _swapTurns = 0.0;
 
-  final List<String> _wallets = ['Slice', 'SBI', 'HDFC', 'Cash'];
   final List<String> _categories = [
     'Food & Drink',
     'Shopping',
@@ -58,6 +58,9 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
     super.initState();
     _amountController = TextEditingController(text: '0');
     _noteController = TextEditingController();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(walletNotifierProvider.notifier).loadWalletData();
+    });
   }
 
   @override
@@ -67,11 +70,10 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
     super.dispose();
   }
 
-  void _swapWallets() {
+  void _swapWallets(String currentSource, String currentDestination) {
     setState(() {
-      final temp = _sourceWallet;
-      _sourceWallet = _destinationWallet;
-      _destinationWallet = temp;
+      _sourceWallet = currentDestination;
+      _destinationWallet = currentSource;
       _swapTurns += 0.5;
     });
   }
@@ -94,6 +96,30 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
   Widget build(BuildContext context) {
     final formattedDate =
         DateFormat('EEEE, MMMM d, yyyy').format(_selectedDate);
+
+    final walletState = ref.watch(walletNotifierProvider);
+    final cardWallets = walletState.cards
+        .map((c) => c.bankName.trim())
+        .where((name) => name.isNotEmpty)
+        .toSet()
+        .toList();
+
+    final List<String> wallets = cardWallets.isNotEmpty
+        ? [
+            ...cardWallets,
+            if (!cardWallets.any((w) => w.toLowerCase() == 'cash')) 'Cash',
+          ]
+        : ['Cash'];
+
+    final selectedSource = (wallets.contains(_sourceWallet))
+        ? _sourceWallet!
+        : wallets.first;
+
+    final selectedDestination = (wallets.contains(_destinationWallet) && _destinationWallet != selectedSource)
+        ? _destinationWallet!
+        : (wallets.length > 1
+            ? wallets.firstWhere((w) => w != selectedSource, orElse: () => wallets.first)
+            : selectedSource);
 
     return Container(
       decoration: const BoxDecoration(
@@ -248,7 +274,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                   Expanded(
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
-                        value: _sourceWallet,
+                        value: selectedSource,
                         icon: Assets.icons.dropDown.svg(
                           width: 24,
                           height: 24,
@@ -263,7 +289,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                           fontWeight: FontWeight.w500,
                           color: Color(0xFF111111),
                         ),
-                        items: _wallets
+                        items: wallets
                             .map(
                               (w) => DropdownMenuItem(
                                 value: w,
@@ -315,7 +341,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                         Expanded(
                           child: DropdownButtonHideUnderline(
                             child: DropdownButton<String>(
-                              value: _destinationWallet,
+                              value: selectedDestination,
                               icon: Assets.icons.dropDown.svg(
                                 width: 24,
                                 height: 24,
@@ -330,7 +356,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                                 fontWeight: FontWeight.w500,
                                 color: Color(0xFF111111),
                               ),
-                              items: _wallets
+                              items: wallets
                                   .map(
                                     (w) => DropdownMenuItem(
                                       value: w,
@@ -357,7 +383,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                     right: 60,
                     top: -26,
                     child: GestureDetector(
-                      onTap: _swapWallets,
+                      onTap: () => _swapWallets(selectedSource, selectedDestination),
                       child: Container(
                         width: 50,
                         height: 50,
@@ -493,7 +519,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                   final amount = double.tryParse(_amountController.text) ?? 0.0;
                   final note = _noteController.text.trim();
                   final title = _selectedType == TransactionType.transfer
-                      ? 'Transfer to $_destinationWallet'
+                      ? 'Transfer to $selectedDestination'
                       : (_selectedCategory ?? 'Transaction');
                   
                   final isIncome = _selectedType == TransactionType.income;
@@ -501,8 +527,8 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                   final timeString = DateFormat('HH : mm').format(DateTime.now());
                   final timestamp = '${DateFormat('yy-MM-dd').format(_selectedDate)}   $timeString';
                   final bankName = _selectedType == TransactionType.transfer
-                      ? '$_sourceWallet -> $_destinationWallet'
-                      : _sourceWallet;
+                      ? '$selectedSource -> $selectedDestination'
+                      : selectedSource;
 
                   final id = DateTime.now().millisecondsSinceEpoch.toString();
 
@@ -532,6 +558,28 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
 
                   ref.read(transactionsNotifierProvider.notifier).addTransaction(txDetail);
                   ref.read(homeNotifierProvider.notifier).addTransaction(txHome);
+
+                  final walletNotifier = ref.read(walletNotifierProvider.notifier);
+                  if (_selectedType == TransactionType.expense) {
+                    walletNotifier.adjustWalletBalance(
+                      walletName: selectedSource,
+                      amount: amount,
+                      isIncome: false,
+                    );
+                  } else if (_selectedType == TransactionType.income) {
+                    walletNotifier.adjustWalletBalance(
+                      walletName: selectedSource,
+                      amount: amount,
+                      isIncome: true,
+                    );
+                  } else if (_selectedType == TransactionType.transfer) {
+                    walletNotifier.transferBetweenWallets(
+                      fromWallet: selectedSource,
+                      toWallet: selectedDestination,
+                      amount: amount,
+                    );
+                  }
+
                   Navigator.of(context).pop();
                 },
                 style: ElevatedButton.styleFrom(

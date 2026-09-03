@@ -1,4 +1,3 @@
-import 'package:zenio/shared/providers/providers.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
@@ -9,7 +8,7 @@ part 'wallet_notifier.freezed.dart';
 part 'wallet_notifier.g.dart';
 part 'wallet_state.dart';
 
-@Riverpod()
+@Riverpod(keepAlive: true)
 class WalletNotifier extends _$WalletNotifier {
   IWalletRepository? _walletRepository;
 
@@ -157,14 +156,40 @@ class WalletNotifier extends _$WalletNotifier {
     );
   }
 
-  Future<void> clearWallets() async {
-    if (_walletRepository == null) return;
-    await _walletRepository!.saveCards([]);
-    await _walletRepository!.saveCardBalance(0.0);
-    state = state.copyWith(
-      cards: [],
-      cardBalance: 0.0,
-      activeCardIndex: 0,
+  Future<void> adjustWalletBalance({
+    required String walletName,
+    required double amount,
+    required bool isIncome,
+  }) async {
+    final index = state.cards.indexWhere(
+      (c) => c.bankName.trim().toLowerCase() == walletName.trim().toLowerCase(),
     );
+    if (index != -1) {
+      await updateCardBalance(
+        index,
+        amount,
+        mode: isIncome ? 'add' : 'subtract',
+      );
+    }
+  }
+
+  Future<void> transferBetweenWallets({
+    required String fromWallet,
+    required String toWallet,
+    required double amount,
+  }) async {
+    final fromIndex = state.cards.indexWhere(
+      (c) => c.bankName.trim().toLowerCase() == fromWallet.trim().toLowerCase(),
+    );
+    if (fromIndex != -1) {
+      await updateCardBalance(fromIndex, amount, mode: 'subtract');
+    }
+
+    final toIndex = state.cards.indexWhere(
+      (c) => c.bankName.trim().toLowerCase() == toWallet.trim().toLowerCase(),
+    );
+    if (toIndex != -1) {
+      await updateCardBalance(toIndex, amount, mode: 'add');
+    }
   }
 }

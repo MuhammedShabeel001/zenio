@@ -3,26 +3,19 @@ import 'package:intl/intl.dart';
 import 'package:zenio/features/analytics/domain/models/category_spend/category_spend_model.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 
-class TopSpentCard extends StatefulWidget {
+class TopSpentCard extends StatelessWidget {
   const TopSpentCard({
     required this.spend,
+    this.totalSpend,
     this.isExpanded,
     this.onTap,
     super.key,
   });
 
   final CategorySpendModel spend;
+  final double? totalSpend;
   final bool? isExpanded;
   final VoidCallback? onTap;
-
-  @override
-  State<TopSpentCard> createState() => _TopSpentCardState();
-}
-
-class _TopSpentCardState extends State<TopSpentCard> {
-  bool _internalExpanded = false;
-
-  bool get _effectiveIsExpanded => widget.isExpanded ?? _internalExpanded;
 
   Widget _getIcon(String iconName) {
     switch (iconName) {
@@ -112,12 +105,11 @@ class _TopSpentCardState extends State<TopSpentCard> {
     return const Color(0xFF06B6D4);
   }
 
-  double _getSpendRatio(CategorySpendModel spend) {
-    if (spend.amount >= 1200) return 0.65;
-    if (spend.amount >= 1000) return 0.55;
-    if (spend.amount >= 800) return 0.45;
-    if (spend.amount >= 500) return 0.35;
-    return 0.25;
+  double _getSpendRatio(CategorySpendModel spend, double? totalSpend) {
+    if (totalSpend != null && totalSpend > 0) {
+      return (spend.amount / totalSpend).clamp(0.0, 1.0);
+    }
+    return 0;
   }
 
   String _formatAmount(double amount) {
@@ -129,19 +121,12 @@ class _TopSpentCardState extends State<TopSpentCard> {
 
   @override
   Widget build(BuildContext context) {
-    final categoryColor = _getCategoryColor(widget.spend);
-    final ratio = _getSpendRatio(widget.spend);
+    final categoryColor = _getCategoryColor(spend);
+    final ratio = _getSpendRatio(spend, totalSpend);
+    final expanded = isExpanded ?? false;
 
     return GestureDetector(
-      onTap: () {
-        if (widget.onTap != null) {
-          widget.onTap!();
-        } else {
-          setState(() {
-            _internalExpanded = !_internalExpanded;
-          });
-        }
-      },
+      onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
@@ -151,16 +136,6 @@ class _TopSpentCardState extends State<TopSpentCard> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(32),
-          // border: Border.all(color: const Color(0xFFF3F3F5), width: 1.2),
-          //   boxShadow: _effectiveIsExpanded
-          //       ? [
-          //           BoxShadow(
-          //             color: Colors.black.withValues(alpha: 0.03),
-          //             blurRadius: 10,
-          //             offset: const Offset(0, 4),
-          //           ),
-          //         ]
-          //       : null,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -171,11 +146,11 @@ class _TopSpentCardState extends State<TopSpentCard> {
                   width: 60,
                   height: 60,
                   decoration: BoxDecoration(
-                    color: _getBadgeBackgroundColor(widget.spend.name),
+                    color: _getBadgeBackgroundColor(spend.name),
                     shape: BoxShape.circle,
                   ),
                   child: Center(
-                    child: _getIcon(widget.spend.iconName),
+                    child: _getIcon(spend.iconName),
                   ),
                 ),
                 const SizedBox(width: 17),
@@ -185,7 +160,7 @@ class _TopSpentCardState extends State<TopSpentCard> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        widget.spend.name,
+                        spend.name,
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -194,7 +169,7 @@ class _TopSpentCardState extends State<TopSpentCard> {
                       ),
                       const SizedBox(height: 3),
                       Text(
-                        '${widget.spend.spendsCount} spends',
+                        '${spend.spendsCount} spends',
                         style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w400,
@@ -209,7 +184,7 @@ class _TopSpentCardState extends State<TopSpentCard> {
                   textBaseline: TextBaseline.alphabetic,
                   children: [
                     Text(
-                      '- ${_formatAmount(widget.spend.amount)}',
+                      '- ${_formatAmount(spend.amount)}',
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -230,18 +205,17 @@ class _TopSpentCardState extends State<TopSpentCard> {
               ],
             ),
 
-            // Expandable Progress Bar Section
+            // Tap-to-Expand Animated Progress Bar Section
             AnimatedCrossFade(
               duration: const Duration(milliseconds: 300),
               firstCurve: Curves.fastOutSlowIn,
               secondCurve: Curves.fastOutSlowIn,
-              crossFadeState: _effectiveIsExpanded
+              crossFadeState: expanded
                   ? CrossFadeState.showSecond
                   : CrossFadeState.showFirst,
               firstChild: const SizedBox.shrink(),
               secondChild: Padding(
                 padding: const EdgeInsets.fromLTRB(15, 15, 0, 10),
-                // padding: const EdgeInsets.fromLTRB(5, 5, 20, 5),
                 child: Container(
                   height: 6,
                   width: double.infinity,
@@ -251,14 +225,21 @@ class _TopSpentCardState extends State<TopSpentCard> {
                   ),
                   child: Align(
                     alignment: Alignment.centerLeft,
-                    child: FractionallySizedBox(
-                      widthFactor: ratio,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: categoryColor,
-                          borderRadius: BorderRadius.circular(3),
-                        ),
-                      ),
+                    child: TweenAnimationBuilder<double>(
+                      tween: Tween<double>(begin: 0, end: expanded ? ratio : 0),
+                      duration: const Duration(milliseconds: 400),
+                      curve: Curves.easeOutCubic,
+                      builder: (context, animatedRatio, child) {
+                        return FractionallySizedBox(
+                          widthFactor: animatedRatio.clamp(0.0, 1.0),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: categoryColor,
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ),

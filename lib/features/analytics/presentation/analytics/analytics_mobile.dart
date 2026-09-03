@@ -184,6 +184,7 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
                                   _expandedCategoryId == spend.id;
                               return TopSpentCard(
                                 spend: spend,
+                                totalSpend: totalBalance,
                                 isExpanded: isExpanded,
                                 onTap: () {
                                   setState(() {
