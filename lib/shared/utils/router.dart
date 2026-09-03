@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:zenio/features/home/home.dart';
+import 'package:zenio/features/splash/splash.dart';
 import 'package:zenio/shared/shared.dart';
 
 /// Exposes a [GoRouter] that uses a [Listenable] to refresh its internal state.
@@ -63,11 +64,20 @@ class AppRouter {
   late final GoRouter router = GoRouter(
     navigatorKey: _rootNavigatorKey,
     debugLogDiagnostics: true,
+    initialLocation: '/splash',
     routes: [
+      GoRoute(
+        path: '/splash',
+        name: splash,
+        builder: (context, state) => const SplashScreen(),
+      ),
       GoRoute(
         path: '/',
         name: home,
-        builder: (context, state) => const HomeScreen(),
+        pageBuilder: (context, state) => fadeTransition(
+          state,
+          const HomeScreen(),
+        ),
       ),
     ],
     // refreshListenable: Listenable.merge([authState]),
