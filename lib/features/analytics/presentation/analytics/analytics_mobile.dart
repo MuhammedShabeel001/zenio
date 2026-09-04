@@ -3,6 +3,7 @@ import 'package:calendar_date_picker2/calendar_date_picker2.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:zenio/features/analytics/controller/analytics/analytics_notifier.dart';
+import 'package:zenio/features/analytics/presentation/categories/categories_list_screen.dart';
 import 'package:zenio/features/analytics/presentation/widgets/category_legend_widget.dart';
 import 'package:zenio/features/analytics/presentation/widgets/donut_chart_widget.dart';
 import 'package:zenio/features/analytics/presentation/widgets/top_spent_card.dart';
@@ -24,7 +25,32 @@ class AnalyticsScreenMobile extends ConsumerStatefulWidget {
 }
 
 class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
+  final ScrollController _scrollController = ScrollController();
+  double _scrollOffset = 0;
   String? _expandedCategoryId;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController
+      ..removeListener(_onScroll)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    final offset = _scrollController.offset.clamp(0.0, 70.0);
+    if ((offset - _scrollOffset).abs() > 0.5) {
+      setState(() {
+        _scrollOffset = offset;
+      });
+    }
+  }
 
   String _formatWholePart(double amount) {
     final whole = amount.toInt();
@@ -41,7 +67,8 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
   Widget build(BuildContext context) {
     final state = ref.watch(analyticsNotifierProvider);
     final totalBalance = state.totalBalance;
-    final categories = state.categorySpends;
+    final categories = state.categorySpends.take(10).toList();
+    final shrinkProgress = (_scrollOffset / 60.0).clamp(0.0, 1.0);
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -118,85 +145,147 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
                   ),
                   child: Stack(
                     children: [
-                      ListView(
-                        padding: const EdgeInsets.fromLTRB(10, 16, 10, 90),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          // Donut Chart Centered
+                          const SizedBox(height: 16),
+
+                          // Donut Chart Centered (Fixed / Pinned)
                           Center(
                             child: DonutChartWidget(categories: categories),
                           ),
-                          const SizedBox(height: 10),
 
-                          // Category Legend Grid
-                          CategoryLegendWidget(categories: categories),
-                          const SizedBox(height: 20),
+                          // Dynamic top spacing for legend
+                          SizedBox(height: 10 * (1.0 - shrinkProgress)),
 
-                          // Top Spent Section Header
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                'Top Spent',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF111111),
-                                  letterSpacing: -0.3,
-                                ),
-                              ),
-                              Assets.icons.rightArrow.svg(
-                                width: 22,
-                                height: 22,
-                                colorFilter: const ColorFilter.mode(
-                                  Color(0xFF2CC56F),
-                                  BlendMode.srcIn,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-
-                          // Divider Line
-                          const Divider(
-                            color: Color(0xFFECECEC),
-                            height: 1,
-                            thickness: 1,
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Top Spent List
-                          if (categories.isEmpty)
-                            const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 24),
-                              child: Center(
-                                child: Text(
-                                  'No spends recorded',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Color(0xFF8E8E93),
+                          // Category Legend Grid that shrinks while scrolling
+                          ClipRect(
+                            child: Align(
+                              alignment: Alignment.topCenter,
+                              heightFactor: (1.0 - shrinkProgress).clamp(0.0, 1.0),
+                              child: Opacity(
+                                opacity: (1.0 - shrinkProgress).clamp(0.0, 1.0),
+                                child: Transform.scale(
+                                  scale: (1.0 - (shrinkProgress * 0.2)).clamp(0.8, 1.0),
+                                  alignment: Alignment.topCenter,
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                                    child: CategoryLegendWidget(categories: categories),
                                   ),
                                 ),
                               ),
-                            )
-                          else
-                            ...categories.map((spend) {
-                              final isExpanded =
-                                  _expandedCategoryId == spend.id;
-                              return TopSpentCard(
-                                spend: spend,
-                                totalSpend: totalBalance,
-                                isExpanded: isExpanded,
-                                onTap: () {
-                                  setState(() {
-                                    if (isExpanded) {
-                                      _expandedCategoryId = null;
-                                    } else {
-                                      _expandedCategoryId = spend.id;
-                                    }
-                                  });
-                                },
-                              );
-                            }),
+                            ),
+                          ),
+
+                          // Dynamic bottom spacing for legend
+                          SizedBox(height: 16 * (1.0 - shrinkProgress) + 4),
+
+                          // Top Spent Section Header (Fixed / Pinned)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                GestureDetector(
+                                  onTap: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute<void>(
+                                        builder: (context) =>
+                                            const CategoriesListScreen(),
+                                      ),
+                                    );
+                                  },
+                                  behavior: HitTestBehavior.opaque,
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      const Text(
+                                        'Top Spent',
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF111111),
+                                          letterSpacing: -0.3,
+                                        ),
+                                      ),
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Text(
+                                            'See All',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
+                                              color: Color(0xFF2CC56F),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Assets.icons.rightArrow.svg(
+                                            width: 18,
+                                            height: 18,
+                                            colorFilter: const ColorFilter.mode(
+                                              Color(0xFF2CC56F),
+                                              BlendMode.srcIn,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                const Divider(
+                                  color: Color(0xFFECECEC),
+                                  height: 1,
+                                  thickness: 1,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+
+                          // Categories List Only Scrolls!
+                          Expanded(
+                            child: categories.isEmpty
+                                ? const Center(
+                                    child: Padding(
+                                      padding: EdgeInsets.symmetric(vertical: 24),
+                                      child: Text(
+                                        'No spends recorded',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Color(0xFF8E8E93),
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                : ListView.builder(
+                                    controller: _scrollController,
+                                    physics: const BouncingScrollPhysics(),
+                                    padding: const EdgeInsets.fromLTRB(10, 4, 10, 95),
+                                    itemCount: categories.length,
+                                    itemBuilder: (context, index) {
+                                      final spend = categories[index];
+                                      final isExpanded =
+                                          _expandedCategoryId == spend.id;
+                                      return TopSpentCard(
+                                        spend: spend,
+                                        totalSpend: totalBalance,
+                                        isExpanded: isExpanded,
+                                        onTap: () {
+                                          setState(() {
+                                            if (isExpanded) {
+                                              _expandedCategoryId = null;
+                                            } else {
+                                              _expandedCategoryId = spend.id;
+                                            }
+                                          });
+                                        },
+                                      );
+                                    },
+                                  ),
+                          ),
                         ],
                       ),
 

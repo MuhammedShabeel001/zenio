@@ -20,6 +20,8 @@ class CategoryLegendWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Wrap(
+      alignment: WrapAlignment.center,
+      runAlignment: WrapAlignment.center,
       spacing: 20,
       runSpacing: 16,
       children: categories.map((item) {
