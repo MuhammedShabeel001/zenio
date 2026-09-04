@@ -189,7 +189,7 @@ class _DebtsScreenMobileState extends ConsumerState<DebtsScreenMobile> {
                       else
                         ...filteredDebts.map(
                           (item) => DebtCard(
-                            key: ValueKey(item.id),
+                            key: ValueKey('${item.id}_${item.isOwed}'),
                             debt: item,
                             isOpen: _openDebtId == item.id,
                             isTileExpanded: _expandedTileId == item.id,

@@ -14,7 +14,6 @@ class DebtsRepository implements IDebtsRepository {
 
   final SqlitePrefs? _prefs;
 
-  static const String _balanceKey = 'debts_page_balance_v2';
   static const String _debtsKey = 'debts_list_key_v2';
 
   @override

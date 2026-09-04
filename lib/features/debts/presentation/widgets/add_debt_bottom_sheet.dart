@@ -131,7 +131,7 @@ class _AddDebtBottomSheetState extends ConsumerState<AddDebtBottomSheet> {
                   ),
                   _buildTabItem(
                     type: DebtType.owedToMe,
-                    label: 'Owed To Me',
+                    label: 'I Own',
                     activeColor: const Color(0xFF10B981),
                   ),
                 ],

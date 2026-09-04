@@ -179,7 +179,7 @@ class _EditDebtDialogState extends ConsumerState<EditDebtDialog> {
               ),
               const SizedBox(height: 16),
 
-              // Mode Switcher (I Owe / Owed To Me)
+              // Mode Switcher (I Owe / I Own)
               Container(
                 height: 52,
                 padding: const EdgeInsets.all(3),
@@ -197,7 +197,7 @@ class _EditDebtDialogState extends ConsumerState<EditDebtDialog> {
                     ),
                     _buildTabItem(
                       type: DebtType.owedToMe,
-                      label: 'Owed To Me',
+                      label: 'I Own',
                       activeColor: const Color(0xFF10B981),
                     ),
                   ],

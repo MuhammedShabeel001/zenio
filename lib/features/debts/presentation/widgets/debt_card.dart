@@ -241,7 +241,7 @@ class _DebtCardState extends State<DebtCard>
                             shape: BoxShape.circle,
                           ),
                           child: Center(
-                            child: widget.debt.iconName == 'down_arrow'
+                            child: widget.debt.isOwed
                                 ? Assets.icons.downArrow.svg(
                                     width: 24,
                                     height: 24,
