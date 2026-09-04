@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:zenio/features/subscriptions/controller/subscriptions/subscriptions_notifier.dart';
 import 'package:zenio/features/subscriptions/domain/models/subscription_model.dart';
+import 'package:zenio/shared/utils/assets.gen.dart';
 
 class AddSubscriptionBottomSheet extends ConsumerStatefulWidget {
   const AddSubscriptionBottomSheet({super.key});
@@ -63,8 +64,8 @@ class _AddSubscriptionBottomSheetState
     final picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
-      firstDate: DateTime.now().subtract(const Duration(days: 365)),
-      lastDate: DateTime.now().add(const Duration(days: 365 * 10)),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2035),
     );
     if (picked != null) {
       setState(() {
@@ -89,11 +90,47 @@ class _AddSubscriptionBottomSheetState
       currency: 'INR',
       nextBillingDate: _selectedDate,
       billingCycle: _selectedBillingCycle,
-      iconName: 'music', // Defaulting to music icon for now
+      iconName: 'music',
     );
 
     ref.read(subscriptionsNotifierProvider.notifier).addSubscription(sub);
     Navigator.of(context).pop();
+  }
+
+  Widget _buildTabItem({
+    required String cycle,
+    required String label,
+  }) {
+    final isSelected = _selectedBillingCycle == cycle;
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            _selectedBillingCycle = cycle;
+          });
+        },
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          decoration: BoxDecoration(
+            color: isSelected ? const Color(0xFFF2F2F2) : Colors.transparent,
+            borderRadius: BorderRadius.circular(30),
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected
+                    ? const Color(0xFF111111)
+                    : const Color(0xFF808080),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -128,20 +165,72 @@ class _AddSubscriptionBottomSheetState
               ),
             ),
             const SizedBox(height: 26),
-            
-            const Text(
-              'Add Subscription',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
+
+            // Segmented Billing Cycle Switcher (Weekly, Monthly, Yearly)
+            Container(
+              height: 60,
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(30),
+                border: Border.all(
+                  color: const Color(0xFFCCCCCC),
+                ),
+              ),
+              child: Row(
+                children: _billingCycles
+                    .map(
+                      (cycle) => _buildTabItem(
+                        cycle: cycle,
+                        label: cycle,
+                      ),
+                    )
+                    .toList(),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 18),
 
-            // Title Input Field
+            // Amount Input Field
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF2F2F2),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: TextField(
+                controller: _amountController,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF111111),
+                ),
+                decoration: const InputDecoration(
+                  hintText: '0',
+                  hintStyle: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF9E9EA5),
+                  ),
+                  isDense: true,
+                  filled: false,
+                  fillColor: Colors.transparent,
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  disabledBorder: InputBorder.none,
+                  focusedErrorBorder: InputBorder.none,
+                  errorBorder: InputBorder.none,
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
+
+            // Subscription Title Field
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
               decoration: BoxDecoration(
                 color: const Color(0xFFF2F2F2),
                 borderRadius: BorderRadius.circular(20),
@@ -150,11 +239,16 @@ class _AddSubscriptionBottomSheetState
                 controller: _titleController,
                 style: const TextStyle(
                   fontSize: 16,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w500,
                   color: Color(0xFF111111),
                 ),
                 decoration: const InputDecoration(
                   hintText: 'Subscription Title (e.g. Netflix)',
+                  hintStyle: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF9E9EA5),
+                  ),
                   isDense: true,
                   filled: false,
                   fillColor: Colors.transparent,
@@ -164,80 +258,59 @@ class _AddSubscriptionBottomSheetState
                   disabledBorder: InputBorder.none,
                   focusedErrorBorder: InputBorder.none,
                   errorBorder: InputBorder.none,
+                  contentPadding: EdgeInsets.zero,
                 ),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 6),
 
-            // Amount Input Field
+            // Category Field
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF2F2F2),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: TextField(
-                controller: _amountController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF111111),
-                ),
-                decoration: const InputDecoration(
-                  hintText: 'Amount',
-                  prefixText: '₹ ',
-                  isDense: true,
-                  filled: false,
-                  fillColor: Colors.transparent,
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  disabledBorder: InputBorder.none,
-                  focusedErrorBorder: InputBorder.none,
-                  errorBorder: InputBorder.none,
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // Category Selector
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 5),
               decoration: BoxDecoration(
                 color: const Color(0xFFF2F2F2),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Row(
                 children: [
-                  const Icon(
-                    Icons.category_rounded,
-                    size: 20,
-                    color: Color(0xFF8E8E93),
-                  ),
-                  const SizedBox(width: 12),
                   Expanded(
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
                         value: _selectedCategory,
+                        hint: const Text(
+                          'Category',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w400,
+                            color: Color(0xFF9E9EA5),
+                          ),
+                        ),
+                        icon: Assets.icons.dropDown.svg(
+                          width: 24,
+                          height: 24,
+                          colorFilter: const ColorFilter.mode(
+                            Color(0xFF111111),
+                            BlendMode.srcIn,
+                          ),
+                        ),
                         isExpanded: true,
-                        icon: const Icon(Icons.keyboard_arrow_down_rounded),
-                        items: _categories.map((category) {
-                          return DropdownMenuItem(
-                            value: category,
-                            child: Text(
-                              category,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF111111),
+                        ),
+                        items: _categories
+                            .map(
+                              (c) => DropdownMenuItem(
+                                value: c,
+                                child: Text(c),
                               ),
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          if (value != null) {
+                            )
+                            .toList(),
+                        onChanged: (val) {
+                          if (val != null) {
                             setState(() {
-                              _selectedCategory = value;
+                              _selectedCategory = val;
                             });
                           }
                         },
@@ -247,62 +320,15 @@ class _AddSubscriptionBottomSheetState
                 ],
               ),
             ),
-            const SizedBox(height: 12),
-
-            // Billing Cycle Selector
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF2F2F2),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.autorenew_rounded,
-                    size: 20,
-                    color: Color(0xFF8E8E93),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: _selectedBillingCycle,
-                        isExpanded: true,
-                        icon: const Icon(Icons.keyboard_arrow_down_rounded),
-                        items: _billingCycles.map((cycle) {
-                          return DropdownMenuItem(
-                            value: cycle,
-                            child: Text(
-                              cycle,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          if (value != null) {
-                            setState(() {
-                              _selectedBillingCycle = value;
-                            });
-                          }
-                        },
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 6),
 
             // Date Selector (Next Billing Date)
             GestureDetector(
               onTap: _pickDate,
               behavior: HitTestBehavior.opaque,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF2F2F2),
                   borderRadius: BorderRadius.circular(20),
@@ -319,8 +345,8 @@ class _AddSubscriptionBottomSheetState
                       child: Text(
                         formattedDate,
                         style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w400,
                           color: Color(0xFF000000),
                         ),
                       ),
@@ -337,31 +363,31 @@ class _AddSubscriptionBottomSheetState
                 ),
               ),
             ),
-            const SizedBox(height: 30),
+            const SizedBox(height: 18),
 
             // Save Button
-            GestureDetector(
-              onTap: _saveSubscription,
-              child: Container(
-                height: 56,
-                margin: const EdgeInsets.symmetric(horizontal: 10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF111111),
-                  borderRadius: BorderRadius.circular(28),
+            SizedBox(
+              height: 60,
+              child: ElevatedButton(
+                onPressed: _saveSubscription,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF10B981),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
                 ),
-                child: const Center(
-                  child: Text(
-                    'Save Subscription',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
+                child: const Text(
+                  'Save subscription',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
                 ),
               ),
             ),
-            // Extends white background behind keyboard — not visible, prevents dark gap
+            // Extends white background behind keyboard
             SizedBox(height: bottomInset),
           ],
         ),
