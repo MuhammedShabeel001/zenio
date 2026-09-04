@@ -4,7 +4,6 @@ import 'package:zenio/features/home/controller/home/home_notifier.dart';
 // import 'package:zenio/features/home/controller/home/home_state.dart';
 import 'package:zenio/features/transactions/controller/transactions/transactions_state.dart';
 import 'package:zenio/features/transactions/domain/models/transaction_detail_model.dart';
-import 'package:zenio/features/transactions/domain/repositories/implementations/transactions_repository.dart';
 
 part 'transactions_notifier.g.dart';
 
@@ -105,16 +104,15 @@ class TransactionsNotifier extends _$TransactionsNotifier {
     return allTransactions;
   }
 
-  double _calculateTotalBalance(List<TransactionDetailModel> txs) {
+  double _calculateTotalExpenses(List<TransactionDetailModel> txs) {
     double total = 0;
     for (final tx in txs) {
-      final isTransfer = tx.title.startsWith('Transfer to');
+      final isTransfer = tx.title.startsWith('Transfer to') ||
+          (tx.bankName?.contains('->') ?? false);
       if (isTransfer) continue;
 
-      if (tx.isIncome) {
+      if (!tx.isIncome) {
         total += tx.amount;
-      } else {
-        total -= tx.amount;
       }
     }
     return total;
@@ -137,7 +135,7 @@ class TransactionsNotifier extends _$TransactionsNotifier {
             )).toList();
         
         final filteredList = _filterTransactions(list, state.selectedPeriod, state.selectedTimeframe);
-        final filteredBalance = _calculateTotalBalance(filteredList);
+        final filteredBalance = _calculateTotalExpenses(filteredList);
 
         state = state.copyWith(
           totalBalance: filteredBalance,
@@ -163,7 +161,7 @@ class TransactionsNotifier extends _$TransactionsNotifier {
     const initialPeriod = 'Monthly';
     final initialTimeframe = DateFormat('MMMM').format(DateTime.now());
     final filteredList = _filterTransactions(list, initialPeriod, initialTimeframe);
-    final filteredBalance = _calculateTotalBalance(filteredList);
+    final filteredBalance = _calculateTotalExpenses(filteredList);
 
     return TransactionsState(
       totalBalance: filteredBalance,
@@ -206,7 +204,7 @@ class TransactionsNotifier extends _$TransactionsNotifier {
         )).toList();
         
     final filteredList = _filterTransactions(list, period, defaultTimeframe);
-    final filteredBalance = _calculateTotalBalance(filteredList);
+    final filteredBalance = _calculateTotalExpenses(filteredList);
     
     state = state.copyWith(
       selectedPeriod: period, 
@@ -231,7 +229,7 @@ class TransactionsNotifier extends _$TransactionsNotifier {
         )).toList();
         
     final filteredList = _filterTransactions(list, state.selectedPeriod, timeframe);
-    final filteredBalance = _calculateTotalBalance(filteredList);
+    final filteredBalance = _calculateTotalExpenses(filteredList);
 
     state = state.copyWith(
       selectedTimeframe: timeframe,

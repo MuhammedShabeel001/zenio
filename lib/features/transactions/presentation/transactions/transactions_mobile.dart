@@ -22,21 +22,26 @@ class _TransactionsScreenMobileState
   String? _openTransactionId;
   String? _expandedTileId;
   String _formatWholePart(double amount) {
-    final whole = amount.toInt();
+    final whole = amount.abs().toInt();
     final formatter = NumberFormat('#,##0');
     return formatter.format(whole);
   }
 
   String _formatDecimalPart(double amount) {
-    final decimal = ((amount - amount.toInt()).abs() * 100).round();
+    final decimal = ((amount.abs() - amount.abs().toInt()) * 100).round();
     return '.${decimal.toString().padLeft(2, '0')}';
   }
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(transactionsNotifierProvider);
-    final totalBalance = state.totalBalance;
     final transactions = state.transactions;
+    final totalExpenses = transactions
+        .where((tx) =>
+            !tx.isIncome &&
+            !tx.title.startsWith('Transfer to') &&
+            !(tx.bankName?.contains('->') ?? false))
+        .fold<double>(0, (sum, tx) => sum + tx.amount);
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -68,7 +73,7 @@ class _TransactionsScreenMobileState
                               ),
                             ),
                             TextSpan(
-                              text: _formatWholePart(totalBalance),
+                              text: _formatWholePart(totalExpenses),
                               style: const TextStyle(
                                 fontSize: 32,
                                 fontWeight: FontWeight.bold,
@@ -77,7 +82,7 @@ class _TransactionsScreenMobileState
                               ),
                             ),
                             TextSpan(
-                              text: _formatDecimalPart(totalBalance),
+                              text: _formatDecimalPart(totalExpenses),
                               style: const TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,

@@ -1,9 +1,7 @@
-import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:zenio/features/transactions/domain/models/transaction_detail_model.dart';
 import 'package:zenio/features/transactions/domain/repositories/interfaces/i_transactions_repository.dart';
-import 'package:zenio/shared/services/local_database_service.dart';
 import 'package:zenio/shared/providers/providers.dart';
 
 part 'transactions_repository.g.dart';
