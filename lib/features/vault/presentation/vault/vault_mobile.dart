@@ -6,6 +6,7 @@ import 'package:zenio/features/vault/presentation/widgets/vault_card_item.dart';
 import 'package:zenio/features/vault/presentation/widgets/vault_note_item.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/features/vault/presentation/widgets/add_vault_item_bottom_sheet.dart';
+import 'package:zenio/features/vault/presentation/widgets/edit_vault_item_dialog.dart';
 
 class VaultScreenMobile extends ConsumerStatefulWidget {
   const VaultScreenMobile({super.key});
@@ -142,7 +143,10 @@ class _VaultScreenMobileState extends ConsumerState<VaultScreenMobile> {
                                 notifier.deleteCard(card.id);
                               },
                               onEdit: () {
-                                AddVaultItemBottomSheet.show(context, VaultMode.cards);
+                                EditVaultItemDialog.showCard(
+                                  context,
+                                  card: card,
+                                );
                               },
                             ),
                           ),
@@ -184,7 +188,10 @@ class _VaultScreenMobileState extends ConsumerState<VaultScreenMobile> {
                                 notifier.deleteNote(note.id);
                               },
                               onEdit: () {
-                                AddVaultItemBottomSheet.show(context, VaultMode.notes);
+                                EditVaultItemDialog.showNote(
+                                  context,
+                                  note: note,
+                                );
                               },
                             ),
                           ),

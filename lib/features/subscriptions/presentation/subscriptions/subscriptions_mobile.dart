@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:zenio/features/subscriptions/controller/subscriptions/subscriptions_notifier.dart';
 import 'package:zenio/features/subscriptions/presentation/widgets/add_subscription_bottom_sheet.dart';
+import 'package:zenio/features/subscriptions/presentation/widgets/edit_subscription_dialog.dart';
 import 'package:zenio/features/subscriptions/presentation/widgets/subscription_card.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 
@@ -206,7 +207,10 @@ class _SubscriptionsScreenMobileState
                                   .deleteSubscription(item.id);
                             },
                             onEdit: () {
-                              AddSubscriptionBottomSheet.show(context);
+                              EditSubscriptionDialog.show(
+                                context,
+                                subscription: item,
+                              );
                             },
                           ),
                         ),

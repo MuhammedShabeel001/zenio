@@ -1,4 +1,3 @@
-import 'package:zenio/shared/providers/providers.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:intl/intl.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -45,6 +44,17 @@ class HomeNotifier extends _$HomeNotifier {
   Future<void> addTransaction(TransactionModel newTx) async {
     if (_moneyTrackerRepository == null) return;
     final updatedTxs = [newTx, ...state.transactions];
+    await _moneyTrackerRepository!.saveTransactions(updatedTxs);
+
+    state = state.copyWith(transactions: updatedTxs);
+    await _recalculateSummary(updatedTxs);
+  }
+
+  Future<void> updateTransaction(TransactionModel updatedTx) async {
+    if (_moneyTrackerRepository == null) return;
+    final updatedTxs = state.transactions
+        .map((tx) => tx.id == updatedTx.id ? updatedTx : tx)
+        .toList();
     await _moneyTrackerRepository!.saveTransactions(updatedTxs);
 
     state = state.copyWith(transactions: updatedTxs);

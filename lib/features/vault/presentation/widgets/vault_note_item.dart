@@ -154,13 +154,6 @@ class _VaultNoteItemState extends State<VaultNoteItem>
                           color: const Color(0xFFF3F3F5),
                           width: 1.2,
                         ),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x0C000000),
-                            blurRadius: 8,
-                            offset: Offset(0, 2),
-                          ),
-                        ],
                       ),
                       child: const Center(
                         child: Icon(
@@ -189,13 +182,6 @@ class _VaultNoteItemState extends State<VaultNoteItem>
                           color: const Color(0xFFF3F3F5),
                           width: 1.2,
                         ),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x0C000000),
-                            blurRadius: 8,
-                            offset: Offset(0, 2),
-                          ),
-                        ],
                       ),
                       child: const Center(
                         child: Icon(
@@ -231,13 +217,6 @@ class _VaultNoteItemState extends State<VaultNoteItem>
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(28),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x0A000000),
-                      blurRadius: 12,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

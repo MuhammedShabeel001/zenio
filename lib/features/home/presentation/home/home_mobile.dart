@@ -13,6 +13,7 @@ import 'package:zenio/features/vault/vault.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/widgets/add_transaction_bottom_sheet.dart';
 import 'package:zenio/shared/widgets/custom_navigation_bar.dart';
+import 'package:zenio/features/transactions/presentation/widgets/edit_transaction_dialog.dart';
 
 class HomeScreenMobile extends ConsumerStatefulWidget {
   const HomeScreenMobile({
@@ -499,7 +500,10 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                                             .deleteTransaction(tx.id);
                                       },
                                       onEdit: () {
-                                        AddTransactionBottomSheet.show(context);
+                                        EditTransactionDialog.show(
+                                          context,
+                                          transaction: tx,
+                                        );
                                       },
                                     ),
                                   ),

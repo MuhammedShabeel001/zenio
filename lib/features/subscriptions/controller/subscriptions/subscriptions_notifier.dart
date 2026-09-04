@@ -81,4 +81,13 @@ class SubscriptionsNotifier extends _$SubscriptionsNotifier {
     await repo.saveSubscriptions(updated);
     unawaited(_loadData());
   }
+
+  Future<void> updateSubscription(SubscriptionModel sub) async {
+    final repo = ref.read(subscriptionsRepositoryRepoProvider);
+    final allList = await repo.getSubscriptions();
+    final updated = allList.map((s) => s.id == sub.id ? sub : s).toList();
+
+    await repo.saveSubscriptions(updated);
+    unawaited(_loadData());
+  }
 }

@@ -7,6 +7,7 @@ import 'package:zenio/features/transactions/presentation/widgets/transaction_det
 import 'package:zenio/features/home/home.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/widgets/add_transaction_bottom_sheet.dart';
+import 'package:zenio/features/transactions/presentation/widgets/edit_transaction_dialog.dart';
 
 class TransactionsScreenMobile extends ConsumerStatefulWidget {
   const TransactionsScreenMobile({super.key});
@@ -217,7 +218,10 @@ class _TransactionsScreenMobileState
                                   .deleteTransaction(item.id);
                             },
                             onEdit: () {
-                              AddTransactionBottomSheet.show(context);
+                              EditTransactionDialog.show(
+                                context,
+                                transaction: item,
+                              );
                             },
                           ),
                         ),

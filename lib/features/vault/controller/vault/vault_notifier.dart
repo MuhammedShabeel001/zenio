@@ -56,8 +56,22 @@ class VaultNotifier extends _$VaultNotifier {
     state = state.copyWith(cards: updated);
   }
 
+  Future<void> updateCard(VaultCardModel card) async {
+    final updated = state.cards.map((c) => c.id == card.id ? card : c).toList();
+    final repo = ref.read(vaultRepositoryRepoProvider);
+    await repo.saveCards(updated);
+    state = state.copyWith(cards: updated);
+  }
+
   Future<void> addNote(VaultNoteModel note) async {
     final updated = List<VaultNoteModel>.from(state.notes)..add(note);
+    final repo = ref.read(vaultRepositoryRepoProvider);
+    await repo.saveNotes(updated);
+    state = state.copyWith(notes: updated);
+  }
+
+  Future<void> updateNote(VaultNoteModel note) async {
+    final updated = state.notes.map((n) => n.id == note.id ? note : n).toList();
     final repo = ref.read(vaultRepositoryRepoProvider);
     await repo.saveNotes(updated);
     state = state.copyWith(notes: updated);

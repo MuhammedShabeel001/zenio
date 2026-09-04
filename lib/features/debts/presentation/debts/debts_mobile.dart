@@ -5,6 +5,7 @@ import 'package:zenio/features/debts/controller/debts/debts_notifier.dart';
 import 'package:zenio/features/debts/presentation/widgets/debt_card.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/features/debts/presentation/widgets/add_debt_bottom_sheet.dart';
+import 'package:zenio/features/debts/presentation/widgets/edit_debt_dialog.dart';
 
 class DebtsScreenMobile extends ConsumerStatefulWidget {
   const DebtsScreenMobile({super.key});
@@ -221,7 +222,10 @@ class _DebtsScreenMobileState extends ConsumerState<DebtsScreenMobile> {
                                   .deleteDebt(item.id);
                             },
                             onEdit: () {
-                                AddDebtBottomSheet.show(context);
+                              EditDebtDialog.show(
+                                context,
+                                debt: item,
+                              );
                             },
                           ),
                         ),

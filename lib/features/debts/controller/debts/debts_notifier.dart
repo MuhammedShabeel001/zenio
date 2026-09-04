@@ -59,6 +59,18 @@ class DebtsNotifier extends _$DebtsNotifier {
     );
   }
 
+  Future<void> updateDebt(DebtModel debt) async {
+    final updated = state.debts.map((d) => d.id == debt.id ? debt : d).toList();
+    final repo = ref.read(debtsRepositoryRepoProvider);
+    await repo.saveDebts(updated);
+
+    final newBalance = _calculateBalance(updated);
+    state = state.copyWith(
+      totalBalance: newBalance,
+      debts: updated,
+    );
+  }
+
   Future<void> deleteDebt(String id) async {
     final target = state.debts.firstWhere(
       (debt) => debt.id == id,
