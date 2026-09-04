@@ -226,7 +226,7 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
       backgroundColor: Colors.white,
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(30),
       ),
       child: ConstrainedBox(
         constraints: BoxConstraints(
@@ -271,107 +271,11 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-
-              // Wallet Type Dropdown
-              Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF2F2F2),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: _selectedType,
-                    isExpanded: true,
-                    icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.black),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      color: Colors.black,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    dropdownColor: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    items: _buildDropdownItems(),
-                    onChanged: (val) {
-                      if (val != null) {
-                        setState(() {
-                          _selectedType = val;
-                          _isCustom = val == '__CUSTOM__';
-                        });
-                      }
-                    },
-                  ),
-                ),
-              ),
-
-              // Custom Type Input (if Custom selected)
-              if (_isCustom || _selectedType == '__CUSTOM__') ...[
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF2F2F2),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                        child: TextField(
-                          controller: _customTypeController,
-                          autofocus: true,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            color: Colors.black,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          decoration: const InputDecoration(
-                            hintText: 'Enter custom type (e.g. Crypto)',
-                            hintStyle: TextStyle(
-                              color: Color(0xFFA0A0A0),
-                              fontSize: 15,
-                            ),
-                            border: InputBorder.none,
-                            enabledBorder: InputBorder.none,
-                            focusedBorder: InputBorder.none,
-                            filled: false,
-                            fillColor: Colors.transparent,
-                          ),
-                          onSubmitted: (_) => _applyCustomType(),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    GestureDetector(
-                      onTap: _applyCustomType,
-                      behavior: HitTestBehavior.opaque,
-                      child: Container(
-                        height: 48,
-                        padding: const EdgeInsets.symmetric(horizontal: 18),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF10B981),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: const Center(
-                          child: Text(
-                            'Add',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-              const SizedBox(height: 12),
+              const SizedBox(height: 18),
 
               // Balance (Amount) Input
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 15),
+                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF2F2F2),
                   borderRadius: BorderRadius.circular(20),
@@ -386,6 +290,11 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
                   ),
                   decoration: const InputDecoration(
                     hintText: '0.00',
+                    hintStyle: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF9E9EA5),
+                    ),
                     isDense: true,
                     filled: false,
                     fillColor: Colors.transparent,
@@ -399,145 +308,312 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 6),
 
-              // Wallet Name Input
+              // Field 1: Wallet Name
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF2F2F2),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: TextField(
-                  controller: _nameController,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF111111),
-                  ),
-                  decoration: const InputDecoration(
-                    hintText: 'Wallet name',
-                    hintStyle: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w400,
-                      color: Color(0xFF9E9EA5),
-                    ),
-                    isDense: true,
-                    filled: false,
-                    fillColor: Colors.transparent,
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // Card Number Input
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF2F2F2),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: TextField(
-                  controller: _cardNumberController,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF111111),
-                  ),
-                  decoration: const InputDecoration(
-                    hintText: 'Card number',
-                    hintStyle: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w400,
-                      color: Color(0xFF9E9EA5),
-                    ),
-                    isDense: true,
-                    filled: false,
-                    fillColor: Colors.transparent,
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Card Skin Selector
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 4),
-                child: Text(
-                  'Card Skin',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF808080),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
                 child: Row(
-                  children: List.generate(_cardImages.length, (index) {
-                    final isSelected = _selectedImageIndex == index;
-                    final imagePath = _cardImages[index];
-
-                    return GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _selectedImageIndex = index;
-                        });
-                      },
-                      behavior: HitTestBehavior.opaque,
-                      child: Container(
-                        width: 58,
-                        height: 42,
-                        margin: EdgeInsets.only(
-                          right: index == _cardImages.length - 1 ? 0 : 10,
+                  children: [
+                    Assets.icons.wallet.svg(
+                      width: 20,
+                      height: 20,
+                      colorFilter: const ColorFilter.mode(
+                        Color(0xFF8E8E93),
+                        BlendMode.srcIn,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextField(
+                        controller: _nameController,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF111111),
                         ),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(10),
-                          border: isSelected
-                              ? Border.all(
-                                  color: const Color(0xFF10B981),
-                                  width: 2.5,
-                                )
-                              : Border.all(
-                                  color: const Color(0xFFE5E5EA),
-                                ),
-                          image: DecorationImage(
-                            image: AssetImage(imagePath),
-                            fit: BoxFit.cover,
+                        decoration: const InputDecoration(
+                          hintText: 'Wallet name',
+                          hintStyle: TextStyle(
+                            fontSize: 14,
+                            color: Color(0xFF9E9EA5),
+                          ),
+                          isDense: true,
+                          filled: false,
+                          fillColor: Colors.transparent,
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          disabledBorder: InputBorder.none,
+                          focusedErrorBorder: InputBorder.none,
+                          errorBorder: InputBorder.none,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 6),
+
+              // Field 2: Wallet Type Dropdown
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 5),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF2F2F2),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  children: [
+                    Assets.icons.card.svg(
+                      width: 20,
+                      height: 20,
+                      colorFilter: const ColorFilter.mode(
+                        Color(0xFF8E8E93),
+                        BlendMode.srcIn,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: _selectedType,
+                          icon: Assets.icons.dropDown.svg(
+                            width: 24,
+                            height: 24,
+                            colorFilter: const ColorFilter.mode(
+                              Color(0xFF111111),
+                              BlendMode.srcIn,
+                            ),
+                          ),
+                          isExpanded: true,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF111111),
+                          ),
+                          dropdownColor: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          items: _buildDropdownItems(),
+                          onChanged: (val) {
+                            if (val != null) {
+                              setState(() {
+                                _selectedType = val;
+                                _isCustom = val == '__CUSTOM__';
+                              });
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 6),
+
+              // Custom Type Input (if Custom selected)
+              if (_isCustom || _selectedType == '__CUSTOM__') ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF2F2F2),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    children: [
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: TextField(
+                          controller: _customTypeController,
+                          autofocus: true,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Color(0xFF111111),
+                            fontWeight: FontWeight.w500,
+                          ),
+                          decoration: const InputDecoration(
+                            hintText: 'Enter custom type (e.g. Crypto)',
+                            hintStyle: TextStyle(
+                              color: Color(0xFF9E9EA5),
+                              fontSize: 14,
+                            ),
+                            isDense: true,
+                            filled: false,
+                            fillColor: Colors.transparent,
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                          onSubmitted: (_) => _applyCustomType(),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      GestureDetector(
+                        onTap: _applyCustomType,
+                        behavior: HitTestBehavior.opaque,
+                        child: Container(
+                          height: 38,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF10B981),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: const Center(
+                            child: Text(
+                              'Add',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                    );
-                  }),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 6),
+              ],
+
+              // Field 3: Card Number
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF2F2F2),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  children: [
+                    Assets.icons.card.svg(
+                      width: 20,
+                      height: 20,
+                      colorFilter: const ColorFilter.mode(
+                        Color(0xFF8E8E93),
+                        BlendMode.srcIn,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextField(
+                        controller: _cardNumberController,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF111111),
+                        ),
+                        decoration: const InputDecoration(
+                          hintText: 'Card number',
+                          hintStyle: TextStyle(
+                            fontSize: 14,
+                            color: Color(0xFF9E9EA5),
+                          ),
+                          isDense: true,
+                          filled: false,
+                          fillColor: Colors.transparent,
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          disabledBorder: InputBorder.none,
+                          focusedErrorBorder: InputBorder.none,
+                          errorBorder: InputBorder.none,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 6),
+
+              // Card Skin Selector
+              Container(
+                clipBehavior: Clip.antiAlias,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF2F2F2),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.fromLTRB(16, 12, 16, 8),
+                      child: Text(
+                        'Card skin',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF8E8E93),
+                        ),
+                      ),
+                    ),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+                      child: Row(
+                        children: List.generate(_cardImages.length, (index) {
+                          final isSelected = _selectedImageIndex == index;
+                          final imagePath = _cardImages[index];
+
+                          return GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _selectedImageIndex = index;
+                              });
+                            },
+                            child: Container(
+                              width: 58,
+                              height: 42,
+                              margin: EdgeInsets.only(
+                                right: index == _cardImages.length - 1 ? 0 : 10,
+                              ),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(10),
+                                border: isSelected
+                                    ? Border.all(
+                                        color: const Color(0xFF10B981),
+                                        width: 2.5,
+                                      )
+                                    : Border.all(
+                                        color: const Color(0xFFE5E5EA),
+                                      ),
+                                image: DecorationImage(
+                                  image: AssetImage(imagePath),
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
 
               // Save Changes Button
-              SizedBox(
-                height: 52,
+              Container(
+                height: 55,
+                margin: const EdgeInsets.only(top: 20),
                 child: ElevatedButton(
                   onPressed: _saveChanges,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF10B981),
                     elevation: 0,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(18),
+                      borderRadius: BorderRadius.circular(20),
                     ),
                   ),
                   child: const Text(
                     'Save Changes',
                     style: TextStyle(
-                      fontSize: 15,
+                      fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),
