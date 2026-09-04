@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:zenio/features/analytics/domain/models/category_spend/category_spend_model.dart';
-import 'package:zenio/shared/utils/assets.gen.dart';
+import 'package:zenio/features/subscriptions/controller/categories/subscription_categories_notifier.dart';
+import 'package:zenio/features/transactions/controller/categories/categories_notifier.dart';
 
-class TopSpentCard extends StatelessWidget {
+class TopSpentCard extends ConsumerWidget {
   const TopSpentCard({
     required this.spend,
     this.totalSpend,
@@ -17,54 +19,77 @@ class TopSpentCard extends StatelessWidget {
   final bool? isExpanded;
   final VoidCallback? onTap;
 
-  Widget _getIcon(String iconName) {
-    switch (iconName) {
-      case 'travel':
-        return Assets.icons.travel.svg(
-          width: 22,
-          height: 22,
-          colorFilter: const ColorFilter.mode(
-            Color(0xFF111111),
-            BlendMode.srcIn,
-          ),
-        );
-      case 'entertainment':
-        return Assets.icons.entertainment.svg(
-          width: 22,
-          height: 22,
-          colorFilter: const ColorFilter.mode(
-            Color(0xFF111111),
-            BlendMode.srcIn,
-          ),
-        );
-      case 'debt':
-        return Assets.icons.debts.svg(
-          width: 22,
-          height: 22,
-          colorFilter: const ColorFilter.mode(
-            Color(0xFF111111),
-            BlendMode.srcIn,
-          ),
-        );
-      case 'expense':
-        return Assets.icons.expense.svg(
-          width: 22,
-          height: 22,
-          colorFilter: const ColorFilter.mode(
-            Color(0xFF111111),
-            BlendMode.srcIn,
-          ),
-        );
-      default:
-        return Assets.icons.card.svg(
-          width: 22,
-          height: 22,
-          colorFilter: const ColorFilter.mode(
-            Color(0xFF111111),
-            BlendMode.srcIn,
-          ),
-        );
+  bool _isEmoji(String text) {
+    if (text.isEmpty) return false;
+    return text.runes.any((rune) => rune > 255 || (rune >= 0x2000 && rune <= 0x3299));
+  }
+
+  String _getCategoryEmoji(WidgetRef ref, CategorySpendModel spend) {
+    final categories = ref.watch(categoriesNotifierProvider);
+    final cleanName = spend.name.trim().toLowerCase();
+
+    // 1. Exact match in saved categories
+    final exactMatch = categories.where(
+      (c) => c.name.trim().toLowerCase() == cleanName,
+    );
+    if (exactMatch.isNotEmpty && exactMatch.first.emoji.trim().isNotEmpty) {
+      return exactMatch.first.emoji.trim();
     }
+
+    // 2. Exact match in subscription categories
+    final subCategories = ref.watch(subscriptionCategoriesNotifierProvider);
+    final subMatch = subCategories.where(
+      (c) => c.name.trim().toLowerCase() == cleanName,
+    );
+    if (subMatch.isNotEmpty && subMatch.first.emoji.trim().isNotEmpty) {
+      return subMatch.first.emoji.trim();
+    }
+
+    // 3. If spend.iconName is already an emoji, use it
+    if (_isEmoji(spend.iconName)) {
+      return spend.iconName;
+    }
+
+    // 4. Fuzzy / Contains match in saved categories
+    final fuzzyMatch = categories.where(
+      (c) =>
+          cleanName.contains(c.name.trim().toLowerCase()) ||
+          c.name.trim().toLowerCase().contains(cleanName),
+    );
+    if (fuzzyMatch.isNotEmpty && fuzzyMatch.first.emoji.trim().isNotEmpty) {
+      return fuzzyMatch.first.emoji.trim();
+    }
+
+    // 5. Default keyword fallbacks
+    if (cleanName.contains('food') || cleanName.contains('drink') || cleanName.contains('dine') || cleanName.contains('restaurant') || cleanName.contains('cafe')) {
+      return '🍔';
+    }
+    if (cleanName.contains('travel') || cleanName.contains('trip') || cleanName.contains('transport') || cleanName.contains('fuel') || cleanName.contains('flight') || cleanName.contains('cab')) {
+      return '🚗';
+    }
+    if (cleanName.contains('shopping') || cleanName.contains('shop') || cleanName.contains('clothes') || cleanName.contains('store')) {
+      return '🛍️';
+    }
+    if (cleanName.contains('entertainment') || cleanName.contains('movie') || cleanName.contains('cinema') || cleanName.contains('music') || cleanName.contains('game')) {
+      return '🎬';
+    }
+    if (cleanName.contains('bills') || cleanName.contains('bill') || cleanName.contains('utility') || cleanName.contains('electricity')) {
+      return '💡';
+    }
+    if (cleanName.contains('loan') || cleanName.contains('debt')) {
+      return '💳';
+    }
+    if (cleanName.contains('grocery') || cleanName.contains('market')) {
+      return '🛒';
+    }
+    if (cleanName.contains('health') || cleanName.contains('medical') || cleanName.contains('doctor') || cleanName.contains('pharmacy')) {
+      return '💊';
+    }
+    if (cleanName.contains('school') || cleanName.contains('education') || cleanName.contains('college')) {
+      return '🎓';
+    }
+
+    return '🏷️';
   }
 
   Color _getBadgeBackgroundColor(String name) {
@@ -126,10 +151,11 @@ class TopSpentCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final categoryColor = _getCategoryColor(spend);
     final ratio = _getSpendRatio(spend, totalSpend);
     final expanded = isExpanded ?? false;
+    final emoji = _getCategoryEmoji(ref, spend);
 
     return GestureDetector(
       onTap: onTap,
@@ -156,7 +182,10 @@ class TopSpentCard extends StatelessWidget {
                     shape: BoxShape.circle,
                   ),
                   child: Center(
-                    child: _getIcon(spend.iconName),
+                    child: Text(
+                      emoji,
+                      style: const TextStyle(fontSize: 26),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 17),

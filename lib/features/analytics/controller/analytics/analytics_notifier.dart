@@ -4,6 +4,8 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:zenio/features/analytics/domain/models/category_spend/category_spend_model.dart';
 import 'package:zenio/features/home/controller/home/home_notifier.dart';
 import 'package:zenio/features/home/domain/models/transaction/transaction_model.dart';
+import 'package:zenio/features/subscriptions/controller/categories/subscription_categories_notifier.dart';
+import 'package:zenio/features/transactions/controller/categories/categories_notifier.dart';
 
 part 'analytics_notifier.freezed.dart';
 part 'analytics_notifier.g.dart';
@@ -126,31 +128,75 @@ class AnalyticsNotifier extends _$AnalyticsNotifier {
       final amount = categoryTxs.fold(0.0, (sum, tx) => sum + tx.amount);
       
       String colorHex = '0xFF1DA1F2';
-      String iconName = 'expense';
 
       final nameLower = categoryName.toLowerCase();
       if (nameLower.contains('travel')) {
         colorHex = '0xFFFF771C';
-        iconName = 'travel';
       } else if (nameLower.contains('entertainment')) {
         colorHex = '0xFF8C43E6';
-        iconName = 'entertainment';
       } else if (nameLower.contains('loan') || nameLower.contains('debt')) {
         colorHex = '0xFF10B981';
-        iconName = 'debt';
       } else if (nameLower.contains('food') || nameLower.contains('drink')) {
         colorHex = '0xFFFF4D4D';
-        iconName = 'expense';
       } else if (nameLower.contains('shopping')) {
         colorHex = '0xFF1DA1F2';
-        iconName = 'card';
       } else if (nameLower.contains('grocery')) {
         colorHex = '0xFF00C4DE';
-        iconName = 'wallet';
       } else {
         // Fallback random colors for unknown categories based on name length
         final colors = ['0xFFFF771C', '0xFF8C43E6', '0xFF10B981', '0xFFFF4D4D', '0xFF1DA1F2', '0xFF00C4DE'];
         colorHex = colors[categoryName.length % colors.length];
+      }
+
+      // Resolve category emoji from saved categories or intelligent fallback
+      final categories = ref.read(categoriesNotifierProvider);
+      final subCategories = ref.read(subscriptionCategoriesNotifierProvider);
+      final cleanName = categoryName.trim().toLowerCase();
+
+      String emoji = '';
+      final exactMatch = categories.where(
+        (c) => c.name.trim().toLowerCase() == cleanName,
+      );
+      if (exactMatch.isNotEmpty && exactMatch.first.emoji.trim().isNotEmpty) {
+        emoji = exactMatch.first.emoji.trim();
+      } else {
+        final subMatch = subCategories.where(
+          (c) => c.name.trim().toLowerCase() == cleanName,
+        );
+        if (subMatch.isNotEmpty && subMatch.first.emoji.trim().isNotEmpty) {
+          emoji = subMatch.first.emoji.trim();
+        } else {
+          final fuzzyMatch = categories.where(
+            (c) =>
+                cleanName.contains(c.name.trim().toLowerCase()) ||
+                c.name.trim().toLowerCase().contains(cleanName),
+          );
+          if (fuzzyMatch.isNotEmpty && fuzzyMatch.first.emoji.trim().isNotEmpty) {
+            emoji = fuzzyMatch.first.emoji.trim();
+          }
+        }
+      }
+
+      if (emoji.isEmpty) {
+        if (nameLower.contains('travel') || nameLower.contains('trip') || nameLower.contains('fuel')) {
+          emoji = '🚗';
+        } else if (nameLower.contains('food') || nameLower.contains('drink') || nameLower.contains('dine')) {
+          emoji = '🍔';
+        } else if (nameLower.contains('entertainment') || nameLower.contains('movie')) {
+          emoji = '🎬';
+        } else if (nameLower.contains('shopping') || nameLower.contains('shop')) {
+          emoji = '🛍️';
+        } else if (nameLower.contains('bills') || nameLower.contains('bill')) {
+          emoji = '💡';
+        } else if (nameLower.contains('loan') || nameLower.contains('debt')) {
+          emoji = '💳';
+        } else if (nameLower.contains('grocery')) {
+          emoji = '🛒';
+        } else if (nameLower.contains('health') || nameLower.contains('medical')) {
+          emoji = '💊';
+        } else {
+          emoji = '🏷️';
+        }
       }
 
       spends.add(CategorySpendModel(
@@ -159,7 +205,7 @@ class AnalyticsNotifier extends _$AnalyticsNotifier {
         amount: amount,
         spendsCount: categoryTxs.length,
         colorHex: colorHex,
-        iconName: iconName,
+        iconName: emoji,
       ));
       idCounter++;
     }
@@ -179,6 +225,18 @@ class AnalyticsNotifier extends _$AnalyticsNotifier {
         state = state.copyWith(
           status: AnalyticsStatus.success,
           totalBalance: balance,
+          categorySpends: spends,
+        );
+      }
+    });
+
+    ref.listen(categoriesNotifierProvider, (previous, next) {
+      final homeState = ref.read(homeNotifierProvider);
+      if (homeState.status == HomeStatus.success) {
+        final filteredList = _filterTransactions(homeState.transactions, state.selectedPeriod, state.selectedTimeframe);
+        final (balance, spends) = _computeAnalytics(filteredList);
+
+        state = state.copyWith(
           categorySpends: spends,
         );
       }
