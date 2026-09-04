@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:zenio/features/home/controller/home/home_notifier.dart';
 import 'package:zenio/features/home/domain/models/transaction/transaction_model.dart';
+import 'package:zenio/features/transactions/controller/categories/categories_notifier.dart';
 import 'package:zenio/features/transactions/controller/transactions/transactions_notifier.dart';
 import 'package:zenio/features/transactions/domain/models/transaction_detail_model.dart';
+import 'package:zenio/features/transactions/presentation/widgets/manage_categories_bottom_sheet.dart';
 import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 
@@ -37,16 +39,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
   String? _sourceWallet;
   String? _destinationWallet;
   String? _selectedCategory;
-  double _swapTurns = 0.0;
-
-  final List<String> _categories = [
-    'Food & Drink',
-    'Shopping',
-    'Travel',
-    'Entertainment',
-    'Loan',
-    'Grocery',
-  ];
+  double _swapTurns = 0;
 
   @override
   void initState() {
@@ -92,6 +85,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
     final formattedDate =
         DateFormat('EEEE, MMMM d, yyyy').format(_selectedDate);
 
+    final categories = ref.watch(categoriesNotifierProvider);
     final walletState = ref.watch(walletNotifierProvider);
     final cardWallets = walletState.cards
         .map((c) => c.bankName.trim())
@@ -99,7 +93,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
         .toSet()
         .toList();
 
-    final List<String> wallets = cardWallets.isNotEmpty
+    final wallets = cardWallets.isNotEmpty
         ? [
             ...cardWallets,
             if (!cardWallets.any((w) => w.toLowerCase() == 'cash')) 'Cash',
@@ -413,58 +407,130 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                 ],
               )
             else
-              // Category Field for Expense / Income
+              // Category Chips Section for Expense / Income
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 30, vertical: 5),
+                clipBehavior: Clip.antiAlias,
                 decoration: BoxDecoration(
                   color: const Color(0xFFF2F2F2),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: _selectedCategory,
-                          hint: const Text(
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 12, 16, 0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
                             'Category',
                             style: TextStyle(
                               fontSize: 14,
-                              fontWeight: FontWeight.w400,
-                              color: Color(0xFF9E9EA5),
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFF8E8E93),
                             ),
                           ),
-                          icon: Assets.icons.dropDown.svg(
-                            width: 24,
-                            height: 24,
-                            colorFilter: const ColorFilter.mode(
-                              Color(0xFF111111),
-                              BlendMode.srcIn,
+                          GestureDetector(
+                            onTap: () async {
+                              final picked =
+                                  await ManageCategoriesBottomSheet.show(context);
+                              if (picked != null) {
+                                setState(() {
+                                  _selectedCategory = picked.name;
+                                });
+                              }
+                            },
+                            behavior: HitTestBehavior.opaque,
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 4,
+                                vertical: 2,
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.tune_rounded,
+                                    size: 14,
+                                    color: Color(0xFF10B981),
+                                  ),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'Manage',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF10B981),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                          isExpanded: true,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: Color(0xFF111111),
-                          ),
-                          items: _categories
-                              .map(
-                                (c) => DropdownMenuItem(
-                                  value: c,
-                                  child: Text(c),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: (val) {
-                            setState(() {
-                              _selectedCategory = val;
-                            });
-                          },
-                        ),
+                        ],
                       ),
                     ),
+                    const SizedBox(height: 10),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                      child: Row(
+                        children: categories.map((cat) {
+                            final isSelected = _selectedCategory == cat.name ||
+                                (_selectedCategory == null &&
+                                    cat == categories.first);
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _selectedCategory = cat.name;
+                                  });
+                                },
+                                behavior: HitTestBehavior.opaque,
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? const Color(0xFF10B981)
+                                        : Colors.white,
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (isSelected) ...[
+                                        Text(
+                                          cat.emoji,
+                                          style: const TextStyle(fontSize: 14),
+                                        ),
+                                        const SizedBox(width: 6),
+                                      ],
+                                      Text(
+                                        cat.name,
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: isSelected
+                                              ? FontWeight.bold
+                                              : FontWeight.w500,
+                                          color: isSelected
+                                              ? Colors.white
+                                              : const Color(0xFF111111),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -517,7 +583,10 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                   final note = _noteController.text.trim();
                   final title = _selectedType == TransactionType.transfer
                       ? 'Transfer to $selectedDestination'
-                      : (_selectedCategory ?? 'Transaction');
+                      : (_selectedCategory ??
+                          (categories.isNotEmpty
+                              ? categories.first.name
+                              : 'Transaction'));
                   
                   final isIncome = _selectedType == TransactionType.income;
                   final formattedDate = DateFormat('dd-MM-yyyy').format(_selectedDate);
