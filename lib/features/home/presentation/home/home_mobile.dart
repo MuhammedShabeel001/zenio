@@ -473,7 +473,7 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                                     ),
                                   )
                                 else
-                                  ...transactions.map(
+                                  ...transactions.take(10).map(
                                     (tx) => TransactionCard(
                                       key: ValueKey(tx.id),
                                       transaction: tx,
