@@ -156,7 +156,7 @@ class _DebtCardState extends State<DebtCard>
                   child: Container(
                     width: 70,
                     height: 70,
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       color: Colors.white,
                       shape: BoxShape.circle,
                     ),
@@ -179,7 +179,7 @@ class _DebtCardState extends State<DebtCard>
                   child: Container(
                     width: 70,
                     height: 70,
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       color: Colors.white,
                       shape: BoxShape.circle,
                     ),
@@ -228,7 +228,6 @@ class _DebtCardState extends State<DebtCard>
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Top Row: Arrow Badge, Person Name & Date, Amount
                     Row(
@@ -322,11 +321,16 @@ class _DebtCardState extends State<DebtCard>
                       duration: const Duration(milliseconds: 300),
                       firstCurve: Curves.fastOutSlowIn,
                       secondCurve: Curves.fastOutSlowIn,
+                      sizeCurve: Curves.fastOutSlowIn,
                       crossFadeState: _effectiveIsTileExpanded
                           ? CrossFadeState.showSecond
                           : CrossFadeState.showFirst,
-                      firstChild: const SizedBox.shrink(),
-                      secondChild: Padding(
+                      firstChild: const SizedBox(
+                        width: double.infinity,
+                        height: 0,
+                      ),
+                      secondChild: Container(
+                        width: double.infinity,
                         padding: const EdgeInsets.fromLTRB(20, 12, 0, 20),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,

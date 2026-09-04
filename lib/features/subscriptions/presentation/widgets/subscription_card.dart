@@ -235,7 +235,6 @@ class _SubscriptionCardState extends State<SubscriptionCard>
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Top Row: Music Icon Badge, Title & Category, Amount & Due In Text
                     Row(
@@ -331,11 +330,16 @@ class _SubscriptionCardState extends State<SubscriptionCard>
                       duration: const Duration(milliseconds: 300),
                       firstCurve: Curves.fastOutSlowIn,
                       secondCurve: Curves.fastOutSlowIn,
+                      sizeCurve: Curves.fastOutSlowIn,
                       crossFadeState: _effectiveIsTileExpanded
                           ? CrossFadeState.showSecond
                           : CrossFadeState.showFirst,
-                      firstChild: const SizedBox.shrink(),
-                      secondChild: Padding(
+                      firstChild: const SizedBox(
+                        width: double.infinity,
+                        height: 0,
+                      ),
+                      secondChild: Container(
+                        width: double.infinity,
                         padding: const EdgeInsets.fromLTRB(20, 12, 0, 20),
                         child: Row(
                           children: [

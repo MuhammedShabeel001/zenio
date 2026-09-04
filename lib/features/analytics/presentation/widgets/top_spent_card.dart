@@ -216,10 +216,14 @@ class TopSpentCard extends StatelessWidget {
               duration: const Duration(milliseconds: 300),
               firstCurve: Curves.fastOutSlowIn,
               secondCurve: Curves.fastOutSlowIn,
+              sizeCurve: Curves.fastOutSlowIn,
               crossFadeState: expanded
                   ? CrossFadeState.showSecond
                   : CrossFadeState.showFirst,
-              firstChild: const SizedBox.shrink(),
+              firstChild: const SizedBox(
+                width: double.infinity,
+                height: 0,
+              ),
               secondChild: Padding(
                 padding: const EdgeInsets.fromLTRB(15, 15, 0, 10),
                 child: Container(
