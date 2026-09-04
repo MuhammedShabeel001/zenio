@@ -18,12 +18,7 @@ class AddTransactionBottomSheet extends ConsumerStatefulWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        child: const AddTransactionBottomSheet(),
-      ),
+      builder: (context) => const AddTransactionBottomSheet(),
     );
   }
 
@@ -121,6 +116,8 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
             ? wallets.firstWhere((w) => w != selectedSource, orElse: () => wallets.first)
             : selectedSource);
 
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -128,8 +125,8 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
           top: Radius.circular(30),
         ),
       ),
-      padding: const EdgeInsets.fromLTRB(10, 16, 10, 40),
       child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(10, 16, 10, 24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -599,6 +596,8 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                 ),
               ),
             ),
+            // Extends white background behind keyboard — not visible, prevents dark gap
+            SizedBox(height: bottomInset),
           ],
         ),
       ),

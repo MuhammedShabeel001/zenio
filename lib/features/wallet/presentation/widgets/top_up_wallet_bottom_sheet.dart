@@ -11,7 +11,7 @@ class EditWalletBalanceBottomSheet extends ConsumerStatefulWidget {
   final int cardIndex;
 
   static void show(BuildContext context, int cardIndex) {
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -85,13 +85,8 @@ class _EditWalletBalanceBottomSheetState extends ConsumerState<EditWalletBalance
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
       ),
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 10,
-        bottom: bottomInset > 0 ? bottomInset + 20 : 40,
-      ),
       child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -186,6 +181,8 @@ class _EditWalletBalanceBottomSheetState extends ConsumerState<EditWalletBalance
                 ),
               ),
             ),
+            // Extends white background behind keyboard — not visible, prevents dark gap
+            SizedBox(height: bottomInset),
           ],
         ),
       ),

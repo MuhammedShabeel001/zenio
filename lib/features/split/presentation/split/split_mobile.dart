@@ -82,11 +82,14 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
 
     final isEqualMode = state.mode == SplitMode.equal;
 
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: SafeArea(
-        bottom: false,
-        child: Column(
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      behavior: HitTestBehavior.opaque,
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: SafeArea(
+          bottom: false,
+          child: Column(
           children: [
             // Dark Header Section (Bill Amount Input)
             Padding(
@@ -320,6 +323,7 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
             ),
           ],
         ),
+      ),
       ),
     );
   }
