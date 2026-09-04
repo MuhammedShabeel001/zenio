@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:zenio/features/vault/domain/models/vault_card_model.dart';
+import 'package:zenio/shared/utils/assets.gen.dart';
 
 class VaultCardItem extends StatefulWidget {
   const VaultCardItem({
@@ -29,7 +30,7 @@ class _VaultCardItemState extends State<VaultCardItem>
   late AnimationController _animationController;
   late Animation<double> _animation;
   double _dragOffset = 0;
-  static const double _maxDragDistance = 136;
+  static const double _maxDragDistance = 146;
 
   @override
   void initState() {
@@ -132,82 +133,57 @@ class _VaultCardItemState extends State<VaultCardItem>
         clipBehavior: Clip.none,
         children: [
           // Background Slide Action Buttons (Delete & Edit)
-          Positioned.fill(
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Delete Button (White Circle + Red Trash Icon)
-                  GestureDetector(
-                    onTap: () {
-                      _close();
-                      widget.onDelete?.call();
-                    },
-                    child: Container(
-                      width: 54,
-                      height: 54,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: const Color(0xFFF3F3F5),
-                          width: 1.2,
-                        ),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x0C000000),
-                            blurRadius: 8,
-                            offset: Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.delete_outline_rounded,
-                          color: Color(0xFFEF4444),
-                          size: 22,
-                        ),
+          Positioned(
+            top: 0,
+            right: 0,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Delete Button (White Circle + Red Trash Icon)
+                GestureDetector(
+                  onTap: () {
+                    _close();
+                    widget.onDelete?.call();
+                  },
+                  child: Container(
+                    width: 70,
+                    height: 70,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Assets.icons.delete.svg(
+                        width: 24,
+                        height: 24,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                ),
+                const SizedBox(width: 3),
 
-                  // Edit Button (White Circle + Pencil Edit Icon)
-                  GestureDetector(
-                    onTap: () {
-                      _close();
-                      widget.onEdit?.call();
-                    },
-                    child: Container(
-                      width: 54,
-                      height: 54,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: const Color(0xFFF3F3F5),
-                          width: 1.2,
-                        ),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x0C000000),
-                            blurRadius: 8,
-                            offset: Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.edit_outlined,
-                          color: Color(0xFF555555),
-                          size: 22,
-                        ),
+                // Edit Button (White Circle + Pencil Edit Icon)
+                GestureDetector(
+                  onTap: () {
+                    _close();
+                    widget.onEdit?.call();
+                  },
+                  child: Container(
+                    width: 70,
+                    height: 70,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Assets.icons.edit.svg(
+                        width: 24,
+                        height: 24,
                       ),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
 

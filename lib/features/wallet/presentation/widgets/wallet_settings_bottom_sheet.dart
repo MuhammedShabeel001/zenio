@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
 import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
-import 'package:zenio/features/wallet/presentation/widgets/add_wallet_bottom_sheet.dart';
+import 'package:zenio/features/wallet/presentation/widgets/edit_wallet_dialog.dart';
 
 class WalletSettingsBottomSheet extends ConsumerWidget {
   const WalletSettingsBottomSheet({
@@ -15,7 +15,7 @@ class WalletSettingsBottomSheet extends ConsumerWidget {
   final int cardIndex;
 
   static void show(BuildContext context, WalletCardModel card, int cardIndex) {
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (context) => WalletSettingsBottomSheet(
@@ -59,7 +59,11 @@ class WalletSettingsBottomSheet extends ConsumerWidget {
             ),
             onTap: () {
               Navigator.of(context).pop();
-              AddWalletBottomSheet.show(context, editingCard: card, editingIndex: cardIndex);
+              EditWalletDialog.show(
+                context,
+                card: card,
+                cardIndex: cardIndex,
+              );
             },
           ),
           const Divider(height: 1),
