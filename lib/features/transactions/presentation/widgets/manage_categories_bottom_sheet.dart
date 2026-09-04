@@ -35,10 +35,10 @@ class _ManageCategoriesBottomSheetState
   String _selectedEmoji = '🍔';
 
   static const List<String> _popularEmojis = [
-    '🍔', '🍕', '☕', '🍷', '🍦', '🛒', '🛍️', '🚗',
-    '🚕', '⛽', '🚌', '✈️', '🎬', '🎮', '🎵', '⚽',
-    '🏋️', '💊', '🏥', '💡', '🏠', '📱', '💻', '📚',
-    '💼', '💰', '🎁', '🐾', '💈', '🏖️', '👶', '🛠️',
+    '🍔', '🍕', '☕', '🍷', '🍦', '🛒', '🛍️',
+    '🚗', '⛽', '🚌', '✈️', '🏠', '💡', '📱',
+    '🎬', '🎮', '🎵', '⚽', '🏋️', '💊', '🏥',
+    '💻', '📚', '💼', '💰', '🎁', '🐾', '🏖️',
   ];
 
   @override
@@ -124,7 +124,7 @@ class _ManageCategoriesBottomSheetState
         borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
       ),
       child: SingleChildScrollView(
-        padding: EdgeInsets.fromLTRB(16, 16, 16, 24 + bottomInset),
+        padding: const EdgeInsets.fromLTRB(10, 16, 10, 24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -143,67 +143,75 @@ class _ManageCategoriesBottomSheetState
             const SizedBox(height: 20),
 
             // Sheet Title & Top Action
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  _isCreatingOrEditing
-                      ? (_editingCategory != null
-                          ? 'Edit Category'
-                          : 'New Category')
-                      : 'Categories',
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF111111),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    _isCreatingOrEditing
+                        ? (_editingCategory != null
+                            ? 'Edit Category'
+                            : 'New Category')
+                        : 'Categories',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF111111),
+                    ),
                   ),
-                ),
-                if (!_isCreatingOrEditing)
-                  GestureDetector(
-                    onTap: _startCreate,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF10B981),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.add_rounded,
-                            size: 16,
-                            color: Colors.white,
-                          ),
-                          SizedBox(width: 4),
-                          Text(
-                            'Add',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
+                  if (!_isCreatingOrEditing)
+                    GestureDetector(
+                      onTap: _startCreate,
+                      behavior: HitTestBehavior.opaque,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.add_rounded,
+                              size: 16,
                               color: Colors.white,
                             ),
+                            SizedBox(width: 4),
+                            Text(
+                              'Add',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  else
+                    GestureDetector(
+                      onTap: _cancelEditOrCreate,
+                      behavior: HitTestBehavior.opaque,
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                        child: Text(
+                          'Cancel',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF8E8E93),
                           ),
-                        ],
+                        ),
                       ),
                     ),
-                  )
-                else
-                  GestureDetector(
-                    onTap: _cancelEditOrCreate,
-                    child: const Text(
-                      'Cancel',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFF8E8E93),
-                      ),
-                    ),
-                  ),
-              ],
+                ],
+              ),
             ),
             const SizedBox(height: 16),
 
@@ -212,6 +220,9 @@ class _ManageCategoriesBottomSheetState
               _buildCategoryForm()
             else
               _buildCategoryList(categories),
+
+            // Keyboard Inset padding
+            SizedBox(height: bottomInset),
           ],
         ),
       ),
@@ -221,11 +232,15 @@ class _ManageCategoriesBottomSheetState
   Widget _buildCategoryList(List<CategoryItemModel> categories) {
     if (categories.isEmpty) {
       return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 30),
+        padding: EdgeInsets.symmetric(vertical: 40),
         child: Center(
           child: Text(
             'No categories yet. Tap + Add to create one.',
-            style: TextStyle(fontSize: 14, color: Color(0xFF8E8E93)),
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w400,
+              color: Color(0xFF8E8E93),
+            ),
           ),
         ),
       );
@@ -234,10 +249,10 @@ class _ManageCategoriesBottomSheetState
     return Column(
       children: categories.map((category) {
         return Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          margin: const EdgeInsets.only(bottom: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
-            color: const Color(0xFFF7F7F7),
+            color: const Color(0xFFF2F2F2),
             borderRadius: BorderRadius.circular(20),
           ),
           child: Row(
@@ -261,12 +276,18 @@ class _ManageCategoriesBottomSheetState
 
               // Category Name
               Expanded(
-                child: Text(
-                  category.name,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF111111),
+                child: GestureDetector(
+                  onTap: () => widget.onCategorySelected?.call(category),
+                  behavior: HitTestBehavior.opaque,
+                  child: Text(
+                    category.name,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF111111),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ),
@@ -320,161 +341,195 @@ class _ManageCategoriesBottomSheetState
     final currentEmoji = _customEmojiController.text.trim().isNotEmpty
         ? _customEmojiController.text.trim()
         : _selectedEmoji;
-    final currentName = _nameController.text.trim().isNotEmpty
-        ? _nameController.text.trim()
-        : 'Category Name';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Live Preview Chip
-        Center(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-            decoration: BoxDecoration(
-              color: const Color(0xFF10B981),
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  currentEmoji,
-                  style: const TextStyle(fontSize: 18),
+        // Category Name & Emoji Avatar Field
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF2F2F2),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            children: [
+              // Avatar circle with current emoji
+              Container(
+                width: 46,
+                height: 46,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
                 ),
-                const SizedBox(width: 8),
-                Flexible(
+                child: Center(
                   child: Text(
-                    currentName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    currentEmoji,
+                    style: const TextStyle(fontSize: 24),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 14),
+
+              // Name input
+              Expanded(
+                child: TextField(
+                  controller: _nameController,
+                  onChanged: (_) => setState(() {}),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF111111),
+                  ),
+                  decoration: const InputDecoration(
+                    hintText: 'Category Name (e.g. Groceries)',
+                    hintStyle: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w400,
+                      color: Color(0xFF9E9EA5),
+                    ),
+                    isDense: true,
+                    filled: false,
+                    fillColor: Colors.transparent,
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    disabledBorder: InputBorder.none,
+                    focusedErrorBorder: InputBorder.none,
+                    errorBorder: InputBorder.none,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 6),
+
+        // Emoji Selection Container
+        Container(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF2F2F2),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Select Emoji',
+                    style: TextStyle(
                       fontSize: 14,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF8E8E93),
+                    ),
+                  ),
+                  // Custom emoji mini-input pill
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
                       color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          'Custom: ',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF8E8E93),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 32,
+                          child: TextField(
+                            controller: _customEmojiController,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(fontSize: 16),
+                            decoration: const InputDecoration(
+                              hintText: '🎯',
+                              hintStyle: TextStyle(
+                                fontSize: 14,
+                                color: Color(0xFFC7C7CC),
+                              ),
+                              isDense: true,
+                              filled: false,
+                              fillColor: Colors.transparent,
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              disabledBorder: InputBorder.none,
+                              focusedErrorBorder: InputBorder.none,
+                              errorBorder: InputBorder.none,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                            onChanged: (val) {
+                              setState(() {});
+                            },
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 20),
-
-        // Name Input
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF2F2F2),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: TextField(
-            controller: _nameController,
-            onChanged: (_) => setState(() {}),
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF111111),
-            ),
-            decoration: const InputDecoration(
-              hintText: 'Category Name (e.g. Groceries)',
-              hintStyle: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w400,
-                color: Color(0xFF9E9EA5),
+                ],
               ),
-              border: InputBorder.none,
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        // Select Emoji Header
-        const Text(
-          'Select Emoji',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF8E8E93),
-          ),
-        ),
-        const SizedBox(height: 10),
-
-        // Emoji Grid
-        Container(
-          height: 160,
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF7F7F7),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: GridView.builder(
-            itemCount: _popularEmojis.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 8,
-              mainAxisSpacing: 6,
-              crossAxisSpacing: 6,
-            ),
-            itemBuilder: (context, index) {
-              final emoji = _popularEmojis[index];
-              final isSelected = _selectedEmoji == emoji &&
-                  _customEmojiController.text.trim().isEmpty;
-
-              return GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _selectedEmoji = emoji;
-                    _customEmojiController.clear();
-                  });
-                },
-                behavior: HitTestBehavior.opaque,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: isSelected ? Colors.white : Colors.transparent,
-                    borderRadius: BorderRadius.circular(12),
-                    border: isSelected
-                        ? Border.all(color: const Color(0xFF10B981), width: 2)
-                        : null,
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 150,
+                child: GridView.builder(
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: _popularEmojis.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 7,
+                    mainAxisSpacing: 8,
+                    crossAxisSpacing: 8,
                   ),
-                  child: Center(
-                    child: Text(
-                      emoji,
-                      style: const TextStyle(fontSize: 20),
-                    ),
-                  ),
+                  itemBuilder: (context, index) {
+                    final emoji = _popularEmojis[index];
+                    final isSelected = _selectedEmoji == emoji &&
+                        _customEmojiController.text.trim().isEmpty;
+
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _selectedEmoji = emoji;
+                          _customEmojiController.clear();
+                        });
+                      },
+                      behavior: HitTestBehavior.opaque,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? const Color(0xFF10B981)
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Center(
+                          child: Text(
+                            emoji,
+                            style: const TextStyle(fontSize: 20),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: 12),
-
-        // Custom Emoji Row
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF2F2F2),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: TextField(
-            controller: _customEmojiController,
-            onChanged: (_) => setState(() {}),
-            style: const TextStyle(fontSize: 16),
-            decoration: const InputDecoration(
-              hintText: 'Or type custom emoji (e.g. 🎯)',
-              hintStyle: TextStyle(
-                fontSize: 14,
-                color: Color(0xFF9E9EA5),
               ),
-              border: InputBorder.none,
-            ),
+            ],
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 6),
 
         // Save Button
         SizedBox(
-          height: 56,
+          height: 60,
           child: ElevatedButton(
             onPressed: _saveCategory,
             style: ElevatedButton.styleFrom(
@@ -485,7 +540,7 @@ class _ManageCategoriesBottomSheetState
               ),
             ),
             child: Text(
-              _editingCategory != null ? 'Update Category' : 'Save Category',
+              _editingCategory != null ? 'Update category' : 'Save category',
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
