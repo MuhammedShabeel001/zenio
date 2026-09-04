@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:zenio/features/subscriptions/controller/categories/subscription_categories_notifier.dart';
 import 'package:zenio/features/subscriptions/domain/models/subscription_model.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 
-class SubscriptionCard extends StatefulWidget {
+class SubscriptionCard extends ConsumerStatefulWidget {
   const SubscriptionCard({
     required this.subscription,
     this.onDelete,
@@ -26,10 +28,10 @@ class SubscriptionCard extends StatefulWidget {
   final VoidCallback? onTileTap;
 
   @override
-  State<SubscriptionCard> createState() => _SubscriptionCardState();
+  ConsumerState<SubscriptionCard> createState() => _SubscriptionCardState();
 }
 
-class _SubscriptionCardState extends State<SubscriptionCard>
+class _SubscriptionCardState extends ConsumerState<SubscriptionCard>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _animation;
@@ -130,6 +132,19 @@ class _SubscriptionCardState extends State<SubscriptionCard>
 
   @override
   Widget build(BuildContext context) {
+    final categories = ref.watch(subscriptionCategoriesNotifierProvider);
+    final matchedCat = categories.where(
+      (c) =>
+          c.name.trim().toLowerCase() ==
+          widget.subscription.category.trim().toLowerCase(),
+    );
+    final categoryEmoji = matchedCat.isNotEmpty
+        ? matchedCat.first.emoji
+        : (widget.subscription.iconName.isNotEmpty &&
+                widget.subscription.iconName != 'music'
+            ? widget.subscription.iconName
+            : '🏷️');
+
     final now = DateTime.now();
     final difference = widget.subscription.nextBillingDate.difference(now).inDays;
     
@@ -239,7 +254,7 @@ class _SubscriptionCardState extends State<SubscriptionCard>
                     // Top Row: Music Icon Badge, Title & Category, Amount & Due In Text
                     Row(
                       children: [
-                        // Music / App Icon Circle Badge
+                        // Category Emoji Circle Badge
                         Container(
                           width: 60,
                           height: 60,
@@ -248,9 +263,9 @@ class _SubscriptionCardState extends State<SubscriptionCard>
                             shape: BoxShape.circle,
                           ),
                           child: Center(
-                            child: Assets.icons.music.svg(
-                              width: 24,
-                              height: 24,
+                            child: Text(
+                              categoryEmoji,
+                              style: const TextStyle(fontSize: 26),
                             ),
                           ),
                         ),

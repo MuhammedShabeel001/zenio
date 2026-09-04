@@ -1,20 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:zenio/features/subscriptions/controller/categories/subscription_categories_notifier.dart';
 import 'package:zenio/features/transactions/controller/categories/categories_notifier.dart';
 import 'package:zenio/features/transactions/domain/models/category_item_model.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 
 class ManageCategoriesBottomSheet extends ConsumerStatefulWidget {
-  const ManageCategoriesBottomSheet({this.onCategorySelected, super.key});
+  const ManageCategoriesBottomSheet({
+    this.onCategorySelected,
+    this.isSubscription = false,
+    super.key,
+  });
 
   final ValueChanged<CategoryItemModel>? onCategorySelected;
+  final bool isSubscription;
 
-  static Future<CategoryItemModel?> show(BuildContext context) {
+  static Future<CategoryItemModel?> show(
+    BuildContext context, {
+    bool isSubscription = false,
+  }) {
     return showModalBottomSheet<CategoryItemModel>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => ManageCategoriesBottomSheet(
+        isSubscription: isSubscription,
         onCategorySelected: (cat) => Navigator.of(context).pop(cat),
       ),
     );
@@ -46,6 +56,7 @@ class _ManageCategoriesBottomSheetState
     super.initState();
     _nameController = TextEditingController();
     _customEmojiController = TextEditingController();
+    _selectedEmoji = widget.isSubscription ? '🎬' : '🍔';
   }
 
   @override
@@ -61,7 +72,7 @@ class _ManageCategoriesBottomSheetState
       _editingCategory = null;
       _nameController.clear();
       _customEmojiController.clear();
-      _selectedEmoji = '🍔';
+      _selectedEmoji = widget.isSubscription ? '🎬' : '🍔';
     });
   }
 
@@ -92,30 +103,53 @@ class _ManageCategoriesBottomSheetState
         ? _customEmojiController.text.trim()
         : _selectedEmoji;
 
-    final notifier = ref.read(categoriesNotifierProvider.notifier);
-
-    if (_editingCategory != null) {
-      await notifier.updateCategory(
-        id: _editingCategory!.id,
-        name: name,
-        emoji: emoji,
-      );
-      setState(() {
-        _isCreatingOrEditing = false;
-        _editingCategory = null;
-      });
+    if (widget.isSubscription) {
+      final notifier =
+          ref.read(subscriptionCategoriesNotifierProvider.notifier);
+      if (_editingCategory != null) {
+        await notifier.updateCategory(
+          id: _editingCategory!.id,
+          name: name,
+          emoji: emoji,
+        );
+        setState(() {
+          _isCreatingOrEditing = false;
+          _editingCategory = null;
+        });
+      } else {
+        final created = await notifier.addCategory(
+          name: name,
+          emoji: emoji,
+        );
+        widget.onCategorySelected?.call(created);
+      }
     } else {
-      final created = await notifier.addCategory(
-        name: name,
-        emoji: emoji,
-      );
-      widget.onCategorySelected?.call(created);
+      final notifier = ref.read(categoriesNotifierProvider.notifier);
+      if (_editingCategory != null) {
+        await notifier.updateCategory(
+          id: _editingCategory!.id,
+          name: name,
+          emoji: emoji,
+        );
+        setState(() {
+          _isCreatingOrEditing = false;
+          _editingCategory = null;
+        });
+      } else {
+        final created = await notifier.addCategory(
+          name: name,
+          emoji: emoji,
+        );
+        widget.onCategorySelected?.call(created);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final categories = ref.watch(categoriesNotifierProvider);
+    final categories = widget.isSubscription
+        ? ref.watch(subscriptionCategoriesNotifierProvider)
+        : ref.watch(categoriesNotifierProvider);
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return Container(
@@ -313,9 +347,15 @@ class _ManageCategoriesBottomSheetState
               // Delete Action
               GestureDetector(
                 onTap: () async {
-                  await ref
-                      .read(categoriesNotifierProvider.notifier)
-                      .deleteCategory(category.id);
+                  if (widget.isSubscription) {
+                    await ref
+                        .read(subscriptionCategoriesNotifierProvider.notifier)
+                        .deleteCategory(category.id);
+                  } else {
+                    await ref
+                        .read(categoriesNotifierProvider.notifier)
+                        .deleteCategory(category.id);
+                  }
                 },
                 behavior: HitTestBehavior.opaque,
                 child: Container(

@@ -28,6 +28,7 @@ class _AddDebtBottomSheetState extends ConsumerState<AddDebtBottomSheet> {
   late TextEditingController _amountController;
   late TextEditingController _personNameController;
   late TextEditingController _noteController;
+  late FocusNode _personNameFocusNode;
 
   DateTime _selectedDate = DateTime.now();
 
@@ -37,6 +38,10 @@ class _AddDebtBottomSheetState extends ConsumerState<AddDebtBottomSheet> {
     _amountController = TextEditingController();
     _personNameController = TextEditingController();
     _noteController = TextEditingController();
+    _personNameFocusNode = FocusNode();
+    _personNameFocusNode.addListener(() {
+      setState(() {});
+    });
   }
 
   @override
@@ -44,6 +49,7 @@ class _AddDebtBottomSheetState extends ConsumerState<AddDebtBottomSheet> {
     _amountController.dispose();
     _personNameController.dispose();
     _noteController.dispose();
+    _personNameFocusNode.dispose();
     super.dispose();
   }
 
@@ -64,8 +70,20 @@ class _AddDebtBottomSheetState extends ConsumerState<AddDebtBottomSheet> {
   @override
   Widget build(BuildContext context) {
     final formattedDate = DateFormat('dd MMMM yyyy').format(_selectedDate);
-
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
+    final debtsState = ref.watch(debtsNotifierProvider);
+    final existingNames = debtsState.debts
+        .map((d) => d.personName.trim())
+        .where((name) => name.isNotEmpty)
+        .toSet()
+        .toList();
+
+    final query = _personNameController.text.trim().toLowerCase();
+    final matchingSuggestions = existingNames.where((name) {
+      final lower = name.toLowerCase();
+      return query.isNotEmpty && lower.contains(query) && lower != query;
+    }).toList();
 
     return Container(
       decoration: const BoxDecoration(
@@ -158,38 +176,116 @@ class _AddDebtBottomSheetState extends ConsumerState<AddDebtBottomSheet> {
             ),
             const SizedBox(height: 6),
             
-            // Person Name Input Field
+            // Person Name Input Field with Suggestions
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
               decoration: BoxDecoration(
                 color: const Color(0xFFF2F2F2),
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: TextField(
-                controller: _personNameController,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: Color(0xFF111111),
-                ),
-                decoration: const InputDecoration(
-                  hintText: 'Person Name',
-                  hintStyle: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF9E9EA5),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 30,
+                      vertical: 15,
+                    ),
+                    child: TextField(
+                      controller: _personNameController,
+                      focusNode: _personNameFocusNode,
+                      onChanged: (_) => setState(() {}),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF111111),
+                      ),
+                      decoration: const InputDecoration(
+                        hintText: 'Person Name',
+                        hintStyle: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF9E9EA5),
+                        ),
+                        isDense: true,
+                        filled: false,
+                        fillColor: Colors.transparent,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        disabledBorder: InputBorder.none,
+                        focusedErrorBorder: InputBorder.none,
+                        errorBorder: InputBorder.none,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
                   ),
-                  isDense: true,
-                  filled: false,
-                  fillColor: Colors.transparent,
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  disabledBorder: InputBorder.none,
-                  focusedErrorBorder: InputBorder.none,
-                  errorBorder: InputBorder.none,
-                  contentPadding: EdgeInsets.zero,
-                ),
+                  if (matchingSuggestions.isNotEmpty &&
+                      _personNameFocusNode.hasFocus) ...[
+                    const Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: Color(0xFFE5E5EA),
+                      indent: 20,
+                      endIndent: 20,
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 10, 20, 12),
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        physics: const BouncingScrollPhysics(),
+                        child: Row(
+                          children: matchingSuggestions.map((name) {
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _personNameController.text = name;
+                                    _personNameController.selection =
+                                        TextSelection.fromPosition(
+                                      TextPosition(offset: name.length),
+                                    );
+                                  });
+                                },
+                                behavior: HitTestBehavior.opaque,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.person_outline_rounded,
+                                        size: 14,
+                                        color: Color(0xFF10B981),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        name,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFF111111),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
             const SizedBox(height: 6),
@@ -274,7 +370,7 @@ class _AddDebtBottomSheetState extends ConsumerState<AddDebtBottomSheet> {
                 ),
               ),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 6),
 
             // Save Debt Button
             SizedBox(

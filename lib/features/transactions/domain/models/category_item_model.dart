@@ -75,4 +75,43 @@ class CategoryItemModel {
       isDefault: true,
     ),
   ];
+
+  static const List<CategoryItemModel> defaultSubscriptionCategories = [
+    CategoryItemModel(
+      id: 'sub_cat_entertainment',
+      name: 'Entertainment',
+      emoji: '🎬',
+      isDefault: true,
+    ),
+    CategoryItemModel(
+      id: 'sub_cat_school',
+      name: 'School',
+      emoji: '🎓',
+      isDefault: true,
+    ),
+    CategoryItemModel(
+      id: 'sub_cat_utilities',
+      name: 'Utilities',
+      emoji: '⚡',
+      isDefault: true,
+    ),
+    CategoryItemModel(
+      id: 'sub_cat_productivity',
+      name: 'Productivity',
+      emoji: '💼',
+      isDefault: true,
+    ),
+    CategoryItemModel(
+      id: 'sub_cat_health',
+      name: 'Health',
+      emoji: '💊',
+      isDefault: true,
+    ),
+    CategoryItemModel(
+      id: 'sub_cat_streaming',
+      name: 'Streaming',
+      emoji: '📺',
+      isDefault: true,
+    ),
+  ];
 }
