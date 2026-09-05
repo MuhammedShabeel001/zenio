@@ -30,25 +30,25 @@ class SettingsItemTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 5),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(32),
       ),
       child: Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(32),
         child: InkWell(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(32),
           onTap: isSwitch ? null : onTap,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: const EdgeInsets.fromLTRB(5, 5, 20, 5),
             child: Row(
               children: [
-                // Icon Circle
+                // 60x60 Circle Badge (Exact match to Subscriptions, Debts, Transactions)
                 Container(
-                  width: 44,
-                  height: 44,
+                  width: 60,
+                  height: 60,
                   decoration: BoxDecoration(
                     color: iconBgColor,
                     shape: BoxShape.circle,
@@ -62,11 +62,11 @@ class SettingsItemTile extends StatelessWidget {
                   child: Text(
                     title,
                     style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
                       color: isDestructive
-                          ? const Color(0xFF111111)
-                          : const Color(0xFF111111),
+                          ? const Color(0xFFDD3D34)
+                          : const Color(0xFF000000),
                     ),
                   ),
                 ),
@@ -86,14 +86,14 @@ class SettingsItemTile extends StatelessWidget {
                     ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF2F2F5),
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
                       badgeText!,
                       style: const TextStyle(
-                        fontSize: 12,
+                        fontSize: 13,
                         fontWeight: FontWeight.w500,
-                        color: Color(0xFF666666),
+                        color: Color(0xFF8E8E93),
                       ),
                     ),
                   )

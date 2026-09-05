@@ -32,13 +32,13 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Dark Header Title
+            // Dark Header Title (Exact match to Home, Wallet, Subscriptions, Debts)
             const Padding(
-              padding: EdgeInsets.fromLTRB(20, 20, 20, 20),
+              padding: EdgeInsets.fromLTRB(10, 10, 10, 20),
               child: Text(
                 'Settings',
                 style: TextStyle(
-                  fontSize: 34,
+                  fontSize: 32,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                   letterSpacing: -0.5,
@@ -46,65 +46,68 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
               ),
             ),
 
-            // Light Curved Content Sheet
+            // Light Curved Content Sheet (#F7F7F7, Radius: 30)
             Expanded(
               child: Container(
                 width: double.infinity,
                 decoration: const BoxDecoration(
                   color: Color(0xFFF7F7F7),
                   borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(36),
+                    top: Radius.circular(30),
                   ),
                 ),
                 child: ClipRRect(
                   borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(36),
+                    top: Radius.circular(30),
                   ),
                   child: Stack(
                     children: [
                       ListView(
-                        padding: const EdgeInsets.fromLTRB(20, 20, 20, 110),
+                        padding: const EdgeInsets.fromLTRB(10, 16, 10, 120),
                         children: [
                           // SECTION 1: PREFERENCES
-                          _buildSectionHeader('Preferences'),
+                          _buildSectionHeader('Preferences', isFirst: true),
                           SettingsItemTile(
                             title: 'Primary Currency',
                             icon: Assets.icons.currency.svg(
-                              width: 20,
-                              height: 20,
+                              width: 24,
+                              height: 24,
                               colorFilter: const ColorFilter.mode(
                                 Color(0xFF111111),
                                 BlendMode.srcIn,
                               ),
                             ),
+                            iconBgColor: const Color(0xFFFDF3E7),
                             badgeText: '₹  ${settings.primaryCurrency}',
                           ),
                           SettingsItemTile(
                             title: 'Default Wallet',
                             icon: Assets.icons.wallet.svg(
-                              width: 20,
-                              height: 20,
+                              width: 24,
+                              height: 24,
                               colorFilter: const ColorFilter.mode(
                                 Color(0xFF111111),
                                 BlendMode.srcIn,
                               ),
                             ),
+                            iconBgColor: const Color(0xFFE6F3FF),
                             badgeText: settings.defaultWallet,
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 12),
 
                           // SECTION 2: SECURITY
                           _buildSectionHeader('Security'),
                           SettingsItemTile(
                             title: 'Biometric Lock',
                             icon: Assets.icons.biometric.svg(
-                              width: 20,
-                              height: 20,
+                              width: 24,
+                              height: 24,
                               colorFilter: const ColorFilter.mode(
                                 Color(0xFF111111),
                                 BlendMode.srcIn,
                               ),
                             ),
+                            iconBgColor: const Color(0xFFE8F8F0),
                             isSwitch: true,
                             switchValue: settings.isBiometricEnabled,
                             onSwitchChanged: (val) {
@@ -113,20 +116,21 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                                   .toggleBiometric(val);
                             },
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 12),
 
                           // SECTION 3: DATA MANAGEMENT
                           _buildSectionHeader('Data Management'),
                           SettingsItemTile(
                             title: 'Export Data (CSV)',
                             icon: Assets.icons.export.svg(
-                              width: 20,
-                              height: 20,
+                              width: 24,
+                              height: 24,
                               colorFilter: const ColorFilter.mode(
                                 Color(0xFF111111),
                                 BlendMode.srcIn,
                               ),
                             ),
+                            iconBgColor: const Color(0xFFF4ECFB),
                             onTap: () {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
@@ -138,36 +142,60 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                           SettingsItemTile(
                             title: 'Clear All App Data',
                             icon: Assets.icons.delete.svg(
-                              width: 20,
-                              height: 20,
+                              width: 24,
+                              height: 24,
                               colorFilter: const ColorFilter.mode(
-                                Color(0xFFD0021B),
+                                Color(0xFFDD3D34),
                                 BlendMode.srcIn,
                               ),
                             ),
-                            iconBgColor: const Color(0xFFFDE8E8),
+                            iconBgColor: const Color(0xFFFFEAEA),
                             isDestructive: true,
                             onTap: () async {
                               final messenger = ScaffoldMessenger.of(context);
                               final confirm = await showDialog<bool>(
                                 context: context,
                                 builder: (ctx) => AlertDialog(
-                                  title: const Text('Clear All Data'),
+                                  backgroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(28),
+                                  ),
+                                  title: const Text(
+                                    'Clear All Data',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF000000),
+                                    ),
+                                  ),
                                   content: const Text(
                                     'Are you sure you want to clear all app data? This action cannot be undone.',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Color(0xFF666666),
+                                    ),
                                   ),
                                   actions: [
                                     TextButton(
                                       onPressed: () =>
                                           Navigator.of(ctx).pop(false),
-                                      child: const Text('Cancel'),
+                                      child: const Text(
+                                        'Cancel',
+                                        style: TextStyle(
+                                          color: Color(0xFF8E8E93),
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
                                     ),
                                     TextButton(
                                       onPressed: () =>
                                           Navigator.of(ctx).pop(true),
                                       child: const Text(
                                         'Clear',
-                                        style: TextStyle(color: Colors.red),
+                                        style: TextStyle(
+                                          color: Color(0xFFDD3D34),
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -185,36 +213,27 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                               }
                             },
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 12),
 
                           // SECTION 4: SUPPORT & FEEDBACK
                           _buildSectionHeader('Support & Feedback'),
                           SettingsItemTile(
                             title: 'Send Feedback',
                             icon: Assets.icons.feedback.svg(
-                              width: 20,
-                              height: 20,
+                              width: 24,
+                              height: 24,
                               colorFilter: const ColorFilter.mode(
                                 Color(0xFF111111),
                                 BlendMode.srcIn,
                               ),
                             ),
-                            trailing: Container(
-                              width: 24,
-                              height: 24,
-                              decoration: const BoxDecoration(
-                                color: Color(0xFFEAEAEA),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Center(
-                                child: Text(
-                                  '>',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF777777),
-                                  ),
-                                ),
+                            iconBgColor: const Color(0xFFFDF3E7),
+                            trailing: Assets.icons.rightArrow.svg(
+                              width: 20,
+                              height: 20,
+                              colorFilter: const ColorFilter.mode(
+                                Color(0xFF8E8E93),
+                                BlendMode.srcIn,
                               ),
                             ),
                             onTap: () {},
@@ -222,20 +241,21 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                           SettingsItemTile(
                             title: 'Contact support',
                             icon: Assets.icons.support.svg(
-                              width: 20,
-                              height: 20,
+                              width: 24,
+                              height: 24,
                               colorFilter: const ColorFilter.mode(
                                 Color(0xFF111111),
                                 BlendMode.srcIn,
                               ),
                             ),
+                            iconBgColor: const Color(0xFFE6F3FF),
                             badgeText: settings.supportEmail,
                           ),
                           SettingsItemTile(
                             title: 'Version',
                             icon: Assets.icons.info.svg(
-                              width: 20,
-                              height: 20,
+                              width: 24,
+                              height: 24,
                               colorFilter: const ColorFilter.mode(
                                 Color(0xFF111111),
                                 BlendMode.srcIn,
@@ -272,15 +292,20 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
     );
   }
 
-  Widget _buildSectionHeader(String title) {
+  Widget _buildSectionHeader(String title, {bool isFirst = false}) {
     return Padding(
-      padding: const EdgeInsets.only(left: 4, bottom: 8),
+      padding: EdgeInsets.only(
+        left: 6,
+        top: isFirst ? 0 : 6,
+        bottom: 8,
+      ),
       child: Text(
         title,
         style: const TextStyle(
           fontSize: 13,
-          fontWeight: FontWeight.w500,
-          color: Color(0xFFA0A0A5),
+          fontWeight: FontWeight.w600,
+          color: Color(0xFF8E8E93),
+          letterSpacing: -0.2,
         ),
       ),
     );
