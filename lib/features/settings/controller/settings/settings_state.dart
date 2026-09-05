@@ -17,7 +17,7 @@ abstract class SettingsState with _$SettingsState {
           defaultWallet: 'SBI (Debit Card)',
           isBiometricEnabled: true,
           supportEmail: 'support@zenio.app',
-          appVersion: 'vv 3.00.00',
+          appVersion: '',
         ),
         isLoading: false,
       );

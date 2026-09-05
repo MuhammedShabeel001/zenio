@@ -1,9 +1,11 @@
-import 'package:zenio/shared/providers/providers.dart';
 import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:zenio/features/settings/domain/models/settings_model.dart';
 import 'package:zenio/features/settings/domain/repositories/interfaces/i_settings_repository.dart';
+import 'package:zenio/shared/providers/providers.dart';
 
 part 'settings_repository.g.dart';
 
@@ -16,22 +18,29 @@ class SettingsRepository implements ISettingsRepository {
 
   @override
   Future<SettingsModel> getSettings() async {
+    var dynamicVersion = 'v 1.0.0';
+    try {
+      final info = await PackageInfo.fromPlatform();
+      dynamicVersion = 'v ${info.version}';
+    } catch (_) {}
+
     final rawJson = _prefs.getString(_settingsKey);
     if (rawJson != null && rawJson.isNotEmpty) {
       try {
         final map = jsonDecode(rawJson) as Map<String, dynamic>;
-        return SettingsModel.fromJson(map);
+        final saved = SettingsModel.fromJson(map);
+        return saved.copyWith(appVersion: dynamicVersion);
       } catch (_) {
         // Fallback to default
       }
     }
 
-    const defaultSettings = SettingsModel(
+    final defaultSettings = SettingsModel(
       primaryCurrency: 'INR',
       defaultWallet: 'SBI (Debit Card)',
       isBiometricEnabled: true,
       supportEmail: 'support@zenio.app',
-      appVersion: 'vv 3.00.00',
+      appVersion: dynamicVersion,
     );
     await saveSettings(defaultSettings);
     return defaultSettings;

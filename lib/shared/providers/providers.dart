@@ -7,6 +7,7 @@ export 'facebook_app_events_provider/facebook_app_events_provider.dart';
 export 'firebase_analytics_provider/firebase_analytics_provider.dart';
 export 'ip_config_provider/ip_config_provider.dart';
 export 'locale_provider/locale_provider.dart';
+export 'package_info_provider/package_info_provider.dart';
 export 'pdf_platform_provider/pdf_platform_provider.dart';
 export 'router_provider/router_provider.dart';
 export 'theme_provider/theme_provider.dart';

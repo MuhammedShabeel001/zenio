@@ -6,6 +6,7 @@ import 'package:zenio/features/settings/presentation/widgets/settings_item_tile.
 import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/providers/default_wallet_provider/default_wallet_provider.dart';
+import 'package:zenio/shared/providers/package_info_provider/package_info_provider.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/widgets/add_transaction_bottom_sheet.dart';
 import 'package:zenio/shared/widgets/custom_navigation_bar.dart';
@@ -36,6 +37,7 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
     final walletState = ref.watch(walletNotifierProvider);
     final cards = walletState.cards;
     final defaultWallet = ref.watch(defaultWalletProvider);
+    final dynamicVersion = ref.watch(appVersionProvider);
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -641,7 +643,11 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                                 BlendMode.srcIn,
                               ),
                             ),
-                            badgeText: settings.appVersion,
+                            badgeText: dynamicVersion.isNotEmpty
+                                ? dynamicVersion
+                                : (settings.appVersion.isNotEmpty
+                                    ? settings.appVersion
+                                    : 'v 2.0.0'),
                           ),
                         ],
                       ),
