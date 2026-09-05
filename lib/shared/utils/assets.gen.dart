@@ -79,6 +79,9 @@ class $AssetsIconsGen {
   /// File path: assets/icons/icome.svg
   SvgGenImage get icome => const SvgGenImage('assets/icons/icome.svg');
 
+  /// File path: assets/icons/import.svg
+  SvgGenImage get import => const SvgGenImage('assets/icons/import.svg');
+
   /// File path: assets/icons/info.svg
   SvgGenImage get info => const SvgGenImage('assets/icons/info.svg');
 
@@ -165,6 +168,7 @@ class $AssetsIconsGen {
     group,
     home,
     icome,
+    import,
     info,
     ious,
     leftArrow,

@@ -6,6 +6,12 @@ class Alert {
     String message, {
     SnackBarType type = SnackBarType.info,
   }) {
-    AppRouter.rootContext.showSnackBar(message, type: type);
+    final zType = switch (type) {
+      SnackBarType.success => ZenioSnackBarType.success,
+      SnackBarType.error => ZenioSnackBarType.error,
+      SnackBarType.warning => ZenioSnackBarType.warning,
+      SnackBarType.info => ZenioSnackBarType.info,
+    };
+    ZenioSnackBar.show(AppRouter.rootContext, message: message, type: zType);
   }
 }

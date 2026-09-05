@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:zenio/features/home/controller/home/home_notifier.dart';
 import 'package:zenio/features/settings/controller/settings/settings_notifier.dart';
 import 'package:zenio/features/settings/presentation/widgets/settings_item_tile.dart';
 import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
@@ -8,9 +9,11 @@ import 'package:zenio/shared/providers/currency_provider/currency_provider.dart'
 import 'package:zenio/shared/providers/default_wallet_provider/default_wallet_provider.dart';
 import 'package:zenio/shared/providers/package_info_provider/package_info_provider.dart';
 import 'package:zenio/shared/services/csv_export_service.dart';
+import 'package:zenio/shared/services/csv_import_service.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/widgets/add_transaction_bottom_sheet.dart';
 import 'package:zenio/shared/widgets/custom_navigation_bar.dart';
+import 'package:zenio/shared/widgets/zenio_snack_bar.dart';
 
 class SettingsScreenMobile extends ConsumerStatefulWidget {
   const SettingsScreenMobile({
@@ -515,23 +518,68 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                             ),
                             iconBgColor: const Color(0xFFF4ECFB),
                             onTap: () async {
-                              final messenger = ScaffoldMessenger.of(context);
-                              messenger.showSnackBar(
-                                const SnackBar(
-                                  content: Text('Preparing CSV export...'),
-                                  duration: Duration(milliseconds: 800),
-                                ),
+                              ZenioSnackBar.show(
+                                context,
+                                message: 'Preparing CSV export...',
+                                duration: const Duration(milliseconds: 1500),
                               );
                               try {
                                 await ref
                                     .read(csvExportServiceProvider)
                                     .exportDataToCsv();
                               } catch (e) {
-                                messenger.showSnackBar(
-                                  SnackBar(
-                                    content: Text('Failed to export data: $e'),
-                                  ),
-                                );
+                                if (context.mounted) {
+                                  ZenioSnackBar.show(
+                                    context,
+                                    message: 'Failed to export data: $e',
+                                    type: ZenioSnackBarType.error,
+                                  );
+                                }
+                              }
+                            },
+                          ),
+                          SettingsItemTile(
+                            title: 'Import Data (CSV)',
+                            icon: Assets.icons.import.svg(
+                              width: 24,
+                              height: 24,
+                              colorFilter: const ColorFilter.mode(
+                                Color(0xFF111111),
+                                BlendMode.srcIn,
+                              ),
+                            ),
+                            iconBgColor: const Color(0xFFE6F3FF),
+                            onTap: () async {
+                              try {
+                                final count = await ref
+                                    .read(csvImportServiceProvider)
+                                    .pickAndImportCsv();
+                                if (count == null) {
+                                  return;
+                                }
+                                await ref
+                                    .read(homeNotifierProvider.notifier)
+                                    .loadMoneyTrackerData();
+                                await ref
+                                    .read(walletNotifierProvider.notifier)
+                                    .loadWalletData();
+
+                                if (context.mounted) {
+                                  ZenioSnackBar.show(
+                                    context,
+                                    message:
+                                        'Successfully imported $count transaction${count == 1 ? '' : 's'}!',
+                                    type: ZenioSnackBarType.success,
+                                  );
+                                }
+                              } catch (e) {
+                                if (context.mounted) {
+                                  ZenioSnackBar.show(
+                                    context,
+                                    message: 'Failed to import data: $e',
+                                    type: ZenioSnackBarType.error,
+                                  );
+                                }
                               }
                             },
                           ),
@@ -548,7 +596,6 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                             iconBgColor: const Color(0xFFFFEAEA),
                             isDestructive: true,
                             onTap: () async {
-                              final messenger = ScaffoldMessenger.of(context);
                               final confirm = await showDialog<bool>(
                                 context: context,
                                 builder: (ctx) => AlertDialog(
@@ -601,11 +648,12 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                                 await ref
                                     .read(settingsNotifierProvider.notifier)
                                     .clearAllData();
-                                messenger.showSnackBar(
-                                  const SnackBar(
-                                    content: Text('All data cleared'),
-                                  ),
-                                );
+                                if (context.mounted) {
+                                  ZenioSnackBar.show(
+                                    context,
+                                    message: 'All app data cleared',
+                                  );
+                                }
                               }
                             },
                           ),

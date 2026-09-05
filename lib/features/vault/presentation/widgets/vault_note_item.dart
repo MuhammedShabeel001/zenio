@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:zenio/features/vault/domain/models/vault_note_model.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
+import 'package:zenio/shared/widgets/zenio_snack_bar.dart';
 
 class VaultNoteItem extends StatefulWidget {
   const VaultNoteItem({
@@ -116,11 +117,10 @@ class _VaultNoteItemState extends State<VaultNoteItem>
 
   void _copyToClipboard(BuildContext context, String text) {
     Clipboard.setData(ClipboardData(text: text));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Note copied to clipboard'),
-        duration: Duration(seconds: 2),
-      ),
+    ZenioSnackBar.show(
+      context,
+      message: 'Note copied to clipboard',
+      type: ZenioSnackBarType.success,
     );
   }
 
