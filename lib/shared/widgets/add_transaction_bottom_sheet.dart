@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:zenio/features/home/controller/home/home_notifier.dart';
@@ -35,6 +36,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
   TransactionType _selectedType = TransactionType.expense;
 
   late TextEditingController _amountController;
+  late FocusNode _amountFocusNode;
   late TextEditingController _noteController;
 
   DateTime _selectedDate = DateTime.now();
@@ -46,7 +48,13 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
   @override
   void initState() {
     super.initState();
-    _amountController = TextEditingController(text: '0');
+    _amountController = TextEditingController();
+    _amountFocusNode = FocusNode();
+    _amountFocusNode.addListener(() {
+      if (_amountFocusNode.hasFocus && _amountController.text == '0') {
+        _amountController.clear();
+      }
+    });
     _noteController = TextEditingController();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(walletNotifierProvider.notifier).loadWalletData();
@@ -56,6 +64,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
   @override
   void dispose() {
     _amountController.dispose();
+    _amountFocusNode.dispose();
     _noteController.dispose();
     super.dispose();
   }
@@ -320,9 +329,20 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                   Expanded(
                     child: TextField(
                       controller: _amountController,
+                      focusNode: _amountFocusNode,
                       keyboardType:
                           const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                      ],
                       onChanged: (val) {
+                        if (val.length > 1 && val.startsWith('0') && !val.startsWith('0.')) {
+                          final newText = val.replaceFirst(RegExp(r'^0+'), '');
+                          _amountController.value = TextEditingValue(
+                            text: newText.isEmpty ? '0' : newText,
+                            selection: TextSelection.collapsed(offset: newText.length),
+                          );
+                        }
                         setState(() {});
                       },
                       style: TextStyle(
@@ -333,6 +353,12 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                             : const Color(0xFF111111),
                       ),
                       decoration: const InputDecoration(
+                        hintText: '0',
+                        hintStyle: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF9E9EA5),
+                        ),
                         isDense: true,
                         filled: false,
                         fillColor: Colors.transparent,

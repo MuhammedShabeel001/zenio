@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:zenio/features/debts/controller/debts/debts_notifier.dart';
@@ -148,7 +149,21 @@ class _AddDebtBottomSheetState extends ConsumerState<AddDebtBottomSheet> {
               ),
               child: TextField(
                 controller: _amountController,
-                keyboardType: TextInputType.number,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                ],
+                onChanged: (val) {
+                  if (val.length > 1 && val.startsWith('0') && !val.startsWith('0.')) {
+                    final newText = val.replaceFirst(RegExp(r'^0+'), '');
+                    _amountController.value = TextEditingValue(
+                      text: newText.isEmpty ? '0' : newText,
+                      selection: TextSelection.collapsed(offset: newText.length),
+                    );
+                  }
+                  setState(() {});
+                },
                 style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,

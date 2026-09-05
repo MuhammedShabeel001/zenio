@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zenio/features/subscriptions/controller/categories/subscription_categories_notifier.dart';
 import 'package:zenio/features/transactions/controller/categories/categories_notifier.dart';
@@ -491,6 +492,9 @@ class _ManageCategoriesBottomSheetState
                           child: TextField(
                             controller: _customEmojiController,
                             textAlign: TextAlign.center,
+                            inputFormatters: [
+                              LengthLimitingTextInputFormatter(2),
+                            ],
                             style: const TextStyle(fontSize: 16),
                             decoration: const InputDecoration(
                               hintText: '🎯',

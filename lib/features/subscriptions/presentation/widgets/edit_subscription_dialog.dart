@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:zenio/features/subscriptions/controller/categories/subscription_categories_notifier.dart';
@@ -225,7 +226,11 @@ class _EditSubscriptionDialogState
                 ),
                 child: TextField(
                   controller: _amountController,
-                  keyboardType: TextInputType.number,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                  ],
                   style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,

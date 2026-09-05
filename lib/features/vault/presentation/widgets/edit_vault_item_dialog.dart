@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:zenio/features/vault/controller/vault/vault_notifier.dart';
@@ -243,6 +244,10 @@ class _EditVaultItemDialogState extends ConsumerState<EditVaultItemDialog> {
                   child: TextField(
                     controller: _cardNumberController,
                     keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(19),
+                    ],
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w500,
@@ -284,6 +289,11 @@ class _EditVaultItemDialogState extends ConsumerState<EditVaultItemDialog> {
                         ),
                         child: TextField(
                           controller: _expiryController,
+                          keyboardType: TextInputType.datetime,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(RegExp('^[0-9/]*')),
+                            LengthLimitingTextInputFormatter(5),
+                          ],
                           style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w500,
@@ -323,6 +333,10 @@ class _EditVaultItemDialogState extends ConsumerState<EditVaultItemDialog> {
                         child: TextField(
                           controller: _cvvController,
                           keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(4),
+                          ],
                           obscureText: true,
                           style: const TextStyle(
                             fontSize: 15,

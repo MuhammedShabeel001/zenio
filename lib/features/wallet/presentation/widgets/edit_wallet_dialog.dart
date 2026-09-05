@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
 import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
@@ -283,6 +284,9 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
                 child: TextField(
                   controller: _balanceController,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                  ],
                   style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -502,6 +506,11 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
                     Expanded(
                       child: TextField(
                         controller: _cardNumberController,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(19),
+                        ],
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,

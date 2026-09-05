@@ -115,6 +115,9 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
                           controller: _billAmountController,
                           autofocus: true,
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                          ],
                           style: const TextStyle(
                             fontSize: 32,
                             fontWeight: FontWeight.bold,
@@ -122,6 +125,16 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
                             letterSpacing: -0.5,
                           ),
                           onChanged: (val) {
+                            if (val.length > 1 && val.startsWith('0') && !val.startsWith('0.')) {
+                              final newText = val.replaceFirst(RegExp(r'^0+'), '');
+                              _billAmountController.value = TextEditingValue(
+                                text: newText.isEmpty ? '0' : newText,
+                                selection: TextSelection.collapsed(offset: newText.length),
+                              );
+                              final parsed = double.tryParse(newText) ?? 0.0;
+                              notifier.setBillAmount(parsed);
+                              return;
+                            }
                             final parsed = double.tryParse(val) ?? 0.0;
                             notifier.setBillAmount(parsed);
                           },

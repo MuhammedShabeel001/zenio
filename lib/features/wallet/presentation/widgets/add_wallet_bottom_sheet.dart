@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
 import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
@@ -278,6 +279,18 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
                 controller: _balanceController,
                 readOnly: widget.editingCard != null,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                ],
+                onChanged: (val) {
+                  if (val.length > 1 && val.startsWith('0') && !val.startsWith('0.')) {
+                    final newText = val.replaceFirst(RegExp(r'^0+'), '');
+                    _balanceController.value = TextEditingValue(
+                      text: newText.isEmpty ? '0' : newText,
+                      selection: TextSelection.collapsed(offset: newText.length),
+                    );
+                  }
+                },
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,

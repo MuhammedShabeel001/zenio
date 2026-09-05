@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:zenio/features/vault/controller/vault/vault_notifier.dart';
@@ -150,6 +151,7 @@ class _AddVaultItemBottomSheetState
     TextEditingController controller,
     String hintText, {
     TextInputType keyboardType = TextInputType.text,
+    List<TextInputFormatter>? inputFormatters,
     int minLines = 1,
     int maxLines = 1,
   }) {
@@ -163,6 +165,7 @@ class _AddVaultItemBottomSheetState
       child: TextField(
         controller: controller,
         keyboardType: keyboardType,
+        inputFormatters: inputFormatters,
         minLines: minLines,
         maxLines: maxLines,
         style: const TextStyle(
@@ -255,11 +258,33 @@ class _AddVaultItemBottomSheetState
 
             if (isCard) ...[
               _buildTextField(_cardTypeController, 'Card Type (e.g., Credit)'),
-              _buildTextField(_cardNumberController, 'Card Number',
-                  keyboardType: TextInputType.number),
-              _buildTextField(_expiryController, 'Expiry (MM/YY)'),
-              _buildTextField(_cvvController, 'CVV',
-                  keyboardType: TextInputType.number),
+              _buildTextField(
+                _cardNumberController,
+                'Card Number',
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(19),
+                ],
+              ),
+              _buildTextField(
+                _expiryController,
+                'Expiry (MM/YY)',
+                keyboardType: TextInputType.datetime,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp('^[0-9/]*')),
+                  LengthLimitingTextInputFormatter(5),
+                ],
+              ),
+              _buildTextField(
+                _cvvController,
+                'CVV',
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(4),
+                ],
+              ),
             ] else ...[
               // Note Input Field
               _buildTextField(
