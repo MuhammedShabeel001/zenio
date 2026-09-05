@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:zenio/features/debts/domain/models/debt_model.dart';
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
+import 'package:zenio/shared/widgets/swipe_delete_button.dart';
 
 class DebtCard extends ConsumerStatefulWidget {
   const DebtCard({
@@ -38,6 +39,7 @@ class _DebtCardState extends ConsumerState<DebtCard>
   late AnimationController _animationController;
   late Animation<double> _animation;
   double _dragOffset = 0;
+  bool _isConfirmingDelete = false;
   static const double _maxDragDistance = 146;
   bool _internalTileExpanded = false;
 
@@ -71,6 +73,7 @@ class _DebtCardState extends ConsumerState<DebtCard>
     super.didUpdateWidget(oldWidget);
     if (oldWidget.isOpen != widget.isOpen) {
       if (!widget.isOpen && _dragOffset != 0) {
+        _isConfirmingDelete = false;
         _animateTo(0);
       } else if (widget.isOpen && _dragOffset != -_maxDragDistance) {
         _animateTo(-_maxDragDistance);
@@ -85,6 +88,9 @@ class _DebtCardState extends ConsumerState<DebtCard>
   }
 
   void _animateTo(double targetOffset) {
+    if (targetOffset == 0 && _isConfirmingDelete) {
+      _isConfirmingDelete = false;
+    }
     _animation = Tween<double>(
       begin: _dragOffset,
       end: targetOffset,
@@ -119,6 +125,11 @@ class _DebtCardState extends ConsumerState<DebtCard>
   }
 
   void _close() {
+    if (_isConfirmingDelete) {
+      setState(() {
+        _isConfirmingDelete = false;
+      });
+    }
     if (_dragOffset != 0) {
       _animateTo(0);
       widget.onClose?.call();
@@ -150,26 +161,19 @@ class _DebtCardState extends ConsumerState<DebtCard>
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Delete Button (White Circle + Red Trash Icon)
-                GestureDetector(
+                // Delete Button (First tap: red trash icon; tap again to confirm: red circle with white checkmark)
+                SwipeDeleteButton(
+                  isConfirming: _isConfirmingDelete,
                   onTap: () {
-                    _close();
-                    widget.onDelete?.call();
+                    if (!_isConfirmingDelete) {
+                      setState(() {
+                        _isConfirmingDelete = true;
+                      });
+                    } else {
+                      _close();
+                      widget.onDelete?.call();
+                    }
                   },
-                  child: Container(
-                    width: 70,
-                    height: 70,
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Assets.icons.delete.svg(
-                        width: 24,
-                        height: 24,
-                      ),
-                    ),
-                  ),
                 ),
                 const SizedBox(width: 3),
 
