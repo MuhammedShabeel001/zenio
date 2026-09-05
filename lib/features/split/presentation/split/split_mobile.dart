@@ -7,6 +7,7 @@ import 'package:zenio/features/split/controller/split/split_notifier.dart';
 import 'package:zenio/features/split/controller/split/split_state.dart';
 import 'package:zenio/features/split/domain/models/split_calculation_model.dart';
 import 'package:zenio/features/split/domain/services/split_share_service.dart';
+import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/utils/alert.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 
@@ -33,7 +34,8 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
   }
 
   String _formatCurrencyValue(double amount) {
-    return '₹ ${NumberFormat('#,##0.00').format(amount)}';
+    final symbol = ref.read(currencySymbolProvider);
+    return '$symbol ${NumberFormat('#,##0.00').format(amount)}';
   }
 
   Future<void> _handleShare(BuildContext buttonContext, SplitState state) async {
@@ -52,8 +54,10 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
 
     await HapticFeedback.lightImpact();
 
+    final symbol = ref.read(currencySymbolProvider);
     await SplitShareService.share(
       state: state,
+      currencySymbol: symbol,
       sharePositionOrigin: origin,
     );
   }
@@ -62,6 +66,7 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
   Widget build(BuildContext context) {
     final state = ref.watch(splitNotifierProvider);
     final notifier = ref.read(splitNotifierProvider.notifier);
+    final currencySymbol = ref.watch(currencySymbolProvider);
 
     ref.listen(splitNotifierProvider, (previous, next) {
       if (previous?.billAmount != next.billAmount) {
@@ -101,9 +106,9 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      const Text(
-                        '₹ ',
-                        style: TextStyle(
+                      Text(
+                        '$currencySymbol ',
+                        style: const TextStyle(
                           fontSize: 32,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,

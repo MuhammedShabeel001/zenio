@@ -7,6 +7,7 @@ import 'package:zenio/features/subscriptions/controller/subscriptions/subscripti
 import 'package:zenio/features/subscriptions/domain/models/subscription_model.dart';
 import 'package:zenio/features/transactions/domain/models/category_item_model.dart';
 import 'package:zenio/features/transactions/presentation/widgets/manage_categories_bottom_sheet.dart';
+import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 
 class AddSubscriptionBottomSheet extends ConsumerStatefulWidget {
   const AddSubscriptionBottomSheet({super.key});
@@ -91,7 +92,7 @@ class _AddSubscriptionBottomSheetState
       title: title,
       category: categoryName,
       amount: amount,
-      currency: 'INR',
+      currency: ref.read(currencyCodeProvider),
       nextBillingDate: _selectedDate,
       billingCycle: _selectedBillingCycle,
       iconName: selectedCat.emoji,

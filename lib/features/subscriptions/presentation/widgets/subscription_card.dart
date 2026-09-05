@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:zenio/features/subscriptions/controller/categories/subscription_categories_notifier.dart';
 import 'package:zenio/features/subscriptions/domain/models/subscription_model.dart';
+import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 
 class SubscriptionCard extends ConsumerStatefulWidget {
@@ -132,6 +133,7 @@ class _SubscriptionCardState extends ConsumerState<SubscriptionCard>
 
   @override
   Widget build(BuildContext context) {
+    final currencyCode = ref.watch(currencyCodeProvider);
     final categories = ref.watch(subscriptionCategoriesNotifierProvider);
     final matchedCat = categories.where(
       (c) =>
@@ -317,7 +319,7 @@ class _SubscriptionCardState extends ConsumerState<SubscriptionCard>
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  widget.subscription.currency,
+                                  currencyCode,
                                   style: const TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,

@@ -10,27 +10,28 @@ class SplitShareService {
 
   static final NumberFormat _currencyFormatter = NumberFormat('#,##0.00');
 
-  static String _formatAmount(double amount) {
-    return '₹${_currencyFormatter.format(amount)}';
+  static String _formatAmount(double amount, [String currencySymbol = '₹']) {
+    return '$currencySymbol${_currencyFormatter.format(amount)}';
   }
 
   /// Generates a catchy, stylish, and informative shareable message.
-  static String generateShareMessage(SplitState state) {
-    final totalFormatted = _formatAmount(state.billAmount);
+  static String generateShareMessage(SplitState state, [String currencySymbol = '₹']) {
+    final totalFormatted = _formatAmount(state.billAmount, currencySymbol);
 
     if (state.mode == SplitMode.equal) {
-      return _generateEqualSplitMessage(state, totalFormatted);
+      return _generateEqualSplitMessage(state, totalFormatted, currencySymbol);
     } else {
-      return _generateTripSplitMessage(state, totalFormatted);
+      return _generateTripSplitMessage(state, totalFormatted, currencySymbol);
     }
   }
 
   static String _generateEqualSplitMessage(
     SplitState state,
-    String totalFormatted,
-  ) {
+    String totalFormatted, [
+    String currencySymbol = '₹',
+  ]) {
     final people = state.peopleCount;
-    final eachPay = _formatAmount(state.eachPersonPay);
+    final eachPay = _formatAmount(state.eachPersonPay, currencySymbol);
 
     if (people <= 1) {
       return '''
@@ -63,14 +64,15 @@ Let's settle up before we forget.” ✨
 
   static String _generateTripSplitMessage(
     SplitState state,
-    String totalFormatted,
-  ) {
+    String totalFormatted, [
+    String currencySymbol = '₹',
+  ]) {
     final totalPeople = state.peopleCount;
     final returners = state.returnersCount;
     final oneWayCount = totalPeople - returners;
 
-    final oneWayPay = _formatAmount(state.oneWayPay);
-    final returnersPay = _formatAmount(state.returnersPay);
+    final oneWayPay = _formatAmount(state.oneWayPay, currencySymbol);
+    final returnersPay = _formatAmount(state.returnersPay, currencySymbol);
 
     final breakdown = StringBuffer();
 
@@ -112,9 +114,10 @@ Drop your share & let’s hit the road again soon.” 🚀
   /// [sharePositionOrigin] is recommended on iPad and Mac to anchor the popover.
   static Future<ShareResult?> share({
     required SplitState state,
+    String currencySymbol = '₹',
     Rect? sharePositionOrigin,
   }) async {
-    final message = generateShareMessage(state);
+    final message = generateShareMessage(state, currencySymbol);
     final subject = state.mode == SplitMode.equal
         ? '🧾 Bill Split breakdown'
         : '🚗 Road Trip Split breakdown';

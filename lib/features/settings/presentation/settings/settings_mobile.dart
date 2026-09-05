@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zenio/features/settings/controller/settings/settings_notifier.dart';
+import 'package:zenio/features/settings/presentation/widgets/currency_picker_bottom_sheet.dart';
 import 'package:zenio/features/settings/presentation/widgets/settings_item_tile.dart';
+import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/widgets/add_transaction_bottom_sheet.dart';
 import 'package:zenio/shared/widgets/custom_navigation_bar.dart';
@@ -24,6 +26,8 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
   Widget build(BuildContext context) {
     final state = ref.watch(settingsNotifierProvider);
     final settings = state.settings;
+    final currencyCode = ref.watch(currencyCodeProvider);
+    final currencySymbol = ref.watch(currencySymbolProvider);
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -69,16 +73,32 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                           _buildSectionHeader('Preferences', isFirst: true),
                           SettingsItemTile(
                             title: 'Primary Currency',
-                            icon: Assets.icons.currency.svg(
-                              width: 24,
-                              height: 24,
-                              colorFilter: const ColorFilter.mode(
-                                Color(0xFF111111),
-                                BlendMode.srcIn,
-                              ),
-                            ),
-                            iconBgColor: const Color(0xFFFDF3E7),
-                            badgeText: '₹  ${settings.primaryCurrency}',
+                            icon: currencyCode.toUpperCase() == 'DLR'
+                                ? const Center(
+                                    child: Text(
+                                      r'$',
+                                      style: TextStyle(
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF111111),
+                                      ),
+                                    ),
+                                  )
+                                : Assets.icons.currency.svg(
+                                    width: 24,
+                                    height: 24,
+                                    colorFilter: const ColorFilter.mode(
+                                      Color(0xFF111111),
+                                      BlendMode.srcIn,
+                                    ),
+                                  ),
+                            iconBgColor: currencyCode.toUpperCase() == 'DLR'
+                                ? const Color(0xFFE8F8F0)
+                                : const Color(0xFFFDF3E7),
+                            badgeText: '$currencySymbol  $currencyCode',
+                            onTap: () {
+                              CurrencyPickerBottomSheet.show(context);
+                            },
                           ),
                           SettingsItemTile(
                             title: 'Default Wallet',

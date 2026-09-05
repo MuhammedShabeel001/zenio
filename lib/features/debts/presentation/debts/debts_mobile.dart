@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:zenio/features/debts/controller/debts/debts_notifier.dart';
 import 'package:zenio/features/debts/presentation/widgets/debt_card.dart';
+import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/features/debts/presentation/widgets/add_debt_bottom_sheet.dart';
 import 'package:zenio/features/debts/presentation/widgets/edit_debt_dialog.dart';
@@ -50,6 +51,8 @@ class _DebtsScreenMobileState extends ConsumerState<DebtsScreenMobile> {
       }
     }
 
+    final currencySymbol = ref.watch(currencySymbolProvider);
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
@@ -70,9 +73,9 @@ class _DebtsScreenMobileState extends ConsumerState<DebtsScreenMobile> {
                       RichText(
                         text: TextSpan(
                           children: [
-                            const TextSpan(
-                              text: '₹ ',
-                              style: TextStyle(
+                            TextSpan(
+                              text: '$currencySymbol ',
+                              style: const TextStyle(
                                 fontSize: 32,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,

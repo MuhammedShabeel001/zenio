@@ -8,6 +8,7 @@ import 'package:zenio/features/home/domain/models/transaction/transaction_model.
 import 'package:zenio/features/transactions/controller/categories/categories_notifier.dart';
 import 'package:zenio/features/transactions/domain/models/category_item_model.dart';
 import 'package:zenio/features/transactions/presentation/widgets/manage_categories_bottom_sheet.dart';
+import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 
 enum CategorySortOption {
@@ -155,6 +156,9 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
         filtered.sort((a, b) => a.item.name.compareTo(b.item.name));
     }
 
+    final currencySymbol = ref.watch(currencySymbolProvider);
+    final currencyCode = ref.watch(currencyCodeProvider);
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
@@ -175,9 +179,9 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                       RichText(
                         text: TextSpan(
                           children: [
-                            const TextSpan(
-                              text: '₹ ',
-                              style: TextStyle(
+                            TextSpan(
+                              text: '$currencySymbol ',
+                              style: const TextStyle(
                                 fontSize: 32,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,
@@ -425,6 +429,8 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
     final percent = data.ratio * 100;
 
     // Calculate metrics
+    final currencySymbol = ref.watch(currencySymbolProvider);
+    final currencyCode = ref.watch(currencyCodeProvider);
     final totalSpent = data.spend.amount;
     final txCount = data.transactions.length;
     final avgSpend = txCount > 0 ? (totalSpent / txCount) : 0.0;
@@ -500,7 +506,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                   textBaseline: TextBaseline.alphabetic,
                   children: [
                     Text(
-                      totalSpent > 0 ? '- ${_formatAmount(totalSpent)}' : '₹ 0',
+                      totalSpent > 0 ? '- ${_formatAmount(totalSpent)}' : '$currencySymbol 0',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -510,9 +516,9 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                       ),
                     ),
                     const SizedBox(width: 4),
-                    const Text(
-                      'INR',
-                      style: TextStyle(
+                    Text(
+                      currencyCode,
+                      style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                         color: Color(0xFF8E8E93),
@@ -624,7 +630,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                                 ),
                                 const SizedBox(height: 3),
                                 Text(
-                                  '₹ ${_formatAmount(avgSpend)}',
+                                  '$currencySymbol ${_formatAmount(avgSpend)}',
                                   style: const TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold,
@@ -659,7 +665,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                                 ),
                                 const SizedBox(height: 3),
                                 Text(
-                                  '₹ ${_formatAmount(maxSpend)}',
+                                  '$currencySymbol ${_formatAmount(maxSpend)}',
                                   style: const TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold,
@@ -762,7 +768,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                                   ),
                                 ),
                                 Text(
-                                  '- ₹ ${_formatAmount(tx.amount)}',
+                                  '- $currencySymbol ${_formatAmount(tx.amount)}',
                                   style: const TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.bold,

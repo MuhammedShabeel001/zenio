@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:zenio/features/transactions/controller/transactions/transactions_notifier.dart';
 import 'package:zenio/features/transactions/presentation/widgets/transaction_detail_card.dart';
 import 'package:zenio/features/home/home.dart';
+import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/widgets/add_transaction_bottom_sheet.dart';
 import 'package:zenio/features/transactions/presentation/widgets/edit_transaction_dialog.dart';
@@ -43,6 +44,8 @@ class _TransactionsScreenMobileState
             !(tx.bankName?.contains('->') ?? false))
         .fold<double>(0, (sum, tx) => sum + tx.amount);
 
+    final currencySymbol = ref.watch(currencySymbolProvider);
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
@@ -63,9 +66,9 @@ class _TransactionsScreenMobileState
                       RichText(
                         text: TextSpan(
                           children: [
-                            const TextSpan(
-                              text: '₹ ',
-                              style: TextStyle(
+                            TextSpan(
+                              text: '$currencySymbol ',
+                              style: const TextStyle(
                                 fontSize: 32,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,

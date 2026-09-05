@@ -5,6 +5,7 @@ import 'package:zenio/features/subscriptions/controller/subscriptions/subscripti
 import 'package:zenio/features/subscriptions/presentation/widgets/add_subscription_bottom_sheet.dart';
 import 'package:zenio/features/subscriptions/presentation/widgets/edit_subscription_dialog.dart';
 import 'package:zenio/features/subscriptions/presentation/widgets/subscription_card.dart';
+import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 
 class SubscriptionsScreenMobile extends ConsumerStatefulWidget {
@@ -33,8 +34,13 @@ class _SubscriptionsScreenMobileState
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(subscriptionsNotifierProvider);
-    final totalBalance = state.totalBalance;
     final subscriptions = state.subscriptions;
+    final totalBalance = subscriptions.fold<double>(
+      0,
+      (sum, item) => sum + item.amount,
+    );
+
+    final currencySymbol = ref.watch(currencySymbolProvider);
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -56,9 +62,9 @@ class _SubscriptionsScreenMobileState
                       RichText(
                         text: TextSpan(
                           children: [
-                            const TextSpan(
-                              text: '₹ ',
-                              style: TextStyle(
+                            TextSpan(
+                              text: '$currencySymbol ',
+                              style: const TextStyle(
                                 fontSize: 32,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,

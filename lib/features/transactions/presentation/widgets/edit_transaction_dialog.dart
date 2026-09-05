@@ -10,6 +10,7 @@ import 'package:zenio/features/transactions/presentation/widgets/manage_categori
 import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
 import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
 import 'package:zenio/features/wallet/presentation/widgets/add_wallet_bottom_sheet.dart';
+import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/widgets/zenio_dropdown.dart';
 
@@ -262,6 +263,8 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
     final isExceedingBalance = isDebit && enteredAmount > availableBalance;
     final isInvalidAmount = enteredAmount <= 0;
     final canSave = !isExceedingBalance && !isInvalidAmount;
+    final currencySymbol = ref.watch(currencySymbolProvider);
+    final currencyCode = ref.watch(currencyCodeProvider);
 
     final dialogTitle = _isTransfer
         ? 'Edit Transfer'
@@ -357,43 +360,59 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                       ? Border.all(color: const Color(0xFFDD3D34), width: 1.5)
                       : null,
                 ),
-                child: TextField(
-                  controller: _amountController,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                child: Row(
+                  children: [
+                    Text(
+                      '$currencySymbol ',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: isExceedingBalance
+                            ? const Color(0xFFDD3D34)
+                            : const Color(0xFF111111),
+                      ),
+                    ),
+                    Expanded(
+                      child: TextField(
+                        controller: _amountController,
+                        keyboardType:
+                            const TextInputType.numberWithOptions(decimal: true),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                        ],
+                        onChanged: (val) {
+                          if (val.length > 1 && val.startsWith('0') && !val.startsWith('0.')) {
+                            final newText = val.replaceFirst(RegExp(r'^0+'), '');
+                            _amountController.value = TextEditingValue(
+                              text: newText.isEmpty ? '0' : newText,
+                              selection: TextSelection.collapsed(offset: newText.length),
+                            );
+                          }
+                          setState(() {});
+                        },
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: isExceedingBalance
+                              ? const Color(0xFFDD3D34)
+                              : const Color(0xFF111111),
+                        ),
+                        decoration: const InputDecoration(
+                          hintText: '0',
+                          isDense: true,
+                          filled: false,
+                          fillColor: Colors.transparent,
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          disabledBorder: InputBorder.none,
+                          focusedErrorBorder: InputBorder.none,
+                          errorBorder: InputBorder.none,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
+                    ),
                   ],
-                  onChanged: (val) {
-                    if (val.length > 1 && val.startsWith('0') && !val.startsWith('0.')) {
-                      final newText = val.replaceFirst(RegExp(r'^0+'), '');
-                      _amountController.value = TextEditingValue(
-                        text: newText.isEmpty ? '0' : newText,
-                        selection: TextSelection.collapsed(offset: newText.length),
-                      );
-                    }
-                    setState(() {});
-                  },
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: isExceedingBalance
-                        ? const Color(0xFFDD3D34)
-                        : const Color(0xFF111111),
-                  ),
-                  decoration: const InputDecoration(
-                    hintText: '0',
-                    isDense: true,
-                    filled: false,
-                    fillColor: Colors.transparent,
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    disabledBorder: InputBorder.none,
-                    focusedErrorBorder: InputBorder.none,
-                    errorBorder: InputBorder.none,
-                    contentPadding: EdgeInsets.zero,
-                  ),
                 ),
               ),
               if (isExceedingBalance)
@@ -419,7 +438,7 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'Amount exceeds wallet balance (Available: ₹ ${_formatAmount(availableBalance)} in $selectedSource). Change wallet or enter a valid amount.',
+                            'Amount exceeds wallet balance (Available: $currencySymbol ${_formatAmount(availableBalance)} in $selectedSource). Change wallet or enter a valid amount.',
                             style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -495,7 +514,7 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                   return ZenioDropdownItem<String>(
                     value: w,
                     label: w,
-                    subtitle: '₹ ${_formatAmount(bal)}',
+                    subtitle: '$currencySymbol ${_formatAmount(bal)}',
                     subtitleColor: !hasEnough
                         ? const Color(0xFFDD3D34)
                         : const Color(0xFF8E8E93),
@@ -542,7 +561,7 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                     return ZenioDropdownItem<String>(
                       value: w,
                       label: w,
-                      subtitle: '₹ ${_formatAmount(bal)}',
+                      subtitle: '$currencySymbol ${_formatAmount(bal)}',
                       icon: Assets.icons.wallet.svg(
                         width: 18,
                         height: 18,
@@ -797,7 +816,7 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                             date: formattedDate,
                             amount: amount,
                             isIncome: _isIncome,
-                            currency: 'INR',
+                            currency: currencyCode,
                             note: note.isNotEmpty ? note : null,
                             bankName: bankName,
                             timestamp: widget.transaction.timestamp,

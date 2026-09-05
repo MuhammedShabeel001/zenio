@@ -10,6 +10,7 @@ import 'package:zenio/shared/widgets/add_transaction_bottom_sheet.dart';
 import 'package:zenio/features/wallet/presentation/widgets/add_wallet_bottom_sheet.dart';
 import 'package:zenio/features/wallet/presentation/widgets/wallet_settings_bottom_sheet.dart';
 import 'package:zenio/features/wallet/presentation/widgets/top_up_wallet_bottom_sheet.dart';
+import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/widgets/custom_navigation_bar.dart';
 
 class WalletScreenMobile extends ConsumerStatefulWidget {
@@ -64,6 +65,7 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
   Widget build(BuildContext context) {
     final state = ref.watch(walletNotifierProvider);
     final notifier = ref.read(walletNotifierProvider.notifier);
+    final currencySymbol = ref.watch(currencySymbolProvider);
 
     final cards = state.cards;
     final activeIndex = state.activeCardIndex;
@@ -107,9 +109,9 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                           RichText(
                             text: TextSpan(
                               children: [
-                                const TextSpan(
-                                  text: '₹ ',
-                                  style: TextStyle(
+                                TextSpan(
+                                  text: '$currencySymbol ',
+                                  style: const TextStyle(
                                     fontSize: 32,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.white,
@@ -724,7 +726,7 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
   }
 }
 
-class WalletCardDetailRoute extends StatelessWidget {
+class WalletCardDetailRoute extends ConsumerWidget {
   const WalletCardDetailRoute({
     required this.card,
     required this.isFrozen,
@@ -739,7 +741,8 @@ class WalletCardDetailRoute extends StatelessWidget {
   final VoidCallback onPop;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currencySymbol = ref.watch(currencySymbolProvider);
     return PopScope(
       canPop: true,
       onPopInvokedWithResult: (didPop, dynamic result) {
@@ -767,10 +770,10 @@ class WalletCardDetailRoute extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           RichText(
-                            text: const TextSpan(
+                            text: TextSpan(
                               children: [
-                                TextSpan(text: '₹ ', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
-                                TextSpan(text: '0', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
+                                TextSpan(text: '$currencySymbol ', style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
+                                const TextSpan(text: '0', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
                               ],
                             ),
                           ),

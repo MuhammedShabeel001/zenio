@@ -2,10 +2,12 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:zenio/features/analytics/domain/models/category_spend/category_spend_model.dart';
+import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 
-class DonutChartWidget extends StatefulWidget {
+class DonutChartWidget extends ConsumerStatefulWidget {
   const DonutChartWidget({
     required this.categories,
     super.key,
@@ -14,10 +16,10 @@ class DonutChartWidget extends StatefulWidget {
   final List<CategorySpendModel> categories;
 
   @override
-  State<DonutChartWidget> createState() => _DonutChartWidgetState();
+  ConsumerState<DonutChartWidget> createState() => _DonutChartWidgetState();
 }
 
-class _DonutChartWidgetState extends State<DonutChartWidget> {
+class _DonutChartWidgetState extends ConsumerState<DonutChartWidget> {
   int? _selectedIndex;
   DateTime? _pointerDownTime;
   Timer? _hideTimer;
@@ -145,6 +147,7 @@ class _DonutChartWidgetState extends State<DonutChartWidget> {
   Widget _buildCenterInfo(CategorySpendModel category, double total) {
     final percent = total > 0 ? (category.amount / total * 100) : 0.0;
     final color = _parseColor(category.colorHex);
+    final currencySymbol = ref.watch(currencySymbolProvider);
 
     return Column(
       key: ValueKey(category.id),
@@ -166,7 +169,7 @@ class _DonutChartWidgetState extends State<DonutChartWidget> {
         const SizedBox(height: 2),
         // Amount
         Text(
-          '₹${_formatAmount(category.amount)}',
+          '$currencySymbol${_formatAmount(category.amount)}',
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           textAlign: TextAlign.center,

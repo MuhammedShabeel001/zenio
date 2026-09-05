@@ -11,6 +11,7 @@ import 'package:zenio/features/transactions/presentation/widgets/manage_categori
 import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
 import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
 import 'package:zenio/features/wallet/presentation/widgets/add_wallet_bottom_sheet.dart';
+import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/widgets/zenio_dropdown.dart';
 
@@ -238,6 +239,8 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
     final isExceedingBalance = isDebit && enteredAmount > availableBalance;
     final isInvalidAmount = enteredAmount <= 0;
     final canSave = !isExceedingBalance && !isInvalidAmount;
+    final currencySymbol = ref.watch(currencySymbolProvider);
+    final currencyCode = ref.watch(currencyCodeProvider);
 
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
@@ -318,7 +321,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
               child: Row(
                 children: [
                   Text(
-                    '₹ ',
+                    '$currencySymbol ',
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -401,7 +404,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Amount exceeds wallet balance (Available: ₹ ${_formatAmount(availableBalance)} in $selectedSource). Change wallet or enter a valid amount.',
+                          'Amount exceeds wallet balance (Available: $currencySymbol ${_formatAmount(availableBalance)} in $selectedSource). Change wallet or enter a valid amount.',
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -520,7 +523,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                 return ZenioDropdownItem<String>(
                   value: w,
                   label: w,
-                  subtitle: '₹ ${_formatAmount(bal)}',
+                  subtitle: '$currencySymbol ${_formatAmount(bal)}',
                   subtitleColor: hasEnough
                       ? const Color(0xFF8E8E93)
                       : const Color(0xFFDD3D34),
@@ -571,7 +574,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                       return ZenioDropdownItem<String>(
                         value: w,
                         label: w,
-                        subtitle: '₹ ${_formatAmount(bal)}',
+                        subtitle: '$currencySymbol ${_formatAmount(bal)}',
                         icon: Assets.icons.wallet.svg(
                           width: 18,
                           height: 18,
@@ -825,7 +828,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                           date: formattedDate,
                           amount: amount,
                           isIncome: isIncome,
-                          currency: 'INR',
+                          currency: currencyCode,
                           note: note.isNotEmpty ? note : null,
                           bankName: bankName,
                           timestamp: timestamp,
@@ -837,7 +840,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                           date: formattedDate,
                           amount: amount,
                           isIncome: isIncome,
-                          currency: 'INR',
+                          currency: currencyCode,
                           note: note.isNotEmpty ? note : null,
                           bankName: bankName,
                           timestamp: timestamp,

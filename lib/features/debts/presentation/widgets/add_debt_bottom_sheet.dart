@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:zenio/features/debts/controller/debts/debts_notifier.dart';
 import 'package:zenio/features/debts/domain/models/debt_model.dart';
+import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 
 enum DebtType { iOwe, owedToMe }
 
@@ -406,7 +407,7 @@ class _AddDebtBottomSheetState extends ConsumerState<AddDebtBottomSheet> {
                     personName: personName,
                     date: formattedDate,
                     amount: amount,
-                    currency: 'INR',
+                    currency: ref.read(currencyCodeProvider),
                     isOwed: isOwed,
                     iconName: isOwed ? 'down_arrow' : 'up_arrow',
                     note: note.isNotEmpty ? note : null,

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:zenio/features/home/domain/models/transaction/transaction_model.dart';
+import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/utils/datetime.dart';
 
-class TransactionCard extends StatefulWidget {
+class TransactionCard extends ConsumerStatefulWidget {
   const TransactionCard({
     required this.transaction,
     this.onDelete,
@@ -23,10 +25,10 @@ class TransactionCard extends StatefulWidget {
   final VoidCallback? onClose;
 
   @override
-  State<TransactionCard> createState() => _TransactionCardState();
+  ConsumerState<TransactionCard> createState() => _TransactionCardState();
 }
 
-class _TransactionCardState extends State<TransactionCard>
+class _TransactionCardState extends ConsumerState<TransactionCard>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _animation;
@@ -123,6 +125,7 @@ class _TransactionCardState extends State<TransactionCard>
 
   @override
   Widget build(BuildContext context) {
+    final currencyCode = ref.watch(currencyCodeProvider);
     return Container(
       margin: const EdgeInsets.only(bottom: 5),
       height: 70,
@@ -289,7 +292,7 @@ class _TransactionCardState extends State<TransactionCard>
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          widget.transaction.currency,
+                          currencyCode,
                           style: const TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,

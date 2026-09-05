@@ -7,6 +7,7 @@ import 'package:zenio/features/analytics/presentation/categories/categories_list
 import 'package:zenio/features/analytics/presentation/widgets/category_legend_widget.dart';
 import 'package:zenio/features/analytics/presentation/widgets/donut_chart_widget.dart';
 import 'package:zenio/features/analytics/presentation/widgets/top_spent_card.dart';
+import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/widgets/add_transaction_bottom_sheet.dart';
 import 'package:zenio/shared/widgets/custom_navigation_bar.dart';
@@ -69,6 +70,7 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
     final totalBalance = state.totalBalance;
     final categories = state.categorySpends.take(10).toList();
     final shrinkProgress = (_scrollOffset / 60.0).clamp(0.0, 1.0);
+    final currencySymbol = ref.watch(currencySymbolProvider);
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -86,9 +88,9 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
                   RichText(
                     text: TextSpan(
                       children: [
-                        const TextSpan(
-                          text: '₹ ',
-                          style: TextStyle(
+                        TextSpan(
+                          text: '$currencySymbol ',
+                          style: const TextStyle(
                             fontSize: 32,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,

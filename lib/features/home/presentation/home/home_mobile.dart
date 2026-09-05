@@ -6,10 +6,12 @@ import 'package:zenio/features/home/controller/home/home_notifier.dart';
 import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
 import 'package:zenio/features/home/presentation/widgets/quick_action_item.dart';
 import 'package:zenio/features/home/presentation/widgets/transaction_card.dart';
+import 'package:zenio/features/settings/presentation/widgets/currency_picker_bottom_sheet.dart';
 import 'package:zenio/features/split/split.dart';
 import 'package:zenio/features/subscriptions/subscriptions.dart';
 import 'package:zenio/features/transactions/transactions.dart';
 import 'package:zenio/features/vault/vault.dart';
+import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/widgets/add_transaction_bottom_sheet.dart';
 import 'package:zenio/shared/widgets/custom_navigation_bar.dart';
@@ -55,7 +57,8 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
     final incomeChange = summary?.incomeChangePercentage ?? 0.0;
     final expense = summary?.expense ?? 0.0;
     final expenseChange = summary?.expenseChangePercentage ?? 0.0;
-    final currency = summary?.selectedCurrency ?? 'INR';
+    final currency = ref.watch(currencyCodeProvider);
+    final currencySymbol = ref.watch(currencySymbolProvider);
 
     final formattedIncomeChange = incomeChange >= 0
         ? '+ ${incomeChange.toStringAsFixed(2)} %'
@@ -94,9 +97,9 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                           RichText(
                             text: TextSpan(
                               children: [
-                                const TextSpan(
-                                  text: '₹ ',
-                                  style: TextStyle(
+                                TextSpan(
+                                  text: '$currencySymbol ',
+                                  style: const TextStyle(
                                     fontSize: 32,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.white,
@@ -135,40 +138,43 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                         ],
                       ),
                       // Currency Badge Pill
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 17,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1A1A1A),
-                          borderRadius: BorderRadius.circular(30),
-                          border: Border.all(
-                            color: const Color(0xFF313131),
-                            width: 1,
+                      GestureDetector(
+                        onTap: () => CurrencyPickerBottomSheet.show(context),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 14,
                           ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text(
-                              '₹',
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFFE0E0E0),
-                              ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1a1a1a),
+                            borderRadius: BorderRadius.circular(30),
+                            border: Border.all(
+                              color: const Color(0xFF313131),
+                              width: 1,
                             ),
-                            const SizedBox(width: 8),
-                            Text(
-                              currency,
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                currencySymbol,
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFFE0E0E0),
+                                ),
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 8),
+                              Text(
+                                currency,
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],
@@ -215,7 +221,7 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                               ),
                               const SizedBox(height: 16),
                               Text(
-                                '₹ ${NumberFormat('#,##0.00').format(income)}',
+                                '$currencySymbol ${NumberFormat('#,##0.00').format(income)}',
                                 style: const TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
@@ -273,7 +279,7 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                               ),
                               const SizedBox(height: 16),
                               Text(
-                                '₹ ${NumberFormat('#,##0.00').format(expense)}',
+                                '$currencySymbol ${NumberFormat('#,##0.00').format(expense)}',
                                 style: const TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,

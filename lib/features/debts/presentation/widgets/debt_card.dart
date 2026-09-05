@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:zenio/features/debts/domain/models/debt_model.dart';
+import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 
-class DebtCard extends StatefulWidget {
+class DebtCard extends ConsumerStatefulWidget {
   const DebtCard({
     required this.debt,
     this.onDelete,
@@ -28,10 +30,10 @@ class DebtCard extends StatefulWidget {
   final String? description;
 
   @override
-  State<DebtCard> createState() => _DebtCardState();
+  ConsumerState<DebtCard> createState() => _DebtCardState();
 }
 
-class _DebtCardState extends State<DebtCard>
+class _DebtCardState extends ConsumerState<DebtCard>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _animation;
@@ -135,6 +137,7 @@ class _DebtCardState extends State<DebtCard>
 
   @override
   Widget build(BuildContext context) {
+    final currencyCode = ref.watch(currencyCodeProvider);
     return Container(
       margin: const EdgeInsets.only(bottom: 5),
       child: Stack(
@@ -304,7 +307,7 @@ class _DebtCardState extends State<DebtCard>
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              widget.debt.currency,
+                              currencyCode,
                               style: const TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,

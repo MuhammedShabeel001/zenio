@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:zenio/features/analytics/domain/models/category_spend/category_spend_model.dart';
 import 'package:zenio/features/subscriptions/controller/categories/subscription_categories_notifier.dart';
 import 'package:zenio/features/transactions/controller/categories/categories_notifier.dart';
+import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 
 class TopSpentCard extends ConsumerWidget {
   const TopSpentCard({
@@ -156,6 +157,7 @@ class TopSpentCard extends ConsumerWidget {
     final ratio = _getSpendRatio(spend, totalSpend);
     final expanded = isExpanded ?? false;
     final emoji = _getCategoryEmoji(ref, spend);
+    final currencyCode = ref.watch(currencyCodeProvider);
 
     return GestureDetector(
       onTap: onTap,
@@ -227,9 +229,9 @@ class TopSpentCard extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(width: 4),
-                    const Text(
-                      'INR',
-                      style: TextStyle(
+                    Text(
+                      currencyCode,
+                      style: const TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                         color: Color(0xFF8E8E93),
