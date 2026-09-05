@@ -6,7 +6,7 @@ import 'package:zenio/features/home/controller/home/home_notifier.dart';
 import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
 import 'package:zenio/features/home/presentation/widgets/quick_action_item.dart';
 import 'package:zenio/features/home/presentation/widgets/transaction_card.dart';
-import 'package:zenio/features/settings/presentation/widgets/currency_picker_bottom_sheet.dart';
+import 'package:zenio/features/settings/controller/settings/settings_notifier.dart';
 import 'package:zenio/features/split/split.dart';
 import 'package:zenio/features/subscriptions/subscriptions.dart';
 import 'package:zenio/features/transactions/transactions.dart';
@@ -138,42 +138,202 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                         ],
                       ),
                       // Currency Badge Pill
-                      GestureDetector(
-                        onTap: () => CurrencyPickerBottomSheet.show(context),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 14,
+                      Theme(
+                        data: Theme.of(context).copyWith(
+                          splashColor: Colors.transparent,
+                          highlightColor: Colors.transparent,
+                        ),
+                        child: PopupMenuButton<String>(
+                          tooltip: 'Select Currency',
+                          elevation: 12,
+                          shadowColor: Colors.black.withValues(alpha: 0.25),
+                          color: const Color(0xFF1E1E1E),
+                          surfaceTintColor: Colors.transparent,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(
+                            minWidth: 190,
+                            maxWidth: 220,
                           ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF1a1a1a),
-                            borderRadius: BorderRadius.circular(30),
-                            border: Border.all(
-                              color: const Color(0xFF313131),
-                              width: 1,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            side: const BorderSide(
+                              color: Color(0xFF313131),
+                              width: 1.2,
                             ),
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                currencySymbol,
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFFE0E0E0),
-                                ),
+                          offset: const Offset(0, 52),
+                          onSelected: (String code) {
+                            ref
+                                .read(settingsNotifierProvider.notifier)
+                                .updatePrimaryCurrency(code);
+                          },
+                          itemBuilder: (BuildContext context) => [
+                            PopupMenuItem<String>(
+                              value: 'INR',
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 32,
+                                    height: 32,
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFF2C2520),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Center(
+                                      child: Text(
+                                        '₹',
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFFFDB965),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  const Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          'INR',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                        Text(
+                                          'Indian Rupee',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: Color(0xFF8E8E93),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  if (currency.toUpperCase() == 'INR')
+                                    const Icon(
+                                      Icons.check_circle_rounded,
+                                      color: Color(0xFF10B981),
+                                      size: 18,
+                                    ),
+                                ],
                               ),
-                              const SizedBox(width: 8),
-                              Text(
-                                currency,
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
+                            ),
+                            const PopupMenuItem<String>(
+                              enabled: false,
+                              height: 1,
+                              padding: EdgeInsets.zero,
+                              child: Divider(
+                                height: 1,
+                                thickness: 1,
+                                color: Color(0xFF313131),
                               ),
-                            ],
+                            ),
+                            PopupMenuItem<String>(
+                              value: 'DLR',
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 32,
+                                    height: 32,
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFF1E2D27),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Center(
+                                      child: Text(
+                                        r'$',
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF10B981),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  const Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          'DLR',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                        Text(
+                                          'US Dollar',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: Color(0xFF8E8E93),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  if (currency.toUpperCase() == 'DLR')
+                                    const Icon(
+                                      Icons.check_circle_rounded,
+                                      color: Color(0xFF10B981),
+                                      size: 18,
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ],
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 18,
+                              vertical: 12,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1a1a1a),
+                              borderRadius: BorderRadius.circular(30),
+                              border: Border.all(
+                                color: const Color(0xFF313131),
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  currencySymbol,
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFFE0E0E0),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  currency,
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                const Icon(
+                                  Icons.keyboard_arrow_down_rounded,
+                                  size: 16,
+                                  color: Color(0xFF8E8E93),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),

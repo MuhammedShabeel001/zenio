@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zenio/features/settings/controller/settings/settings_notifier.dart';
-import 'package:zenio/features/settings/presentation/widgets/currency_picker_bottom_sheet.dart';
 import 'package:zenio/features/settings/presentation/widgets/settings_item_tile.dart';
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
@@ -22,6 +21,8 @@ class SettingsScreenMobile extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
+  final GlobalKey<PopupMenuButtonState<String>> _currencyMenuKey = GlobalKey();
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(settingsNotifierProvider);
@@ -50,14 +51,14 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
               ),
             ),
 
-            // Light Curved Content Sheet (#F7F7F7, Radius: 30)
+            // White Rounded Settings Body Container
             Expanded(
               child: Container(
-                width: double.infinity,
                 decoration: const BoxDecoration(
-                  color: Color(0xFFF7F7F7),
-                  borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(30),
+                  color: Color(0xFFF2F2F5),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(30),
+                    topRight: Radius.circular(30),
                   ),
                 ),
                 child: ClipRRect(
@@ -95,9 +96,195 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                             iconBgColor: currencyCode.toUpperCase() == 'DLR'
                                 ? const Color(0xFFE8F8F0)
                                 : const Color(0xFFFDF3E7),
-                            badgeText: '$currencySymbol  $currencyCode',
+                            trailing: Theme(
+                              data: Theme.of(context).copyWith(
+                                splashColor: Colors.transparent,
+                                highlightColor: Colors.transparent,
+                              ),
+                              child: PopupMenuButton<String>(
+                                key: _currencyMenuKey,
+                                tooltip: 'Select Currency',
+                                elevation: 12,
+                                shadowColor: Colors.black.withValues(alpha: 0.12),
+                                color: Colors.white,
+                                surfaceTintColor: Colors.transparent,
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(
+                                  minWidth: 190,
+                                  maxWidth: 220,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                  side: const BorderSide(
+                                    color: Color(0xFFE5E5EA),
+                                    width: 1.2,
+                                  ),
+                                ),
+                                offset: const Offset(0, 38),
+                                onSelected: (String currency) {
+                                  ref
+                                      .read(settingsNotifierProvider.notifier)
+                                      .updatePrimaryCurrency(currency);
+                                },
+                                itemBuilder: (BuildContext context) => [
+                                  PopupMenuItem<String>(
+                                    value: 'INR',
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          width: 32,
+                                          height: 32,
+                                          decoration: const BoxDecoration(
+                                            color: Color(0xFFFDF3E7),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: const Center(
+                                            child: Text(
+                                              '₹',
+                                              style: TextStyle(
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.bold,
+                                                color: Color(0xFF111111),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        const Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              Text(
+                                                'INR',
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Color(0xFF111111),
+                                                ),
+                                              ),
+                                              Text(
+                                                'Indian Rupee',
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  color: Color(0xFF8E8E93),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        if (currencyCode.toUpperCase() == 'INR')
+                                          const Icon(
+                                            Icons.check_circle_rounded,
+                                            color: Color(0xFF10B981),
+                                            size: 18,
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  const PopupMenuItem<String>(
+                                    enabled: false,
+                                    height: 1,
+                                    padding: EdgeInsets.zero,
+                                    child: Divider(
+                                      height: 1,
+                                      thickness: 1,
+                                      color: Color(0xFFF2F2F5),
+                                    ),
+                                  ),
+                                  PopupMenuItem<String>(
+                                    value: 'DLR',
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          width: 32,
+                                          height: 32,
+                                          decoration: const BoxDecoration(
+                                            color: Color(0xFFE8F8F0),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: const Center(
+                                            child: Text(
+                                              r'$',
+                                              style: TextStyle(
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.bold,
+                                                color: Color(0xFF10B981),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        const Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              Text(
+                                                'DLR',
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Color(0xFF111111),
+                                                ),
+                                              ),
+                                              Text(
+                                                'US Dollar',
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  color: Color(0xFF8E8E93),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        if (currencyCode.toUpperCase() == 'DLR')
+                                          const Icon(
+                                            Icons.check_circle_rounded,
+                                            color: Color(0xFF10B981),
+                                            size: 18,
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF2F2F5),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        '$currencySymbol  $currencyCode',
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFF8E8E93),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      const Icon(
+                                        Icons.keyboard_arrow_down_rounded,
+                                        size: 16,
+                                        color: Color(0xFF8E8E93),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
                             onTap: () {
-                              CurrencyPickerBottomSheet.show(context);
+                              _currencyMenuKey.currentState?.showButtonMenu();
                             },
                           ),
                           SettingsItemTile(
