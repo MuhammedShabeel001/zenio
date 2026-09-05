@@ -31,6 +31,8 @@ class DebtsNotifier extends _$DebtsNotifier {
     }
   }
 
+  Future<void> loadData() async => _loadData();
+
   void updateFilter(String filter) {
     state = state.copyWith(selectedFilter: filter);
   }

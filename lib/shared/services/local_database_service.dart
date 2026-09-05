@@ -118,4 +118,11 @@ class LocalDatabaseService {
     }
     return null;
   }
+
+  /// Wipes all tables from the local SQLite database.
+  Future<void> clearAllData() async {
+    final db = await database;
+    await db.delete('transactions');
+    await db.delete('key_value_store');
+  }
 }

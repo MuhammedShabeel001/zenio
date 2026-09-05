@@ -39,6 +39,8 @@ class SubscriptionsNotifier extends _$SubscriptionsNotifier {
     }
   }
 
+  Future<void> loadData() async => _loadData();
+
   List<SubscriptionModel> _filterSubscriptions(
     List<SubscriptionModel> allSubscriptions,
     String filter,

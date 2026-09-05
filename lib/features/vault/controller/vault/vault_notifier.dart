@@ -32,6 +32,8 @@ class VaultNotifier extends _$VaultNotifier {
     }
   }
 
+  Future<void> loadData() async => _loadData();
+
   void setMode(VaultMode mode) {
     state = state.copyWith(mode: mode);
   }

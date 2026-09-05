@@ -32,6 +32,8 @@ class SplitNotifier extends _$SplitNotifier {
     }
   }
 
+  Future<void> loadData() async => _loadData();
+
   void setBillAmount(double amount) {
     state = state.copyWith(billAmount: amount);
     _persist();

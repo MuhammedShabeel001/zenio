@@ -19,12 +19,12 @@ class TransactionsRepository implements ITransactionsRepository {
   @override
   Future<double> getTransactionsBalance() async {
     final prefs = _prefs;
-    if (prefs == null) return 2678.01;
+    if (prefs == null) return 0.0;
     final balance = prefs.getDouble(_balanceKey);
     if (balance != null) {
       return balance;
     }
-    const defaultBalance = 2678.01;
+    const defaultBalance = 0.0;
     await prefs.setDouble(_balanceKey, defaultBalance);
     return defaultBalance;
   }

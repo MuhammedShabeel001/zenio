@@ -48,6 +48,11 @@ class SubscriptionCategoriesNotifier extends _$SubscriptionCategoriesNotifier {
     await _prefs?.setStringList(_storageKey, rawList);
   }
 
+  Future<void> resetCategories() async {
+    state = CategoryItemModel.defaultSubscriptionCategories;
+    await _saveCategories(state);
+  }
+
   Future<CategoryItemModel> addCategory({
     required String name,
     required String emoji,

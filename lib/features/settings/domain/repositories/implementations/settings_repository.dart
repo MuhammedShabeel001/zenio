@@ -6,13 +6,15 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:zenio/features/settings/domain/models/settings_model.dart';
 import 'package:zenio/features/settings/domain/repositories/interfaces/i_settings_repository.dart';
 import 'package:zenio/shared/providers/providers.dart';
+import 'package:zenio/shared/services/local_database_service.dart';
 
 part 'settings_repository.g.dart';
 
 class SettingsRepository implements ISettingsRepository {
-  SettingsRepository(this._prefs);
+  SettingsRepository(this._prefs, this._dbService);
 
   final SqlitePrefs _prefs;
+  final LocalDatabaseService _dbService;
 
   static const String _settingsKey = 'app_user_settings';
 
@@ -37,7 +39,7 @@ class SettingsRepository implements ISettingsRepository {
 
     final defaultSettings = SettingsModel(
       primaryCurrency: 'INR',
-      defaultWallet: 'SBI (Debit Card)',
+      defaultWallet: '',
       isBiometricEnabled: true,
       supportEmail: 'support@zenio.app',
       appVersion: dynamicVersion,
@@ -54,6 +56,7 @@ class SettingsRepository implements ISettingsRepository {
 
   @override
   Future<void> clearAllAppData() async {
+    await _dbService.clearAllData();
     await _prefs.clear();
   }
 }
@@ -65,5 +68,6 @@ ISettingsRepository settingsRepositoryRepo(Ref ref) {
   if (prefs == null) {
     throw Exception('SqlitePrefs not initialized yet');
   }
-  return SettingsRepository(prefs);
+  final dbService = ref.watch(localDatabaseServiceProvider);
+  return SettingsRepository(prefs, dbService);
 }

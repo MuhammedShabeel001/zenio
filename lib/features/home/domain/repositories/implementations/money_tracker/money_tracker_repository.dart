@@ -30,11 +30,11 @@ class MoneyTrackerRepository implements IMoneyTrackerRepository {
     }
 
     const defaultSummary = FinancialSummaryModel(
-      totalBalance: 23678.01,
-      income: 23678.01,
-      incomeChangePercentage: 12.06,
-      expense: 23678.01,
-      expenseChangePercentage: 12.06,
+      totalBalance: 0.0,
+      income: 0.0,
+      incomeChangePercentage: 0.0,
+      expense: 0.0,
+      expenseChangePercentage: 0.0,
       selectedCurrency: 'INR',
     );
     await saveSummary(defaultSummary);

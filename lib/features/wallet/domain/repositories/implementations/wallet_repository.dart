@@ -21,7 +21,7 @@ class WalletRepository implements IWalletRepository {
     if (balance != null) {
       return balance;
     }
-    const defaultBalance = 2678.01;
+    const defaultBalance = 0.0;
     await saveCardBalance(defaultBalance);
     return defaultBalance;
   }
