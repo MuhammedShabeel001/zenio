@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
 import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
+import 'package:zenio/shared/widgets/zenio_dropdown.dart';
 
 class AddWalletBottomSheet extends ConsumerStatefulWidget {
   const AddWalletBottomSheet({
@@ -139,14 +140,22 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
     });
   }
 
-  List<DropdownMenuItem<String>> _buildDropdownItems() {
-    final items = <DropdownMenuItem<String>>[];
+  List<ZenioDropdownItem<String>> _buildDropdownItems() {
+    final items = <ZenioDropdownItem<String>>[];
 
     for (final preset in _presetTypes) {
       items.add(
-        DropdownMenuItem<String>(
-          value: preset['value'],
-          child: Text(preset['label']!),
+        ZenioDropdownItem<String>(
+          value: preset['value']!,
+          label: preset['label']!,
+          icon: Assets.icons.card.svg(
+            width: 18,
+            height: 18,
+            colorFilter: const ColorFilter.mode(
+              Color(0xFF8E8E93),
+              BlendMode.srcIn,
+            ),
+          ),
         ),
       );
     }
@@ -154,30 +163,28 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
     for (final custom in _customTypes) {
       if (!_presetTypes.any((p) => p['value'] == custom)) {
         items.add(
-          DropdownMenuItem<String>(
+          ZenioDropdownItem<String>(
             value: custom,
-            child: Text(custom),
+            label: custom,
+            icon: Assets.icons.card.svg(
+              width: 18,
+              height: 18,
+              colorFilter: const ColorFilter.mode(
+                Color(0xFF8E8E93),
+                BlendMode.srcIn,
+              ),
+            ),
           ),
         );
       }
     }
 
     items.add(
-      const DropdownMenuItem<String>(
+      const ZenioDropdownItem<String>(
         value: '__CUSTOM__',
-        child: Row(
-          children: [
-            Icon(Icons.add_rounded, size: 18, color: Color(0xFF10B981)),
-            SizedBox(width: 6),
-            Text(
-              'Custom...',
-              style: TextStyle(
-                color: Color(0xFF10B981),
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
+        label: 'Custom...',
+        labelColor: Color(0xFF10B981),
+        icon: Icon(Icons.add_rounded, size: 18, color: Color(0xFF10B981)),
       ),
     );
 
@@ -369,57 +376,23 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
             const SizedBox(height: 6),
 
             // Field 2: Wallet Type Dropdown
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 5),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF2F2F2),
-                borderRadius: BorderRadius.circular(20),
+            ZenioDropdown<String>(
+              value: _selectedType,
+              leadingIcon: Assets.icons.card.svg(
+                width: 20,
+                height: 20,
+                colorFilter: const ColorFilter.mode(
+                  Color(0xFF8E8E93),
+                  BlendMode.srcIn,
+                ),
               ),
-              child: Row(
-                children: [
-                  Assets.icons.card.svg(
-                    width: 20,
-                    height: 20,
-                    colorFilter: const ColorFilter.mode(
-                      Color(0xFF8E8E93),
-                      BlendMode.srcIn,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: _selectedType,
-                        icon: Assets.icons.dropDown.svg(
-                          width: 24,
-                          height: 24,
-                          colorFilter: const ColorFilter.mode(
-                            Color(0xFF111111),
-                            BlendMode.srcIn,
-                          ),
-                        ),
-                        isExpanded: true,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: Color(0xFF111111),
-                        ),
-                        dropdownColor: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        items: _buildDropdownItems(),
-                        onChanged: (val) {
-                          if (val != null) {
-                            setState(() {
-                              _selectedType = val;
-                              _isCustom = val == '__CUSTOM__';
-                            });
-                          }
-                        },
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              items: _buildDropdownItems(),
+              onChanged: (val) {
+                setState(() {
+                  _selectedType = val;
+                  _isCustom = val == '__CUSTOM__';
+                });
+              },
             ),
             const SizedBox(height: 6),
 

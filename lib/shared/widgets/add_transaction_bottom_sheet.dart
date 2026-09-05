@@ -12,6 +12,7 @@ import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
 import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
 import 'package:zenio/features/wallet/presentation/widgets/add_wallet_bottom_sheet.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
+import 'package:zenio/shared/widgets/zenio_dropdown.dart';
 
 enum TransactionType { expense, income, transfer }
 
@@ -492,88 +493,52 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                 ),
               ),
             ),
-            const SizedBox(height: 6),
+             const SizedBox(height: 6),
 
             // Field 2: Source Wallet Selector
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 5),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF2F2F2),
-                borderRadius: BorderRadius.circular(20),
+            ZenioDropdown<String>(
+              value: selectedSource,
+              leadingIcon: Assets.icons.wallet.svg(
+                width: 20,
+                height: 20,
+                colorFilter: const ColorFilter.mode(
+                  Color(0xFF8E8E93),
+                  BlendMode.srcIn,
+                ),
               ),
-              child: Row(
-                children: [
-                  Assets.icons.wallet.svg(
-                    width: 20,
-                    height: 20,
+              items: wallets.map((w) {
+                final card = walletState.cards
+                    .cast<WalletCardModel?>()
+                    .firstWhere(
+                      (c) =>
+                          c?.bankName.trim().toLowerCase() ==
+                          w.trim().toLowerCase(),
+                      orElse: () => null,
+                    );
+                final bal = card?.balance ?? 0.0;
+                final hasEnough = !isDebit || bal >= enteredAmount;
+                return ZenioDropdownItem<String>(
+                  value: w,
+                  label: w,
+                  subtitle: '₹ ${_formatAmount(bal)}',
+                  subtitleColor: hasEnough
+                      ? const Color(0xFF8E8E93)
+                      : const Color(0xFFDD3D34),
+                  icon: Assets.icons.wallet.svg(
+                    width: 18,
+                    height: 18,
                     colorFilter: const ColorFilter.mode(
                       Color(0xFF8E8E93),
                       BlendMode.srcIn,
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: selectedSource,
-                        icon: Assets.icons.dropDown.svg(
-                          width: 24,
-                          height: 24,
-                          colorFilter: const ColorFilter.mode(
-                            Color(0xFF111111),
-                            BlendMode.srcIn,
-                          ),
-                        ),
-                        isExpanded: true,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: Color(0xFF111111),
-                        ),
-                        items: wallets.map((w) {
-                          final card = walletState.cards
-                              .cast<WalletCardModel?>()
-                              .firstWhere(
-                                (c) =>
-                                    c?.bankName.trim().toLowerCase() ==
-                                    w.trim().toLowerCase(),
-                                orElse: () => null,
-                              );
-                          final bal = card?.balance ?? 0.0;
-                          final hasEnough = !isDebit || bal >= enteredAmount;
-                          return DropdownMenuItem(
-                            value: w,
-                            child: Row(
-                              mainAxisAlignment:
-                                  MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(w),
-                                Text(
-                                  '₹ ${_formatAmount(bal)}',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                    color: hasEnough
-                                        ? const Color(0xFF8E8E93)
-                                        : const Color(0xFFDD3D34),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: (val) {
-                          if (val != null) {
-                            setState(() {
-                              _sourceWallet = val;
-                            });
-                          }
-                        },
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                );
+              }).toList(),
+              onChanged: (val) {
+                setState(() {
+                  _sourceWallet = val;
+                });
+              },
             ),
             const SizedBox(height: 6),
 
@@ -583,64 +548,45 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                 clipBehavior: Clip.none,
                 children: [
                   // Destination Wallet Field
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 30,
-                      vertical: 5,
+                  ZenioDropdown<String>(
+                    value: selectedDestination,
+                    leadingIcon: Assets.icons.wallet.svg(
+                      width: 20,
+                      height: 20,
+                      colorFilter: const ColorFilter.mode(
+                        Color(0xFF8E8E93),
+                        BlendMode.srcIn,
+                      ),
                     ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF2F2F2),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      children: [
-                        Assets.icons.wallet.svg(
-                          width: 20,
-                          height: 20,
+                    items: wallets.map((w) {
+                      final card = walletState.cards
+                          .cast<WalletCardModel?>()
+                          .firstWhere(
+                            (c) =>
+                                c?.bankName.trim().toLowerCase() ==
+                                w.trim().toLowerCase(),
+                            orElse: () => null,
+                          );
+                      final bal = card?.balance ?? 0.0;
+                      return ZenioDropdownItem<String>(
+                        value: w,
+                        label: w,
+                        subtitle: '₹ ${_formatAmount(bal)}',
+                        icon: Assets.icons.wallet.svg(
+                          width: 18,
+                          height: 18,
                           colorFilter: const ColorFilter.mode(
                             Color(0xFF8E8E93),
                             BlendMode.srcIn,
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<String>(
-                              value: selectedDestination,
-                              icon: Assets.icons.dropDown.svg(
-                                width: 24,
-                                height: 24,
-                                colorFilter: const ColorFilter.mode(
-                                  Color(0xFF111111),
-                                  BlendMode.srcIn,
-                                ),
-                              ),
-                              isExpanded: true,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: Color(0xFF111111),
-                              ),
-                              items: wallets
-                                  .map(
-                                    (w) => DropdownMenuItem(
-                                      value: w,
-                                      child: Text(w),
-                                    ),
-                                  )
-                                  .toList(),
-                              onChanged: (val) {
-                                if (val != null) {
-                                  setState(() {
-                                    _destinationWallet = val;
-                                  });
-                                }
-                              },
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                      );
+                    }).toList(),
+                    onChanged: (val) {
+                      setState(() {
+                        _destinationWallet = val;
+                      });
+                    },
                   ),
 
                   // Floating Circular Swap Button (⇄)
