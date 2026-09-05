@@ -1,5 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:zenio/features/settings/controller/settings/settings_notifier.dart';
 import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
 import 'package:zenio/features/wallet/domain/repositories/implementations/wallet_repository.dart';
 import 'package:zenio/features/wallet/domain/repositories/interfaces/i_wallet_repository.dart';
@@ -113,6 +114,15 @@ class WalletNotifier extends _$WalletNotifier {
     final totalBalance = _calculateTotalBalance(updatedCards);
     await _walletRepository!.saveCardBalance(totalBalance);
     
+    // If this is the user's first wallet, automatically set as default
+    if (updatedCards.length == 1) {
+      try {
+        await ref
+            .read(settingsNotifierProvider.notifier)
+            .updateDefaultWallet(card.bankName);
+      } catch (_) {}
+    }
+
     state = state.copyWith(
       cards: updatedCards,
       cardBalance: totalBalance,
@@ -123,11 +133,28 @@ class WalletNotifier extends _$WalletNotifier {
 
   Future<void> editCard(int index, WalletCardModel newCard) async {
     if (_walletRepository == null) return;
+    final oldCard = state.cards[index];
     final updatedCards = List<WalletCardModel>.from(state.cards);
     updatedCards[index] = newCard;
     await _walletRepository!.saveCards(updatedCards);
     final totalBalance = _calculateTotalBalance(updatedCards);
     await _walletRepository!.saveCardBalance(totalBalance);
+
+    // If default wallet was renamed, keep default synchronized
+    if (oldCard.bankName.trim().toLowerCase() !=
+        newCard.bankName.trim().toLowerCase()) {
+      try {
+        final currentDefault =
+            ref.read(settingsNotifierProvider).settings.defaultWallet;
+        if (currentDefault.trim().toLowerCase() ==
+            oldCard.bankName.trim().toLowerCase()) {
+          await ref
+              .read(settingsNotifierProvider.notifier)
+              .updateDefaultWallet(newCard.bankName);
+        }
+      } catch (_) {}
+    }
+
     state = state.copyWith(
       cards: updatedCards,
       cardBalance: totalBalance,
@@ -136,11 +163,26 @@ class WalletNotifier extends _$WalletNotifier {
 
   Future<void> deleteCard(int index) async {
     if (_walletRepository == null) return;
+    final deletedCard = state.cards[index];
     final updatedCards = List<WalletCardModel>.from(state.cards)..removeAt(index);
     await _walletRepository!.saveCards(updatedCards);
     final totalBalance = _calculateTotalBalance(updatedCards);
     await _walletRepository!.saveCardBalance(totalBalance);
     
+    // If the deleted card was default, update default to next available card
+    try {
+      final currentDefault =
+          ref.read(settingsNotifierProvider).settings.defaultWallet;
+      if (currentDefault.trim().toLowerCase() ==
+          deletedCard.bankName.trim().toLowerCase()) {
+        if (updatedCards.isNotEmpty) {
+          await ref
+              .read(settingsNotifierProvider.notifier)
+              .updateDefaultWallet(updatedCards.first.bankName);
+        }
+      }
+    } catch (_) {}
+
     // Adjust activeCardIndex if necessary
     int newActiveIndex = state.activeCardIndex;
     if (updatedCards.isEmpty) {

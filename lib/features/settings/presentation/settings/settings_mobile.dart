@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:zenio/features/settings/controller/settings/settings_notifier.dart';
 import 'package:zenio/features/settings/presentation/widgets/settings_item_tile.dart';
+import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
+import 'package:zenio/shared/providers/default_wallet_provider/default_wallet_provider.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/widgets/add_transaction_bottom_sheet.dart';
 import 'package:zenio/shared/widgets/custom_navigation_bar.dart';
@@ -22,6 +25,7 @@ class SettingsScreenMobile extends ConsumerStatefulWidget {
 
 class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
   final GlobalKey<PopupMenuButtonState<String>> _currencyMenuKey = GlobalKey();
+  final GlobalKey<PopupMenuButtonState<String>> _walletMenuKey = GlobalKey();
 
   @override
   Widget build(BuildContext context) {
@@ -29,6 +33,9 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
     final settings = state.settings;
     final currencyCode = ref.watch(currencyCodeProvider);
     final currencySymbol = ref.watch(currencySymbolProvider);
+    final walletState = ref.watch(walletNotifierProvider);
+    final cards = walletState.cards;
+    final defaultWallet = ref.watch(defaultWalletProvider);
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -287,19 +294,185 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                               _currencyMenuKey.currentState?.showButtonMenu();
                             },
                           ),
-                          SettingsItemTile(
-                            title: 'Default Wallet',
-                            icon: Assets.icons.wallet.svg(
-                              width: 24,
-                              height: 24,
-                              colorFilter: const ColorFilter.mode(
-                                Color(0xFF111111),
-                                BlendMode.srcIn,
+                          if (cards.length >= 2)
+                            SettingsItemTile(
+                              title: 'Default Wallet',
+                              icon: Assets.icons.wallet.svg(
+                                width: 24,
+                                height: 24,
+                                colorFilter: const ColorFilter.mode(
+                                  Color(0xFF111111),
+                                  BlendMode.srcIn,
+                                ),
                               ),
+                              iconBgColor: const Color(0xFFE6F3FF),
+                              trailing: Theme(
+                                data: Theme.of(context).copyWith(
+                                  splashColor: Colors.transparent,
+                                  highlightColor: Colors.transparent,
+                                ),
+                                child: PopupMenuButton<String>(
+                                  key: _walletMenuKey,
+                                  tooltip: 'Select Default Wallet',
+                                  elevation: 12,
+                                  shadowColor:
+                                      Colors.black.withValues(alpha: 0.12),
+                                  color: Colors.white,
+                                  surfaceTintColor: Colors.transparent,
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(
+                                    minWidth: 220,
+                                    maxWidth: 290,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20),
+                                    side: const BorderSide(
+                                      color: Color(0xFFE5E5EA),
+                                      width: 1.2,
+                                    ),
+                                  ),
+                                  offset: const Offset(0, 38),
+                                  onSelected: (String walletName) {
+                                    ref
+                                        .read(settingsNotifierProvider.notifier)
+                                        .updateDefaultWallet(walletName);
+                                  },
+                                  itemBuilder: (BuildContext context) {
+                                    final items = <PopupMenuEntry<String>>[];
+                                    for (var i = 0; i < cards.length; i++) {
+                                      final card = cards[i];
+                                      final isSelected = card.bankName
+                                              .trim()
+                                              .toLowerCase() ==
+                                          defaultWallet.trim().toLowerCase();
+                                      items.add(
+                                        PopupMenuItem<String>(
+                                          value: card.bankName,
+                                          child: Row(
+                                            children: [
+                                              Container(
+                                                width: 32,
+                                                height: 32,
+                                                decoration: const BoxDecoration(
+                                                  color: Color(0xFFE6F3FF),
+                                                  shape: BoxShape.circle,
+                                                ),
+                                                child: Center(
+                                                  child: Assets.icons.wallet.svg(
+                                                    width: 16,
+                                                    height: 16,
+                                                    colorFilter:
+                                                        const ColorFilter.mode(
+                                                      Color(0xFF007AFF),
+                                                      BlendMode.srcIn,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 10),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
+                                                  children: [
+                                                    Text(
+                                                      card.bankName,
+                                                      style: const TextStyle(
+                                                        fontSize: 14,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        color:
+                                                            Color(0xFF111111),
+                                                      ),
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                    ),
+                                                    Text(
+                                                      '${card.cardType} • $currencySymbol ${NumberFormat('#,##0.00').format(card.balance)}',
+                                                      style: const TextStyle(
+                                                        fontSize: 11,
+                                                        color:
+                                                            Color(0xFF8E8E93),
+                                                      ),
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              if (isSelected)
+                                                const Icon(
+                                                  Icons.check_circle_rounded,
+                                                  color: Color(0xFF10B981),
+                                                  size: 18,
+                                                ),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                      if (i < cards.length - 1) {
+                                        items.add(
+                                          const PopupMenuItem<String>(
+                                            enabled: false,
+                                            height: 1,
+                                            padding: EdgeInsets.zero,
+                                            child: Divider(
+                                              height: 1,
+                                              thickness: 1,
+                                              color: Color(0xFFF2F2F5),
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    }
+                                    return items;
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF2F2F5),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        ConstrainedBox(
+                                          constraints: const BoxConstraints(
+                                            maxWidth: 130,
+                                          ),
+                                          child: Text(
+                                            defaultWallet,
+                                            style: const TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
+                                              color: Color(0xFF8E8E93),
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        const Icon(
+                                          Icons.keyboard_arrow_down_rounded,
+                                          size: 16,
+                                          color: Color(0xFF8E8E93),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              onTap: () {
+                                _walletMenuKey.currentState?.showButtonMenu();
+                              },
                             ),
-                            iconBgColor: const Color(0xFFE6F3FF),
-                            badgeText: settings.defaultWallet,
-                          ),
                           const SizedBox(height: 12),
 
                           // SECTION 2: SECURITY

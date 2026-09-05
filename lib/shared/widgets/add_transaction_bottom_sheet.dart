@@ -12,6 +12,7 @@ import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
 import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
 import 'package:zenio/features/wallet/presentation/widgets/add_wallet_bottom_sheet.dart';
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
+import 'package:zenio/shared/providers/default_wallet_provider/default_wallet_provider.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/widgets/zenio_dropdown.dart';
 
@@ -215,9 +216,12 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
         .toSet()
         .toList();
 
+    final defaultWallet = ref.watch(defaultWalletProvider);
+    final fallbackWallet = wallets.contains(defaultWallet) ? defaultWallet : wallets.first;
+
     final selectedSource = (wallets.contains(_sourceWallet))
         ? _sourceWallet!
-        : wallets.first;
+        : fallbackWallet;
 
     final selectedDestination = (wallets.contains(_destinationWallet) && _destinationWallet != selectedSource)
         ? _destinationWallet!

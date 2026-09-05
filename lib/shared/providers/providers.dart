@@ -1,5 +1,6 @@
 export 'connectivity_provider/connectivity_provider.dart';
 export 'currency_provider/currency_provider.dart';
+export 'default_wallet_provider/default_wallet_provider.dart';
 export 'dio_provider/dio_provider.dart';
 export 'env_provider/env_provider.dart';
 export 'facebook_app_events_provider/facebook_app_events_provider.dart';

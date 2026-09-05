@@ -11,6 +11,7 @@ import 'package:zenio/features/wallet/presentation/widgets/add_wallet_bottom_she
 import 'package:zenio/features/wallet/presentation/widgets/wallet_settings_bottom_sheet.dart';
 import 'package:zenio/features/wallet/presentation/widgets/top_up_wallet_bottom_sheet.dart';
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
+import 'package:zenio/shared/providers/default_wallet_provider/default_wallet_provider.dart';
 import 'package:zenio/shared/widgets/custom_navigation_bar.dart';
 
 class WalletScreenMobile extends ConsumerStatefulWidget {
@@ -78,9 +79,18 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
       isActiveCardFrozen = cards[actualIndex].isFrozen;
     }
 
-    // Dynamically initialize controller to start at a clean multiple of cards.length
+    // Dynamically initialize controller to start at a clean multiple of cards.length focused on default card
     if (_pageController == null && cards.isNotEmpty) {
-      final initialPage = _lastKnownPage > 0 ? _lastKnownPage : 1000 * cards.length;
+      final defaultWallet = ref.read(defaultWalletProvider);
+      final defaultIdx = cards.indexWhere(
+        (c) =>
+            c.bankName.trim().toLowerCase() ==
+            defaultWallet.trim().toLowerCase(),
+      );
+      final offset = defaultIdx >= 0 ? defaultIdx : 0;
+      final initialPage = _lastKnownPage > 0
+          ? _lastKnownPage
+          : (1000 * cards.length + offset);
       _pageController =
           PageController(initialPage: initialPage, viewportFraction: 0.84);
       WidgetsBinding.instance.addPostFrameCallback((_) {

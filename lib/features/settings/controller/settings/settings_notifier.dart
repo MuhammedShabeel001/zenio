@@ -47,6 +47,15 @@ class SettingsNotifier extends _$SettingsNotifier {
     } catch (_) {}
   }
 
+  Future<void> updateDefaultWallet(String walletName) async {
+    final updated = state.settings.copyWith(defaultWallet: walletName);
+    state = state.copyWith(settings: updated);
+    try {
+      final repo = ref.read(settingsRepositoryRepoProvider);
+      await repo.saveSettings(updated);
+    } catch (_) {}
+  }
+
   Future<void> clearAllData() async {
     state = state.copyWith(isLoading: true);
     try {
