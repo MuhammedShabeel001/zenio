@@ -7,6 +7,8 @@ import 'package:zenio/features/transactions/controller/categories/categories_not
 import 'package:zenio/features/transactions/domain/models/transaction_detail_model.dart';
 import 'package:zenio/features/transactions/presentation/widgets/manage_categories_bottom_sheet.dart';
 import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
+import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
+import 'package:zenio/features/wallet/presentation/widgets/add_wallet_bottom_sheet.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 
 class EditTransactionDialog extends ConsumerStatefulWidget {
@@ -116,6 +118,13 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
     super.dispose();
   }
 
+  String _formatAmount(double amount) {
+    if (amount == amount.toInt()) {
+      return NumberFormat('#,##0').format(amount.toInt());
+    }
+    return NumberFormat('#,##0.00').format(amount);
+  }
+
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -136,18 +145,96 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
 
     final categories = ref.watch(categoriesNotifierProvider);
     final walletState = ref.watch(walletNotifierProvider);
-    final cardWallets = walletState.cards
+
+    // If NO wallet is added, prompt to add wallet
+    if (walletState.cards.isEmpty) {
+      return Dialog(
+        backgroundColor: Colors.white,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(28),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 68,
+                height: 68,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFE6F3FF),
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Assets.icons.wallet.svg(
+                    width: 30,
+                    height: 30,
+                    colorFilter: const ColorFilter.mode(
+                      Color(0xFF3B82F6),
+                      BlendMode.srcIn,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              const Text(
+                'No Wallet Added',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF000000),
+                  letterSpacing: -0.3,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'You must add at least one wallet or card before modifying a transaction.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                  color: Color(0xFF8E8E93),
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 54,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    AddWalletBottomSheet.show(context);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF10B981),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                  child: const Text(
+                    '+ Add Wallet',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final wallets = walletState.cards
         .map((c) => c.bankName.trim())
         .where((name) => name.isNotEmpty)
         .toSet()
         .toList();
-
-    final wallets = cardWallets.isNotEmpty
-        ? [
-            ...cardWallets,
-            if (!cardWallets.any((w) => w.toLowerCase() == 'cash')) 'Cash',
-          ]
-        : ['Cash'];
 
     final selectedSource = (wallets.contains(_sourceWallet))
         ? _sourceWallet!
@@ -158,6 +245,21 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
         : (wallets.length > 1
             ? wallets.firstWhere((w) => w != selectedSource, orElse: () => wallets.first)
             : selectedSource);
+
+    // Selected source card & balance
+    final selectedSourceCard = walletState.cards.cast<WalletCardModel?>().firstWhere(
+      (c) => c?.bankName.trim().toLowerCase() == selectedSource.trim().toLowerCase(),
+      orElse: () => null,
+    );
+    final availableBalance = selectedSourceCard?.balance ?? 0.0;
+    final isSourceFrozen = selectedSourceCard?.isFrozen ?? false;
+
+    // Live amount validation
+    final enteredAmount = double.tryParse(_amountController.text.trim()) ?? 0.0;
+    final isDebit = !_isIncome; // Expense and transfer are debit
+    final isExceedingBalance = isDebit && enteredAmount > availableBalance;
+    final isInvalidAmount = enteredAmount <= 0;
+    final canSave = !isExceedingBalance && !isInvalidAmount;
 
     final dialogTitle = _isTransfer
         ? 'Edit Transfer'
@@ -249,14 +351,23 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                 decoration: BoxDecoration(
                   color: const Color(0xFFF2F2F2),
                   borderRadius: BorderRadius.circular(20),
+                  border: isExceedingBalance
+                      ? Border.all(color: const Color(0xFFDD3D34), width: 1.5)
+                      : null,
                 ),
                 child: TextField(
                   controller: _amountController,
-                  keyboardType: TextInputType.number,
-                  style: const TextStyle(
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  onChanged: (val) {
+                    setState(() {});
+                  },
+                  style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF111111),
+                    color: isExceedingBalance
+                        ? const Color(0xFFDD3D34)
+                        : const Color(0xFF111111),
                   ),
                   decoration: const InputDecoration(
                     hintText: '0',
@@ -273,6 +384,78 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                   ),
                 ),
               ),
+              if (isExceedingBalance)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFEAEA),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFFCA5A5)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.error_outline_rounded,
+                          color: Color(0xFFDD3D34),
+                          size: 18,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Amount exceeds wallet balance (Available: ₹ ${_formatAmount(availableBalance)} in $selectedSource). Change wallet or enter a valid amount.',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFFDD3D34),
+                              height: 1.3,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else if (isSourceFrozen)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF3C7),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFFCD34D)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.ac_unit_rounded,
+                          color: Color(0xFFD97706),
+                          size: 18,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Note: $selectedSource is currently frozen.',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFFD97706),
+                              height: 1.3,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               const SizedBox(height: 6),
 
               // Source Wallet Selector
@@ -303,14 +486,43 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                             fontWeight: FontWeight.w500,
                             color: Color(0xFF111111),
                           ),
-                          items: wallets
-                              .map(
-                                (w) => DropdownMenuItem(
-                                  value: w,
-                                  child: Text(w),
-                                ),
-                              )
-                              .toList(),
+                          items: wallets.map((w) {
+                            final card = walletState.cards
+                                .cast<WalletCardModel?>()
+                                .firstWhere(
+                                  (c) =>
+                                      c?.bankName.trim().toLowerCase() ==
+                                      w.trim().toLowerCase(),
+                                  orElse: () => null,
+                                );
+                            final bal = card?.balance ?? 0.0;
+                            final hasEnough = !isDebit || bal >= enteredAmount;
+                            return DropdownMenuItem(
+                              value: w,
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      w,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Bal: ₹ ${_formatAmount(bal)}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                      color: !hasEnough
+                                          ? const Color(0xFFDD3D34)
+                                          : const Color(0xFF8E8E93),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
                           onChanged: (val) {
                             if (val != null) {
                               setState(() {
@@ -588,50 +800,63 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
               SizedBox(
                 height: 54,
                 child: ElevatedButton(
-                  onPressed: () {
-                    final amount = double.tryParse(_amountController.text) ?? 0.0;
-                    if (amount <= 0) return;
+                  onPressed: canSave
+                      ? () {
+                          final amount =
+                              double.tryParse(_amountController.text) ?? 0.0;
+                          if (amount <= 0) return;
 
-                    final note = _noteController.text.trim();
+                          final note = _noteController.text.trim();
 
-                    final String title;
-                    final bankName = selectedSource;
+                          final String title;
+                          final bankName = selectedSource;
 
-                    if (_isTransfer) {
-                      title = 'Transfer to $selectedDestination';
-                    } else {
-                      title = _selectedCategory ??
-                          (categories.isNotEmpty ? categories.first.name : 'General');
-                    }
+                          if (_isTransfer) {
+                            title = 'Transfer to $selectedDestination';
+                          } else {
+                            title = _selectedCategory ??
+                                (categories.isNotEmpty
+                                    ? categories.first.name
+                                    : 'General');
+                          }
 
-                    final updatedTx = TransactionModel(
-                      id: widget.transaction.id,
-                      title: title,
-                      date: formattedDate,
-                      amount: amount,
-                      isIncome: _isIncome,
-                      currency: 'INR',
-                      note: note.isNotEmpty ? note : null,
-                      bankName: bankName,
-                      timestamp: widget.transaction.timestamp,
-                    );
+                          final updatedTx = TransactionModel(
+                            id: widget.transaction.id,
+                            title: title,
+                            date: formattedDate,
+                            amount: amount,
+                            isIncome: _isIncome,
+                            currency: 'INR',
+                            note: note.isNotEmpty ? note : null,
+                            bankName: bankName,
+                            timestamp: widget.transaction.timestamp,
+                          );
 
-                    ref.read(homeNotifierProvider.notifier).updateTransaction(updatedTx);
-                    Navigator.of(context).pop();
-                  },
+                          ref
+                              .read(homeNotifierProvider.notifier)
+                              .updateTransaction(updatedTx);
+                          Navigator.of(context).pop();
+                        }
+                      : null,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF10B981),
+                    backgroundColor: canSave
+                        ? const Color(0xFF10B981)
+                        : const Color(0xFFE0E0E0),
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
                     ),
                   ),
-                  child: const Text(
-                    'Save Changes',
+                  child: Text(
+                    isExceedingBalance
+                        ? 'Insufficient Wallet Balance'
+                        : (isInvalidAmount
+                            ? 'Enter a Valid Amount'
+                            : 'Save Changes'),
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: canSave ? Colors.white : const Color(0xFF9E9EA5),
                     ),
                   ),
                 ),

@@ -240,7 +240,9 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                             ignoring: _isCardDetailExpanded,
                             child: OverflowBox(
                               maxWidth: constraints.maxWidth,
-                              child: ListView(
+                              child: cards.isEmpty
+                                  ? _buildEmptyWalletView(context)
+                                  : ListView(
                                   key: const ValueKey('carousel'),
                                   physics: const NeverScrollableScrollPhysics(),
                                   padding: const EdgeInsets.fromLTRB(0, 16, 0, 0),
@@ -569,6 +571,151 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
               textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyWalletView(BuildContext context) {
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 110),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Tactile Empty Card Slot Illustration
+            GestureDetector(
+              onTap: () => AddWalletBottomSheet.show(context),
+              behavior: HitTestBehavior.opaque,
+              child: Container(
+                width: 240,
+                height: 150,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: const Color(0xFFE5E5EA),
+                    width: 1.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Top card elements: chip on left, overlapping circles on right
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          width: 30,
+                          height: 20,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF2F2F7),
+                            borderRadius: BorderRadius.circular(5),
+                            border: Border.all(
+                              color: const Color(0xFFE5E5EA),
+                              width: 1,
+                            ),
+                          ),
+                        ),
+                        // Translucent card circles
+                        SizedBox(
+                          width: 36,
+                          height: 22,
+                          child: Stack(
+                            children: [
+                              Positioned(
+                                left: 0,
+                                child: Container(
+                                  width: 22,
+                                  height: 22,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.black.withValues(alpha: 0.06),
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                left: 14,
+                                child: Container(
+                                  width: 22,
+                                  height: 22,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.black.withValues(alpha: 0.1),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    // Center + Add Icon
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFF2F2F7),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.add_rounded,
+                          size: 24,
+                          color: Color(0xFF111111),
+                        ),
+                      ),
+                    ),
+
+                    // Bottom card dots resembling card numbers
+                    const Text(
+                      '••••  ••••  ••••  ••••',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFFD1D1D6),
+                        letterSpacing: 2,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            const Text(
+              'No Cards in Wallet',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF111111),
+                letterSpacing: -0.3,
+              ),
+            ),
+            const SizedBox(height: 6),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                'Add a debit card, credit card, or bank account to manage your balance.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w400,
+                  color: Color(0xFF8E8E93),
+                  height: 1.4,
+                ),
+              ),
             ),
           ],
         ),
