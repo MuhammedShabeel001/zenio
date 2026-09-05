@@ -216,6 +216,10 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
         .toSet()
         .toList();
 
+    if (wallets.length < 2 && _selectedType == TransactionType.transfer) {
+      _selectedType = TransactionType.expense;
+    }
+
     final defaultWallet = ref.watch(defaultWalletProvider);
     final fallbackWallet = wallets.contains(defaultWallet) ? defaultWallet : wallets.first;
 
@@ -297,11 +301,12 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                     label: 'Income',
                     activeColor: const Color(0xFF10B981),
                   ),
-                  _buildTabItem(
-                    type: TransactionType.transfer,
-                    label: 'Transfer',
-                    activeColor: const Color(0xFF8949D5),
-                  ),
+                  if (wallets.length >= 2)
+                    _buildTabItem(
+                      type: TransactionType.transfer,
+                      label: 'Transfer',
+                      activeColor: const Color(0xFF8949D5),
+                    ),
                 ],
               ),
             ),
@@ -599,9 +604,10 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                   // Floating Circular Swap Button (⇄)
                   Positioned(
                     right: 60,
-                    top: -26,
+                    top: -28,
                     child: GestureDetector(
-                      onTap: () => _swapWallets(selectedSource, selectedDestination),
+                      onTap: () =>
+                          _swapWallets(selectedSource, selectedDestination),
                       child: Container(
                         width: 50,
                         height: 50,

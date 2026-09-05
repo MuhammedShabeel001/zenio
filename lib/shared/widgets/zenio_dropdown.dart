@@ -29,7 +29,7 @@ class ZenioDropdown<T> extends StatelessWidget {
     this.leadingIcon,
     this.hintText,
     this.trailing,
-    this.margin = const EdgeInsets.only(bottom: 6),
+    this.margin = EdgeInsets.zero,
     this.padding = const EdgeInsets.symmetric(horizontal: 24, vertical: 15),
     super.key,
   });
@@ -101,28 +101,39 @@ class ZenioDropdown<T> extends StatelessWidget {
                           const SizedBox(width: 10),
                         ],
                         Expanded(
-                          child: Text(
-                            item.label,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                              color: item.labelColor ?? const Color(0xFF111111),
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  item.label,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: isSelected
+                                        ? FontWeight.w600
+                                        : FontWeight.w500,
+                                    color: item.labelColor ??
+                                        const Color(0xFF111111),
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (item.subtitle != null) ...[
+                                const SizedBox(width: 6),
+                                Text(
+                                  '(${item.subtitle!})',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                    color: item.subtitleColor ??
+                                        const Color(0xFF8E8E93),
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                         ),
-                        if (item.subtitle != null) ...[
-                          const SizedBox(width: 8),
-                          Text(
-                            item.subtitle!,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: item.subtitleColor ?? const Color(0xFF8E8E93),
-                            ),
-                          ),
-                        ],
                         if (item.trailing != null) ...[
                           const SizedBox(width: 8),
                           item.trailing!,
@@ -155,31 +166,41 @@ class ZenioDropdown<T> extends StatelessWidget {
                     const SizedBox(width: 12),
                   ],
                   Expanded(
-                    child: Text(
-                      selectedItem?.label ?? hintText ?? '',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: selectedItem != null
-                            ? (selectedItem.labelColor ?? const Color(0xFF111111))
-                            : const Color(0xFF9E9EA5),
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            selectedItem?.label ?? hintText ?? '',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: selectedItem != null
+                                  ? (selectedItem.labelColor ??
+                                      const Color(0xFF111111))
+                                  : const Color(0xFF9E9EA5),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (selectedItem?.subtitle != null) ...[
+                          const SizedBox(width: 6),
+                          Text(
+                            '(${selectedItem!.subtitle})',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: selectedItem.subtitleColor ??
+                                  const Color(0xFF8E8E93),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                   if (trailing != null) ...[
                     trailing!,
-                    const SizedBox(width: 8),
-                  ] else if (selectedItem?.subtitle != null) ...[
-                    Text(
-                      selectedItem!.subtitle!,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: selectedItem.subtitleColor ?? const Color(0xFF8E8E93),
-                      ),
-                    ),
                     const SizedBox(width: 8),
                   ],
                   Assets.icons.dropDown.svg(
