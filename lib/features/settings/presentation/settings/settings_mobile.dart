@@ -7,6 +7,7 @@ import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/providers/default_wallet_provider/default_wallet_provider.dart';
 import 'package:zenio/shared/providers/package_info_provider/package_info_provider.dart';
+import 'package:zenio/shared/services/csv_export_service.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/widgets/add_transaction_bottom_sheet.dart';
 import 'package:zenio/shared/widgets/custom_navigation_bar.dart';
@@ -513,12 +514,25 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                               ),
                             ),
                             iconBgColor: const Color(0xFFF4ECFB),
-                            onTap: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
+                            onTap: () async {
+                              final messenger = ScaffoldMessenger.of(context);
+                              messenger.showSnackBar(
                                 const SnackBar(
-                                  content: Text('Exporting CSV data...'),
+                                  content: Text('Preparing CSV export...'),
+                                  duration: Duration(milliseconds: 800),
                                 ),
                               );
+                              try {
+                                await ref
+                                    .read(csvExportServiceProvider)
+                                    .exportDataToCsv();
+                              } catch (e) {
+                                messenger.showSnackBar(
+                                  SnackBar(
+                                    content: Text('Failed to export data: $e'),
+                                  ),
+                                );
+                              }
                             },
                           ),
                           SettingsItemTile(
