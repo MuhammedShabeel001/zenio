@@ -37,17 +37,9 @@ class CategoriesListScreen extends ConsumerStatefulWidget {
 }
 
 class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
-  final TextEditingController _searchController = TextEditingController();
-  String _searchQuery = '';
   CategorySortOption _sortOption = CategorySortOption.highestSpend;
   CategoryFilterTab _activeTab = CategoryFilterTab.all;
   String? _expandedCategoryId;
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
 
   String _formatAmount(double amount) {
     if (amount == amount.toInt()) {
@@ -145,17 +137,8 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
       );
     }).toList();
 
-    // Filter by search query
-    var filtered = categoriesWithData;
-    if (_searchQuery.isNotEmpty) {
-      filtered = filtered
-          .where(
-            (c) => c.item.name.toLowerCase().contains(_searchQuery.toLowerCase()),
-          )
-          .toList();
-    }
-
     // Filter by tab
+    var filtered = categoriesWithData;
     if (_activeTab == CategoryFilterTab.active) {
       filtered = filtered.where((c) => c.spend.amount > 0).toList();
     } else if (_activeTab == CategoryFilterTab.zero) {
@@ -178,61 +161,64 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
         bottom: false,
         child: Column(
           children: [
-            // Dark Header Section
+            // Dark Top Header Section (Exact match to Subscriptions & Debts)
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              padding: const EdgeInsets.fromLTRB(10, 10, 10, 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // App Bar Row (Back Button, Title, + New Button)
+                  // Top Row: Balance Display & + Manage Button Pill
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      GestureDetector(
-                        onTap: () => Navigator.of(context).pop(),
-                        behavior: HitTestBehavior.opaque,
-                        child: Container(
-                          width: 42,
-                          height: 42,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF1A1A1A),
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: const Color(0xFF313131),
-                            ),
-                          ),
-                          child: Center(
-                            child: Assets.icons.leftArrow.svg(
-                              width: 18,
-                              height: 18,
-                              colorFilter: const ColorFilter.mode(
-                                Colors.white,
-                                BlendMode.srcIn,
+                      // Total Balance
+                      RichText(
+                        text: TextSpan(
+                          children: [
+                            const TextSpan(
+                              text: '₹ ',
+                              style: TextStyle(
+                                fontSize: 32,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                letterSpacing: -0.5,
                               ),
                             ),
-                          ),
+                            TextSpan(
+                              text: _formatWholePart(totalBalance),
+                              style: const TextStyle(
+                                fontSize: 32,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                            TextSpan(
+                              text: _formatDecimalPart(totalBalance),
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF808080),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      const Text(
-                        'Categories',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          letterSpacing: -0.3,
-                        ),
-                      ),
+
+                      // + Manage Button Pill (Exact match to + Add in subscriptions & debts)
                       GestureDetector(
                         onTap: () {
                           ManageCategoriesBottomSheet.show(context);
                         },
                         behavior: HitTestBehavior.opaque,
                         child: Container(
-                          height: 38,
-                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 17,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFF1A1A1A),
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(30),
                             border: Border.all(
                               color: const Color(0xFF313131),
                             ),
@@ -240,17 +226,20 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                           child: const Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(
-                                Icons.add_rounded,
-                                size: 18,
-                                color: Color(0xFF10B981),
+                              Text(
+                                '+',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
                               ),
-                              SizedBox(width: 4),
+                              SizedBox(width: 6),
                               Text(
                                 'Manage',
                                 style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
                                   color: Colors.white,
                                 ),
                               ),
@@ -262,85 +251,19 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Total Spent Display & Subtitle
+                  // Bottom Row: Filter Dropdown Pills (Exact match to Subscriptions & Debts)
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Total Expenses',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                              color: Color(0xFF9E9EA5),
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          RichText(
-                            text: TextSpan(
-                              children: [
-                                const TextSpan(
-                                  text: '₹ ',
-                                  style: TextStyle(
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                    letterSpacing: -0.5,
-                                  ),
-                                ),
-                                TextSpan(
-                                  text: _formatWholePart(totalBalance),
-                                  style: const TextStyle(
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                    letterSpacing: -0.5,
-                                  ),
-                                ),
-                                TextSpan(
-                                  text: _formatDecimalPart(totalBalance),
-                                  style: const TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF808080),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1A1A1A),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: const Color(0xFF313131),
-                          ),
-                        ),
-                        child: Text(
-                          '${allCategories.length} Categories',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFFD1D1D6),
-                          ),
-                        ),
-                      ),
+                      _buildFilterDropdown(),
+                      const SizedBox(width: 10),
+                      _buildSortDropdown(),
                     ],
                   ),
                 ],
               ),
             ),
 
-            // Light Curved Content Sheet
+            // Light Curved Content Sheet (#F7F7F7)
             Expanded(
               child: Container(
                 width: double.infinity,
@@ -354,263 +277,141 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(30),
                   ),
-                  child: Column(
-                    children: [
-                      // Search & Quick Filter Controls
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
-                        child: Column(
-                          children: [
-                            // Search Field
-                            Container(
-                              height: 48,
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    Icons.search_rounded,
-                                    size: 20,
-                                    color: Color(0xFF8E8E93),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: TextField(
-                                      controller: _searchController,
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w500,
-                                        color: Color(0xFF111111),
-                                      ),
-                                      decoration: const InputDecoration(
-                                        hintText: 'Search categories...',
-                                        hintStyle: TextStyle(
-                                          fontSize: 14,
-                                          color: Color(0xFF9E9EA5),
-                                        ),
-                                        border: InputBorder.none,
-                                        enabledBorder: InputBorder.none,
-                                        focusedBorder: InputBorder.none,
-                                        isDense: true,
-                                        contentPadding: EdgeInsets.zero,
-                                      ),
-                                      onChanged: (val) {
-                                        setState(() {
-                                          _searchQuery = val.trim();
-                                        });
-                                      },
-                                    ),
-                                  ),
-                                  if (_searchQuery.isNotEmpty)
-                                    GestureDetector(
-                                      onTap: () {
-                                        _searchController.clear();
-                                        setState(() {
-                                          _searchQuery = '';
-                                        });
-                                      },
-                                      child: const Icon(
-                                        Icons.close_rounded,
-                                        size: 18,
-                                        color: Color(0xFF8E8E93),
-                                      ),
-                                    ),
-                                ],
+                  child: filtered.isEmpty
+                      ? const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 40),
+                          child: Center(
+                            child: Text(
+                              'No categories found',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Color(0xFF8E8E93),
                               ),
                             ),
-                            const SizedBox(height: 12),
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(10, 16, 10, 20),
+                          physics: const BouncingScrollPhysics(),
+                          itemCount: filtered.length,
+                          itemBuilder: (context, index) {
+                            final data = filtered[index];
+                            final isExpanded =
+                                _expandedCategoryId == data.item.id;
 
-                            // Filter Tabs & Sort Dropdown Row
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                // Tabs (All, Active, Zero)
-                                Row(
-                                  children: CategoryFilterTab.values.map((tab) {
-                                    final isSelected = _activeTab == tab;
-                                    return GestureDetector(
-                                      onTap: () {
-                                        setState(() {
-                                          _activeTab = tab;
-                                        });
-                                      },
-                                      behavior: HitTestBehavior.opaque,
-                                      child: Container(
-                                        margin: const EdgeInsets.only(right: 6),
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 6,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: isSelected
-                                              ? const Color(0xFF111111)
-                                              : Colors.white,
-                                          borderRadius: BorderRadius.circular(16),
-                                        ),
-                                        child: Text(
-                                          tab.label,
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: isSelected
-                                                ? FontWeight.bold
-                                                : FontWeight.w500,
-                                            color: isSelected
-                                                ? Colors.white
-                                                : const Color(0xFF8E8E93),
-                                          ),
-                                        ),
-                                      ),
-                                    );
-                                  }).toList(),
-                                ),
-
-                                // Sort Selector
-                                PopupMenuButton<CategorySortOption>(
-                                  initialValue: _sortOption,
-                                  onSelected: (val) {
-                                    setState(() {
-                                      _sortOption = val;
-                                    });
-                                  },
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  color: Colors.white,
-                                  elevation: 4,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 6,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const Icon(
-                                          Icons.sort_rounded,
-                                          size: 15,
-                                          color: Color(0xFF8E8E93),
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          _sortOption.label,
-                                          style: const TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                            color: Color(0xFF111111),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  itemBuilder: (context) {
-                                    return CategorySortOption.values.map((opt) {
-                                      return PopupMenuItem<CategorySortOption>(
-                                        value: opt,
-                                        child: Text(
-                                          opt.label,
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: _sortOption == opt
-                                                ? FontWeight.bold
-                                                : FontWeight.w500,
-                                            color: _sortOption == opt
-                                                ? const Color(0xFF10B981)
-                                                : const Color(0xFF111111),
-                                          ),
-                                        ),
-                                      );
-                                    }).toList();
-                                  },
-                                ),
-                              ],
-                            ),
-                          ],
+                            return _buildCategoryDetailCard(
+                              data: data,
+                              isExpanded: isExpanded,
+                              onTap: () {
+                                setState(() {
+                                  if (isExpanded) {
+                                    _expandedCategoryId = null;
+                                  } else {
+                                    _expandedCategoryId = data.item.id;
+                                  }
+                                });
+                              },
+                            );
+                          },
                         ),
-                      ),
-
-                      // Category Cards List
-                      Expanded(
-                        child: filtered.isEmpty
-                            ? Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Container(
-                                      width: 60,
-                                      height: 60,
-                                      decoration: const BoxDecoration(
-                                        color: Color(0xFFEBEBEB),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: const Center(
-                                        child: Text(
-                                          '🏷️',
-                                          style: TextStyle(fontSize: 28),
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 12),
-                                    const Text(
-                                      'No categories found',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF111111),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      _searchQuery.isNotEmpty
-                                          ? 'Try a different search keyword'
-                                          : 'Tap Manage to add a new category',
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        color: Color(0xFF8E8E93),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              )
-                            : ListView.builder(
-                                padding: const EdgeInsets.fromLTRB(16, 4, 16, 30),
-                                physics: const BouncingScrollPhysics(),
-                                itemCount: filtered.length,
-                                itemBuilder: (context, index) {
-                                  final data = filtered[index];
-                                  final isExpanded =
-                                      _expandedCategoryId == data.item.id;
-
-                                  return _buildCategoryDetailCard(
-                                    data: data,
-                                    isExpanded: isExpanded,
-                                    onTap: () {
-                                      setState(() {
-                                        if (isExpanded) {
-                                          _expandedCategoryId = null;
-                                        } else {
-                                          _expandedCategoryId = data.item.id;
-                                        }
-                                      });
-                                    },
-                                  );
-                                },
-                              ),
-                      ),
-                    ],
-                  ),
                 ),
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildFilterPill({required String label}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.circular(30),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: Color(0xFFD1D1D6),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Assets.icons.dropDown.svg(
+            width: 24,
+            height: 24,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterDropdown() {
+    return PopupMenuButton<CategoryFilterTab>(
+      offset: const Offset(0, 45),
+      elevation: 8,
+      onSelected: (tab) {
+        setState(() {
+          _activeTab = tab;
+        });
+      },
+      color: const Color(0xFF1A1A1A),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: const BorderSide(color: Color(0xFF313131)),
+      ),
+      child: _buildFilterPill(label: _activeTab.label),
+      itemBuilder: (context) => CategoryFilterTab.values.map((tab) {
+        final isSelected = _activeTab == tab;
+        return PopupMenuItem<CategoryFilterTab>(
+          value: tab,
+          child: Text(
+            tab.label,
+            style: TextStyle(
+              color: isSelected ? Colors.white : const Color(0xFFD1D1D6),
+              fontSize: 14,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildSortDropdown() {
+    return PopupMenuButton<CategorySortOption>(
+      offset: const Offset(0, 45),
+      elevation: 8,
+      onSelected: (opt) {
+        setState(() {
+          _sortOption = opt;
+        });
+      },
+      color: const Color(0xFF1A1A1A),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: const BorderSide(color: Color(0xFF313131)),
+      ),
+      child: _buildFilterPill(label: _sortOption.label),
+      itemBuilder: (context) => CategorySortOption.values.map((opt) {
+        final isSelected = _sortOption == opt;
+        return PopupMenuItem<CategorySortOption>(
+          value: opt,
+          child: Text(
+            opt.label,
+            style: TextStyle(
+              color: isSelected ? Colors.white : const Color(0xFFD1D1D6),
+              fontSize: 14,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 
@@ -637,22 +438,22 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
         curve: Curves.fastOutSlowIn,
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(12),
+        margin: const EdgeInsets.only(bottom: 5),
+        padding: const EdgeInsets.fromLTRB(5, 5, 20, 5),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(28),
+          borderRadius: BorderRadius.circular(32),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Top Row: Emoji, Name, Spends Count, Amount, Chevron
+            // Top Row: 60x60 Circle Badge, Category Name & Spend Count, Amount
             Row(
               children: [
                 Container(
-                  width: 56,
-                  height: 56,
+                  width: 60,
+                  height: 60,
                   decoration: BoxDecoration(
                     color: badgeBg,
                     shape: BoxShape.circle,
@@ -675,57 +476,45 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF111111),
+                          color: Color(0xFF000000),
                         ),
                       ),
                       const SizedBox(height: 3),
                       Text(
-                        txCount > 0
-                            ? '$txCount ${txCount == 1 ? 'spend' : 'spends'} • ${percent.toStringAsFixed(1)}%'
+                        totalSpent > 0
+                            ? (txCount > 0
+                                ? '$txCount ${txCount == 1 ? 'spend' : 'spends'} • ${percent.toStringAsFixed(1)}%'
+                                : '${data.spend.spendsCount} spends • ${percent.toStringAsFixed(1)}%')
                             : 'No spends',
                         style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w400,
-                          color: Color(0xFF9E9EA5),
+                          color: Color(0xFFB2B2B2),
                         ),
                       ),
                     ],
                   ),
                 ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  mainAxisSize: MainAxisSize.min,
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
                   children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
-                      children: [
-                        Text(
-                          totalSpent > 0 ? '- ${_formatAmount(totalSpent)}' : '₹ 0',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF111111),
-                          ),
-                        ),
-                        const SizedBox(width: 3),
-                        const Text(
-                          'INR',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF8E8E93),
-                          ),
-                        ),
-                      ],
+                    Text(
+                      totalSpent > 0 ? '- ${_formatAmount(totalSpent)}' : '₹ 0',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: totalSpent > 0
+                            ? const Color(0xFF000000)
+                            : const Color(0xFF8E8E93),
+                      ),
                     ),
-                    const SizedBox(height: 4),
-                    AnimatedRotation(
-                      turns: isExpanded ? 0.5 : 0.0,
-                      duration: const Duration(milliseconds: 250),
-                      child: const Icon(
-                        Icons.keyboard_arrow_down_rounded,
-                        size: 20,
+                    const SizedBox(width: 4),
+                    const Text(
+                      'INR',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
                         color: Color(0xFF8E8E93),
                       ),
                     ),
@@ -734,30 +523,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
               ],
             ),
 
-            // Share Progress Bar
-            if (data.ratio > 0) ...[
-              const SizedBox(height: 10),
-              Container(
-                height: 4,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFECECEC),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-                child: FractionallySizedBox(
-                  alignment: Alignment.centerLeft,
-                  widthFactor: data.ratio,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: catColor,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-
-            // Expanded Detail Drawer (Transactions list + Analytics)
+            // Expanded Detail Drawer (Sleek Animated Bar + Metrics + Transactions)
             AnimatedCrossFade(
               duration: const Duration(milliseconds: 300),
               firstCurve: Curves.fastOutSlowIn,
@@ -771,12 +537,66 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                 height: 0,
               ),
               secondChild: Padding(
-                padding: const EdgeInsets.only(top: 14),
+                padding: const EdgeInsets.fromLTRB(14, 10, 0, 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Divider(color: Color(0xFFECECEC), height: 1),
-                    const SizedBox(height: 12),
+                    // Sleek Animated Progress Bar (only shown if ratio > 0)
+                    if (data.ratio > 0) ...[
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Share of Total Expenses',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFF8E8E93),
+                            ),
+                          ),
+                          Text(
+                            '${percent.toStringAsFixed(1)}%',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: catColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        height: 6,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFECECEC),
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: TweenAnimationBuilder<double>(
+                            tween: Tween<double>(
+                              begin: 0,
+                              end: isExpanded ? data.ratio : 0,
+                            ),
+                            duration: const Duration(milliseconds: 400),
+                            curve: Curves.easeOutCubic,
+                            builder: (context, animatedRatio, child) {
+                              return FractionallySizedBox(
+                                widthFactor: animatedRatio.clamp(0.0, 1.0),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: catColor,
+                                    borderRadius: BorderRadius.circular(3),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                    ],
 
                     // Metrics Row (Avg spend, Max spend)
                     Row(
@@ -784,12 +604,12 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                         Expanded(
                           child: Container(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
+                              horizontal: 14,
                               vertical: 10,
                             ),
                             decoration: BoxDecoration(
                               color: const Color(0xFFF7F7F7),
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(20),
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -802,7 +622,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
-                                const SizedBox(height: 2),
+                                const SizedBox(height: 3),
                                 Text(
                                   '₹ ${_formatAmount(avgSpend)}',
                                   style: const TextStyle(
@@ -819,12 +639,12 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                         Expanded(
                           child: Container(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
+                              horizontal: 14,
                               vertical: 10,
                             ),
                             decoration: BoxDecoration(
                               color: const Color(0xFFF7F7F7),
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(20),
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -837,7 +657,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
-                                const SizedBox(height: 2),
+                                const SizedBox(height: 3),
                                 Text(
                                   '₹ ${_formatAmount(maxSpend)}',
                                   style: const TextStyle(
@@ -880,7 +700,10 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                     // Transactions List
                     if (data.transactions.isEmpty)
                       Container(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFFF7F7F7),
                           borderRadius: BorderRadius.circular(16),
@@ -901,8 +724,8 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                           return Container(
                             margin: const EdgeInsets.only(bottom: 6),
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
+                              horizontal: 14,
+                              vertical: 10,
                             ),
                             decoration: BoxDecoration(
                               color: const Color(0xFFF7F7F7),
