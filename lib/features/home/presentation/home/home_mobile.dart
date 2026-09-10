@@ -12,9 +12,9 @@ import 'package:zenio/features/subscriptions/subscriptions.dart';
 import 'package:zenio/features/transactions/transactions.dart';
 import 'package:zenio/features/vault/vault.dart';
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
+import 'package:zenio/shared/services/services.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
-import 'package:zenio/shared/widgets/add_transaction_bottom_sheet.dart';
-import 'package:zenio/shared/widgets/custom_navigation_bar.dart';
+import 'package:zenio/shared/widgets/widgets.dart';
 import 'package:zenio/features/transactions/presentation/widgets/edit_transaction_dialog.dart';
 
 class HomeScreenMobile extends ConsumerStatefulWidget {
@@ -560,8 +560,40 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                                           width: 28,
                                           height: 28,
                                         ),
-                                        onTap: () {
-                                          Navigator.of(context).push(
+                                        onTap: () async {
+                                          final isBiometricEnabled = ref
+                                              .read(settingsNotifierProvider)
+                                              .settings
+                                              .isBiometricEnabled;
+                                          if (isBiometricEnabled) {
+                                            final biometricService =
+                                                ref.read(biometricServiceProvider);
+                                            final hasBiometrics =
+                                                await biometricService
+                                                    .hasEnrolledBiometrics();
+                                            if (!hasBiometrics) {
+                                              if (!context.mounted) return;
+                                              await BiometricSetupDialog.show(
+                                                context,
+                                                message:
+                                                    'Biometric Lock is active, but no biometrics (Fingerprint or Face ID) are configured on this device. Please set them up in device settings.',
+                                              );
+                                              return;
+                                            }
+
+                                            final authenticated =
+                                                await biometricService
+                                                    .authenticate(
+                                              localizedReason:
+                                                  'Scan fingerprint or Face ID to unlock Vault',
+                                            );
+                                            if (!authenticated) {
+                                              return;
+                                            }
+                                          }
+
+                                          if (!context.mounted) return;
+                                          await Navigator.of(context).push(
                                             MaterialPageRoute<void>(
                                               builder: (context) =>
                                                   const VaultScreenMobile(),

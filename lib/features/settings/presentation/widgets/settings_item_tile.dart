@@ -40,7 +40,11 @@ class SettingsItemTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(32),
         child: InkWell(
           borderRadius: BorderRadius.circular(32),
-          onTap: isSwitch ? null : onTap,
+          onTap: isSwitch
+              ? (onSwitchChanged != null
+                  ? () => onSwitchChanged!(!switchValue)
+                  : null)
+              : onTap,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(5, 5, 20, 5),
             child: Row(

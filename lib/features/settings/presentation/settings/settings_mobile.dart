@@ -10,10 +10,9 @@ import 'package:zenio/shared/providers/default_wallet_provider/default_wallet_pr
 import 'package:zenio/shared/providers/package_info_provider/package_info_provider.dart';
 import 'package:zenio/shared/services/csv_export_service.dart';
 import 'package:zenio/shared/services/csv_import_service.dart';
+import 'package:zenio/shared/services/services.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
-import 'package:zenio/shared/widgets/add_transaction_bottom_sheet.dart';
-import 'package:zenio/shared/widgets/custom_navigation_bar.dart';
-import 'package:zenio/shared/widgets/zenio_snack_bar.dart';
+import 'package:zenio/shared/widgets/widgets.dart';
 
 class SettingsScreenMobile extends ConsumerStatefulWidget {
   const SettingsScreenMobile({
@@ -496,10 +495,63 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                             iconBgColor: const Color(0xFFE8F8F0),
                             isSwitch: true,
                             switchValue: settings.isBiometricEnabled,
-                            onSwitchChanged: (val) {
-                              ref
-                                  .read(settingsNotifierProvider.notifier)
-                                  .toggleBiometric(val);
+                            onSwitchChanged: (val) async {
+                              final biometricService =
+                                  ref.read(biometricServiceProvider);
+                              if (val) {
+                                // Attempting to turn ON
+                                final hasBiometrics = await biometricService
+                                    .hasEnrolledBiometrics();
+                                if (!hasBiometrics) {
+                                  if (!context.mounted) return;
+                                  await BiometricSetupDialog.show(
+                                    context,
+                                    message:
+                                        'Biometric authentication (Fingerprint or Face ID) is not configured on this device. Please set it up in your device settings to enable Biometric Lock.',
+                                  );
+                                  return;
+                                }
+
+                                final authenticated = await biometricService
+                                    .authenticate(
+                                  localizedReason:
+                                      'Scan fingerprint or Face ID to enable Biometric Lock',
+                                );
+                                if (!authenticated) {
+                                  return;
+                                }
+
+                                await ref
+                                    .read(settingsNotifierProvider.notifier)
+                                    .toggleBiometric(true);
+                                if (context.mounted) {
+                                  ZenioSnackBar.show(
+                                    context,
+                                    message: 'Biometric lock enabled',
+                                    type: ZenioSnackBarType.success,
+                                  );
+                                }
+                              } else {
+                                // Attempting to turn OFF
+                                final authenticated = await biometricService
+                                    .authenticate(
+                                  localizedReason:
+                                      'Scan fingerprint or Face ID to disable Biometric Lock',
+                                );
+                                if (!authenticated) {
+                                  return;
+                                }
+
+                                await ref
+                                    .read(settingsNotifierProvider.notifier)
+                                    .toggleBiometric(false);
+                                if (context.mounted) {
+                                  ZenioSnackBar.show(
+                                    context,
+                                    message: 'Biometric lock disabled',
+                                  );
+                                }
+                              }
                             },
                           ),
                           const SizedBox(height: 12),
