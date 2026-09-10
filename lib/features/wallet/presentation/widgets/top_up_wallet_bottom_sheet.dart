@@ -16,7 +16,10 @@ class EditWalletBalanceBottomSheet extends ConsumerStatefulWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => EditWalletBalanceBottomSheet(cardIndex: cardIndex),
+      builder: (context) => Padding(
+        padding: MediaQuery.of(context).viewInsets,
+        child: EditWalletBalanceBottomSheet(cardIndex: cardIndex),
+      ),
     );
   }
 
@@ -78,7 +81,6 @@ class _EditWalletBalanceBottomSheetState extends ConsumerState<EditWalletBalance
 
   @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return Container(
       width: double.infinity,
@@ -194,8 +196,8 @@ class _EditWalletBalanceBottomSheetState extends ConsumerState<EditWalletBalance
                 ),
               ),
             ),
-            // Extends white background behind keyboard — not visible, prevents dark gap
-            SizedBox(height: bottomInset),
+            // Extends white background behind keyboard
+            SizedBox(height: MediaQuery.of(context).padding.bottom),
           ],
         ),
       ),

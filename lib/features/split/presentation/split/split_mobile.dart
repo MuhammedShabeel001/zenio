@@ -92,9 +92,14 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
       behavior: HitTestBehavior.opaque,
       child: Scaffold(
         backgroundColor: Colors.black,
+        resizeToAvoidBottomInset: false,
         body: SafeArea(
           bottom: false,
-          child: Column(
+          child: Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+            ),
+            child: Column(
           children: [
             // Dark Header Section (Bill Amount Input)
             Padding(
@@ -341,7 +346,8 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
             ),
           ],
         ),
-      ),
+          ),
+        ),
       ),
     );
   }

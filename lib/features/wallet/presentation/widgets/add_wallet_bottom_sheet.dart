@@ -27,9 +27,12 @@ class AddWalletBottomSheet extends ConsumerStatefulWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => AddWalletBottomSheet(
-        editingCard: editingCard,
-        editingIndex: editingIndex,
+      builder: (context) => Padding(
+        padding: MediaQuery.of(context).viewInsets,
+        child: AddWalletBottomSheet(
+          editingCard: editingCard,
+          editingIndex: editingIndex,
+        ),
       ),
     );
   }
@@ -247,7 +250,6 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return Container(
       decoration: const BoxDecoration(
@@ -552,7 +554,7 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
               ),
             ),
             // Extends white background behind keyboard
-            SizedBox(height: bottomInset),
+            SizedBox(height: MediaQuery.of(context).padding.bottom),
           ],
         ),
       ),

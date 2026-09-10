@@ -17,7 +17,10 @@ class AddSubscriptionBottomSheet extends ConsumerStatefulWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => const AddSubscriptionBottomSheet(),
+      builder: (context) => Padding(
+        padding: MediaQuery.of(context).viewInsets,
+        child: const AddSubscriptionBottomSheet(),
+      ),
     );
   }
 
@@ -144,7 +147,6 @@ class _AddSubscriptionBottomSheetState
     final formattedDate =
         DateFormat('EEEE, MMMM d, yyyy').format(_selectedDate);
 
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return Container(
       decoration: const BoxDecoration(
@@ -481,7 +483,7 @@ class _AddSubscriptionBottomSheetState
               ),
             ),
             // Extends white background behind keyboard
-            SizedBox(height: bottomInset),
+            SizedBox(height: MediaQuery.of(context).padding.bottom),
           ],
         ),
       ),

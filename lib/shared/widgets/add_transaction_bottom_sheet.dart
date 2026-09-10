@@ -26,7 +26,10 @@ class AddTransactionBottomSheet extends ConsumerStatefulWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => const AddTransactionBottomSheet(),
+      builder: (context) => Padding(
+        padding: MediaQuery.of(context).viewInsets,
+        child: const AddTransactionBottomSheet(),
+      ),
     );
   }
 
@@ -250,7 +253,6 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
     final currencySymbol = ref.watch(currencySymbolProvider);
     final currencyCode = ref.watch(currencyCodeProvider);
 
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return Container(
       decoration: const BoxDecoration(
@@ -904,8 +906,8 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                 ),
               ),
             ),
-            // Extends white background behind keyboard — not visible, prevents dark gap
-            SizedBox(height: bottomInset),
+            // Extends white background behind keyboard
+            SizedBox(height: MediaQuery.of(context).padding.bottom),
           ],
         ),
       ),

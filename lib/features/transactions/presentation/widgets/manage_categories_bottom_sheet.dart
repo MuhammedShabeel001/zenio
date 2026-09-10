@@ -24,9 +24,12 @@ class ManageCategoriesBottomSheet extends ConsumerStatefulWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => ManageCategoriesBottomSheet(
-        isSubscription: isSubscription,
-        onCategorySelected: (cat) => Navigator.of(context).pop(cat),
+      builder: (context) => Padding(
+        padding: MediaQuery.of(context).viewInsets,
+        child: ManageCategoriesBottomSheet(
+          isSubscription: isSubscription,
+          onCategorySelected: (cat) => Navigator.of(context).pop(cat),
+        ),
       ),
     );
   }
@@ -151,7 +154,6 @@ class _ManageCategoriesBottomSheetState
     final categories = widget.isSubscription
         ? ref.watch(subscriptionCategoriesNotifierProvider)
         : ref.watch(categoriesNotifierProvider);
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return Container(
       decoration: const BoxDecoration(
@@ -256,8 +258,8 @@ class _ManageCategoriesBottomSheetState
             else
               _buildCategoryList(categories),
 
-            // Keyboard Inset padding
-            SizedBox(height: bottomInset),
+            // Keyboard inset padding
+            SizedBox(height: MediaQuery.of(context).padding.bottom),
           ],
         ),
       ),

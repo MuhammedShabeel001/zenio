@@ -16,7 +16,10 @@ class AddDebtBottomSheet extends ConsumerStatefulWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => const AddDebtBottomSheet(),
+      builder: (context) => Padding(
+        padding: MediaQuery.of(context).viewInsets,
+        child: const AddDebtBottomSheet(),
+      ),
     );
   }
 
@@ -72,7 +75,6 @@ class _AddDebtBottomSheetState extends ConsumerState<AddDebtBottomSheet> {
   @override
   Widget build(BuildContext context) {
     final formattedDate = DateFormat('dd MMMM yyyy').format(_selectedDate);
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     final debtsState = ref.watch(debtsNotifierProvider);
     final existingNames = debtsState.debts
@@ -433,8 +435,8 @@ class _AddDebtBottomSheetState extends ConsumerState<AddDebtBottomSheet> {
                 ),
               ),
             ),
-            // Extends white background behind keyboard — not visible, prevents dark gap
-            SizedBox(height: bottomInset),
+            // Extends white background behind keyboard
+            SizedBox(height: MediaQuery.of(context).padding.bottom),
           ],
         ),
       ),
