@@ -56,9 +56,16 @@ Future<void> bootstrap(FutureOr<App> Function() builder) async {
   PlatformDispatcher.instance.onError = (exception, stackTrace) {
     log(exception.toString(), stackTrace: stackTrace);
     // Enable on setting up of firebase project
-    // FirebaseCrashlytics.instance.recordError(exception, stackTrace);
     return true;
   };
+
+  WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await NotificationService.instance.initialize();
+  } catch (e) {
+    log('Failed to initialize NotificationService: $e');
+  }
+
   final app = await builder();
   // Add cross-flavor configuration here
   runApp(

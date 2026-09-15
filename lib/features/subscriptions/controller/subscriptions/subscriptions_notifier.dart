@@ -3,10 +3,11 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:zenio/features/subscriptions/controller/subscriptions/subscriptions_state.dart';
 import 'package:zenio/features/subscriptions/domain/models/subscription_model.dart';
 import 'package:zenio/features/subscriptions/domain/repositories/implementations/subscriptions_repository.dart';
+import 'package:zenio/shared/services/notification_service.dart';
 
-part 'subscriptions_notifier.g.dart';
+part 'subscriptions_notifier.g.dart'; 
 
-@Riverpod(keepAlive: true)
+@Riverpod(keepAlive: true) 
 class SubscriptionsNotifier extends _$SubscriptionsNotifier {
   @override
   SubscriptionsState build() {
@@ -30,6 +31,13 @@ class SubscriptionsNotifier extends _$SubscriptionsNotifier {
         totalBalance: balance,
         subscriptions: filteredList,
         isLoading: false,
+      );
+
+      // Keep scheduled reminders in sync for all active subscriptions
+      unawaited(
+        ref
+            .read(notificationServiceProvider)
+            .rescheduleAllSubscriptionReminders(list),
       );
     } catch (e) {
       state = state.copyWith(
@@ -72,6 +80,9 @@ class SubscriptionsNotifier extends _$SubscriptionsNotifier {
     final updated = allList.where((sub) => sub.id != id).toList();
     
     await repo.saveSubscriptions(updated);
+    unawaited(
+      ref.read(notificationServiceProvider).cancelSubscriptionReminder(id),
+    );
     unawaited(_loadData());
   }
 
@@ -81,6 +92,9 @@ class SubscriptionsNotifier extends _$SubscriptionsNotifier {
     final updated = [...allList, sub];
     
     await repo.saveSubscriptions(updated);
+    unawaited(
+      ref.read(notificationServiceProvider).scheduleSubscriptionReminder(sub),
+    );
     unawaited(_loadData());
   }
 
@@ -90,6 +104,9 @@ class SubscriptionsNotifier extends _$SubscriptionsNotifier {
     final updated = allList.map((s) => s.id == sub.id ? sub : s).toList();
 
     await repo.saveSubscriptions(updated);
+    unawaited(
+      ref.read(notificationServiceProvider).scheduleSubscriptionReminder(sub),
+    );
     unawaited(_loadData());
   }
 }

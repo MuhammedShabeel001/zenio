@@ -1,260 +1,224 @@
-// // Copyright 2025. All rights reserved.
+import 'package:flutter/foundation.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
+import 'package:zenio/features/subscriptions/domain/models/subscription_model.dart';
 
-// import 'dart:async';
-// import 'dart:convert';
+final notificationServiceProvider = Provider<NotificationService>((ref) {
+  return NotificationService.instance;
+});
 
-// import 'package:firebase_core/firebase_core.dart';
-// import 'package:firebase_messaging/firebase_messaging.dart';
-// import 'package:flutter/foundation.dart';
-// import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-// import 'package:http/http.dart' as http;
+class NotificationService {
+  NotificationService._();
+  static final NotificationService instance = NotificationService._();
 
-// import 'package:zenio/firebase_options_dev.dart' as dev;
-// import 'package:zenio/firebase_options_prod.dart' as prod;
+  final FlutterLocalNotificationsPlugin _notificationsPlugin =
+      FlutterLocalNotificationsPlugin();
 
-// /// A service to handle Firebase Cloud Messaging (FCM) notifications
-// class NotificationService {
-//   static final NotificationService _instance = NotificationService._internal();
+  bool _initialized = false;
 
-//   /// Singleton instance of the notification service
-//   factory NotificationService() => _instance;
+  static const String _channelId = 'subscription_reminders';
+  static const String _channelName = 'Subscription Reminders';
+  static const String _channelDesc =
+      'Timely reminders for upcoming subscription renewals and due dates';
 
-//   NotificationService._internal();
+  /// Initialize notification settings and timezone data
+  Future<void> initialize() async {
+    if (_initialized) return;
 
-//   /// Firebase Messaging instance
-//   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
+    try {
+      tz.initializeTimeZones();
+    } catch (_) {}
 
-//   /// Stream controller for messages
-//   final StreamController<RemoteMessage> _messageStreamController =
-//       StreamController<RemoteMessage>.broadcast();
+    const androidSettings =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
 
-//   /// Stream of incoming messages
-//   Stream<RemoteMessage> get messageStream => _messageStreamController.stream;
+    const darwinSettings = DarwinInitializationSettings();
 
-//   /// The current FCM token
-//   String? _token;
+    const initSettings = InitializationSettings(
+      android: androidSettings,
+      iOS: darwinSettings,
+      macOS: darwinSettings,
+    );
 
-//   /// Get the current FCM token
-//   String? get token => _token;
+    await _notificationsPlugin.initialize(
+      initSettings,
+      onDidReceiveNotificationResponse: (NotificationResponse response) {
+        debugPrint('Notification clicked with payload: ${response.payload}');
+      },
+    );
 
-//   /// Android notification channel
-//   late AndroidNotificationChannel _channel;
+    // Create Android notification channel and request permissions
+    if (!kIsWeb) {
+      final androidPlugin = _notificationsPlugin
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
 
-//   /// Flutter local notifications plugin
-//   late FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin;
+      if (androidPlugin != null) {
+        await androidPlugin.createNotificationChannel(
+          const AndroidNotificationChannel(
+            _channelId,
+            _channelName,
+            description: _channelDesc,
+            importance: Importance.high,
+          ),
+        );
+        try {
+          await androidPlugin.requestNotificationsPermission();
+        } catch (_) {}
+      }
 
-//   /// Flag to track if local notifications are initialized
-//   bool _isFlutterLocalNotificationsInitialized = false;
+      final iosPlugin = _notificationsPlugin
+          .resolvePlatformSpecificImplementation<
+              IOSFlutterLocalNotificationsPlugin>();
+      if (iosPlugin != null) {
+        try {
+          await iosPlugin.requestPermissions(
+            alert: true,
+            badge: true,
+            sound: true,
+          );
+        } catch (_) {}
+      }
+    }
 
-//   /// Initialize the notification service
-//   Future<void> initialize() async {
-//     // Initialize Firebase
-//     await Firebase.initializeApp(
-//       options: DefaultFirebaseOptions.currentPlatform,
-//     );
+    _initialized = true;
+  }
 
-//     // Set background message handler
-//     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  /// Request runtime notification permissions
+  Future<bool?> requestPermissions() async {
+    if (kIsWeb) return false;
 
-//     // Setup local notifications for non-web platforms
-//     if (!kIsWeb) {
-//       await _setupFlutterNotifications();
-//     }
+    final androidPlugin = _notificationsPlugin
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+    if (androidPlugin != null) {
+      return androidPlugin.requestNotificationsPermission();
+    }
 
-//     // Listen for incoming foreground messages
-//     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-//       _showFlutterNotification(message);
-//       _messageStreamController.add(message);
-//     });
+    final iosPlugin = _notificationsPlugin
+        .resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin>();
+    if (iosPlugin != null) {
+      return iosPlugin.requestPermissions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+    }
+    return true;
+  }
 
-//     // Listen for messages when app is opened from terminated state
-//     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-//       _messageStreamController.add(message);
-//     });
+  /// Helper to derive a positive 32-bit integer ID from a subscription ID
+  int _getNotificationId(String subscriptionId) {
+    return subscriptionId.hashCode & 0x7FFFFFFF;
+  }
 
-//     // Get initial message if app was opened from a notification
-//     FirebaseMessaging.instance
-//         .getInitialMessage()
-//         .then((RemoteMessage? message) {
-//       if (message != null) {
-//         _messageStreamController.add(message);
-//       }
-//     });
+  /// Schedule a renewal reminder notification for a subscription
+  Future<void> scheduleSubscriptionReminder(SubscriptionModel subscription) async {
+    if (kIsWeb) return;
+    await initialize();
 
-//     // Get and monitor FCM token
-//     _getToken();
-//     _monitorToken();
-//   }
+    final id = _getNotificationId(subscription.id);
+    // Cancel any previous reminder for this subscription
+    await _notificationsPlugin.cancel(id);
 
-//   /// Setup Flutter local notifications
-//   Future<void> _setupFlutterNotifications() async {
-//     if (_isFlutterLocalNotificationsInitialized) {
-//       return;
-//     }
+    final now = DateTime.now();
+    var reminderTime = DateTime(
+      subscription.nextBillingDate.year,
+      subscription.nextBillingDate.month,
+      subscription.nextBillingDate.day - 1,
+      9,
+    );
 
-//     _channel = const AndroidNotificationChannel(
-//       'high_importance_channel', // id
-//       'High Importance Notifications', // title
-//       description:
-//           'This channel is used for important notifications.', // description
-//       importance: Importance.high,
-//     );
+    // If 1 day before at 9:00 AM is already in the past, try the due date itself at 9:00 AM
+    if (reminderTime.isBefore(now)) {
+      reminderTime = DateTime(
+        subscription.nextBillingDate.year,
+        subscription.nextBillingDate.month,
+        subscription.nextBillingDate.day,
+        9,
+      );
+    }
 
-//     _flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+    // If still in the past, nothing to schedule for this cycle
+    if (reminderTime.isBefore(now)) {
+      return;
+    }
 
-//     // Create an Android Notification Channel
-//     await _flutterLocalNotificationsPlugin
-//         .resolvePlatformSpecificImplementation<
-//             AndroidFlutterLocalNotificationsPlugin>()
-//         ?.createNotificationChannel(_channel);
+    final tzDateTime = tz.TZDateTime.from(reminderTime, tz.local);
+    final formattedDate =
+        DateFormat.yMMMd().format(subscription.nextBillingDate);
+    final formattedAmount =
+        '${subscription.currency} ${subscription.amount.toStringAsFixed(2)}';
 
-//     // Update iOS foreground notification presentation options
-//     await _firebaseMessaging.setForegroundNotificationPresentationOptions(
-//       alert: true,
-//       badge: true,
-//       sound: true,
-//     );
+    const androidDetails = AndroidNotificationDetails(
+      _channelId,
+      _channelName,
+      channelDescription: _channelDesc,
+      importance: Importance.high,
+      priority: Priority.high,
+      ticker: 'Subscription renewal reminder',
+    );
 
-//     _isFlutterLocalNotificationsInitialized = true;
-//   }
+    const iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
 
-//   /// Show a local notification for a remote message
-//   void _showFlutterNotification(RemoteMessage message) {
-//     RemoteNotification? notification = message.notification;
-//     AndroidNotification? android = message.notification?.android;
+    const details = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
 
-//     if (notification != null && android != null && !kIsWeb) {
-//       _flutterLocalNotificationsPlugin.show(
-//         notification.hashCode,
-//         notification.title,
-//         notification.body,
-//         NotificationDetails(
-//           android: AndroidNotificationDetails(
-//             _channel.id,
-//             _channel.name,
-//             channelDescription: _channel.description,
-//             icon: 'launch_background',
-//           ),
-//         ),
-//       );
-//     }
-//   }
+    try {
+      await _notificationsPlugin.zonedSchedule(
+        id,
+        'Subscription Due: ${subscription.title}',
+        'Your ${subscription.title} subscription ($formattedAmount) is due for renewal on $formattedDate.',
+        tzDateTime,
+        details,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        payload: subscription.id,
+      );
+      debugPrint('Scheduled subscription notification for ${subscription.title} at $tzDateTime');
+    } catch (e) {
+      // Fallback without exact alarm if permission is restricted
+      try {
+        await _notificationsPlugin.zonedSchedule(
+          id,
+          'Subscription Due: ${subscription.title}',
+          'Your ${subscription.title} subscription ($formattedAmount) is due for renewal on $formattedDate.',
+          tzDateTime,
+          details,
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          uiLocalNotificationDateInterpretation:
+              UILocalNotificationDateInterpretation.absoluteTime,
+          payload: subscription.id,
+        );
+      } catch (e2) {
+        debugPrint('Failed to schedule notification: $e2');
+      }
+    }
+  }
 
-//   /// Get the current FCM token
-//   Future<String?> _getToken() async {
-//     try {
-//       _token = await _firebaseMessaging.getToken();
-//       return _token;
-//     } catch (e) {
-//       debugPrint('Failed to get FCM token: $e');
-//       return null;
-//     }
-//   }
+  /// Cancel a scheduled subscription notification
+  Future<void> cancelSubscriptionReminder(String subscriptionId) async {
+    final id = _getNotificationId(subscriptionId);
+    await _notificationsPlugin.cancel(id);
+  }
 
-//   /// Monitor token refreshes
-//   void _monitorToken() {
-//     _firebaseMessaging.onTokenRefresh.listen((String newToken) {
-//       _token = newToken;
-//     });
-//   }
-
-//   /// Request notification permissions
-//   Future<NotificationSettings> requestPermissions({
-//     bool alert = true,
-//     bool announcement = false,
-//     bool badge = true,
-//     bool carPlay = false,
-//     bool criticalAlert = false,
-//     bool provisional = false,
-//     bool sound = true,
-//   }) async {
-//     NotificationSettings settings = await _firebaseMessaging.requestPermission(
-//       alert: alert,
-//       announcement: announcement,
-//       badge: badge,
-//       carPlay: carPlay,
-//       criticalAlert: criticalAlert,
-//       provisional: provisional,
-//       sound: sound,
-//     );
-
-//     return settings;
-//   }
-
-//   /// Get current notification settings
-//   Future<NotificationSettings> getNotificationSettings() async {
-//     return await _firebaseMessaging.getNotificationSettings();
-//   }
-
-//   /// Subscribe to a topic
-//   Future<void> subscribeToTopic(String topic) async {
-//     await _firebaseMessaging.subscribeToTopic(topic);
-//   }
-
-//   /// Unsubscribe from a topic
-//   Future<void> unsubscribeFromTopic(String topic) async {
-//     await _firebaseMessaging.unsubscribeFromTopic(topic);
-//   }
-
-//   /// Get APNs token (iOS only)
-//   Future<String?> getAPNSToken() async {
-//     if (defaultTargetPlatform == TargetPlatform.iOS ||
-//         defaultTargetPlatform == TargetPlatform.macOS) {
-//       return await _firebaseMessaging.getAPNSToken();
-//     }
-//     return null;
-//   }
-
-//   /// Send a test FCM message (for development purposes)
-//   Future<void> sendPushMessage({String? customToken, String? serverUrl}) async {
-//     final String? tokenToUse = customToken ?? _token;
-
-//     if (tokenToUse == null) {
-//       debugPrint('Unable to send FCM message, no token exists.');
-//       return;
-//     }
-
-//     try {
-//       final url = serverUrl ?? 'https://api.rnfirebase.io/messaging/send';
-//       await http.post(
-//         Uri.parse(url),
-//         headers: <String, String>{
-//           'Content-Type': 'application/json; charset=UTF-8',
-//         },
-//         body: jsonEncode({
-//           'token': tokenToUse,
-//           'data': {
-//             'via': 'NotificationService',
-//             'timestamp': DateTime.now().millisecondsSinceEpoch.toString(),
-//           },
-//           'notification': {
-//             'title': 'Test Notification',
-//             'body': 'This is a test notification sent from NotificationService',
-//           },
-//         }),
-//       );
-
-//       debugPrint('FCM request for device sent!');
-//     } catch (e) {
-//       debugPrint('Error sending FCM message: $e');
-//     }
-//   }
-
-//   /// Dispose resources
-//   void dispose() {
-//     _messageStreamController.close();
-//   }
-// }
-
-// /// Background message handler that must be top-level function
-// @pragma('vm:entry-point')
-// Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-//   // Initialize Firebase
-//   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-
-//   // Initialize the notification service
-//   await NotificationService()._setupFlutterNotifications();
-//   NotificationService()._showFlutterNotification(message);
-
-//   debugPrint('Handling a background message ${message.messageId}');
-// }
+  /// Reschedule reminders for an entire list of subscriptions
+  Future<void> rescheduleAllSubscriptionReminders(
+    List<SubscriptionModel> subscriptions,
+  ) async {
+    for (final sub in subscriptions) {
+      await scheduleSubscriptionReminder(sub);
+    }
+  }
+}
