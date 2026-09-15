@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:zenio/features/feedback/presentation/widgets/feedback_bottom_sheet.dart';
 import 'package:zenio/features/home/controller/home/home_notifier.dart';
 import 'package:zenio/features/settings/controller/settings/settings_notifier.dart';
 import 'package:zenio/features/settings/presentation/widgets/settings_item_tile.dart';
@@ -732,7 +733,7 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                                 BlendMode.srcIn,
                               ),
                             ),
-                            onTap: () {},
+                            onTap: () => FeedbackBottomSheet.show(context),
                           ),
                           SettingsItemTile(
                             title: 'Contact support',

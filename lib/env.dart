@@ -4,6 +4,7 @@ abstract class IEnvironment {
   const IEnvironment();
   String get SERVER_URL;
   String get ANON_KEY;
+  String get FEEDBACK_WEBHOOK_URL;
   Duration get CONNECT_TIMEOUT;
   Duration get RECEIVE_TIMEOUT;
 }
@@ -14,6 +15,9 @@ class ProductionEnv extends IEnvironment {
   String get SERVER_URL => '';
   @override
   String get ANON_KEY => '';
+  @override
+  String get FEEDBACK_WEBHOOK_URL =>
+      'https://script.google.com/macros/s/AKfycbxVEG53GrrCwgQjDjrv_K2lmaSNhuOG2fUl0JhYF8IlpFAVhYO6oulJjsojUb9Snw/exec';
   @override
   Duration get CONNECT_TIMEOUT => const Duration(seconds: 5000);
   @override
@@ -27,6 +31,9 @@ class StagingEnv extends IEnvironment {
   @override
   String get ANON_KEY => '';
   @override
+  String get FEEDBACK_WEBHOOK_URL =>
+      'https://script.google.com/macros/s/AKfycbxVEG53GrrCwgQjDjrv_K2lmaSNhuOG2fUl0JhYF8IlpFAVhYO6oulJjsojUb9Snw/exec';
+  @override
   Duration get CONNECT_TIMEOUT => const Duration(seconds: 5000);
   @override
   Duration get RECEIVE_TIMEOUT => const Duration(seconds: 3000);
@@ -38,6 +45,9 @@ class DevelopmentEnv extends IEnvironment {
   String get SERVER_URL => '';
   @override
   String get ANON_KEY => '';
+  @override
+  String get FEEDBACK_WEBHOOK_URL =>
+      'https://script.google.com/macros/s/AKfycbxVEG53GrrCwgQjDjrv_K2lmaSNhuOG2fUl0JhYF8IlpFAVhYO6oulJjsojUb9Snw/exec';
   @override
   Duration get CONNECT_TIMEOUT => const Duration(seconds: 5000);
   @override
