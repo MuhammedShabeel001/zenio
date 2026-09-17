@@ -26,7 +26,10 @@ void main() {
       expect(find.text('Skip'), findsOneWidget);
 
       // Verify forward button is present
-      expect(find.byIcon(Icons.arrow_forward), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('onboarding_next_button')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('can advance to next slide', (tester) async {
@@ -41,7 +44,7 @@ void main() {
       expect(find.text('Find Your Financial Zen'), findsOneWidget);
 
       // Tap Next button
-      await tester.tap(find.byIcon(Icons.arrow_forward));
+      await tester.tap(find.byKey(const ValueKey('onboarding_next_button')));
       await tester.pumpAndSettle();
 
       // Verify second slide is now active
@@ -52,7 +55,10 @@ void main() {
       );
 
       // Verify Back button is now interactive
-      expect(find.byIcon(Icons.arrow_back), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('onboarding_prev_button')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('navigates to last slide and shows Enter Zenio button',
@@ -67,7 +73,7 @@ void main() {
 
       // Advance through all slides to the last slide
       for (var i = 0; i < 3; i++) {
-        await tester.tap(find.byIcon(Icons.arrow_forward));
+        await tester.tap(find.byKey(const ValueKey('onboarding_next_button')));
         await tester.pumpAndSettle();
       }
 
@@ -82,7 +88,10 @@ void main() {
       expect(find.text('Skip'), findsNothing);
 
       // Enter Zenio button should be displayed
-      expect(find.textContaining('Zenio'), findsWidgets);
+      expect(
+        find.byKey(const ValueKey('onboarding_enter_button')),
+        findsOneWidget,
+      );
     });
   });
 }

@@ -1,4 +1,3 @@
-import 'package:zenio/shared/providers/providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hancod_theme/hancod_theme.dart';
@@ -36,13 +35,9 @@ class App extends ConsumerWidget {
       locale: ref.watch(localeNotifierProvider),
       scrollBehavior: const CustomScrollBehavior(),
       builder: (context, child) {
-        // You can wrap Internet connection alert here
-        return NoInternetAlert(
+        return UpgradeAlert(
           navigatorKey: appRouter.router.routerDelegate.navigatorKey,
-          child: UpgradeAlert(
-            navigatorKey: appRouter.router.routerDelegate.navigatorKey,
-            child: child,
-          ),
+          child: child,
         );
       },
     );

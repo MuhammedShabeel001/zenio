@@ -1,7 +1,6 @@
 export 'add_transaction_bottom_sheet.dart';
 export 'biometric_setup_dialog.dart';
 export 'custom_navigation_bar.dart';
-export 'no_internet.dart';
 export 'responsive.dart';
 export 'swipe_delete_button.dart';
 export 'zenio_dropdown.dart';
