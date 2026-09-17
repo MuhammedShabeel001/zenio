@@ -240,17 +240,29 @@ class $AssetsImagesGen {
   SvgGenImage get noWallets =>
       const SvgGenImage('assets/images/no_wallets.svg');
 
+  /// File path: assets/images/page1.png
+  AssetGenImage get page1Png => const AssetGenImage('assets/images/page1.png');
+
   /// File path: assets/images/page1.svg
-  SvgGenImage get page1 => const SvgGenImage('assets/images/page1.svg');
+  SvgGenImage get page1Svg => const SvgGenImage('assets/images/page1.svg');
+
+  /// File path: assets/images/page2.png
+  AssetGenImage get page2Png => const AssetGenImage('assets/images/page2.png');
 
   /// File path: assets/images/page2.svg
-  SvgGenImage get page2 => const SvgGenImage('assets/images/page2.svg');
+  SvgGenImage get page2Svg => const SvgGenImage('assets/images/page2.svg');
+
+  /// File path: assets/images/page3.png
+  AssetGenImage get page3Png => const AssetGenImage('assets/images/page3.png');
 
   /// File path: assets/images/page3.svg
-  SvgGenImage get page3 => const SvgGenImage('assets/images/page3.svg');
+  SvgGenImage get page3Svg => const SvgGenImage('assets/images/page3.svg');
+
+  /// File path: assets/images/page4.png
+  AssetGenImage get page4Png => const AssetGenImage('assets/images/page4.png');
 
   /// File path: assets/images/page4.svg
-  SvgGenImage get page4 => const SvgGenImage('assets/images/page4.svg');
+  SvgGenImage get page4Svg => const SvgGenImage('assets/images/page4.svg');
 
   /// List of all assets
   List<dynamic> get values => [
@@ -268,10 +280,14 @@ class $AssetsImagesGen {
     noAnalytics,
     noData,
     noWallets,
-    page1,
-    page2,
-    page3,
-    page4,
+    page1Png,
+    page1Svg,
+    page2Png,
+    page2Svg,
+    page3Png,
+    page3Svg,
+    page4Png,
+    page4Svg,
   ];
 }
 

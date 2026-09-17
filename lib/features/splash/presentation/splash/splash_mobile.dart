@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hancod_theme/hancod_theme.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:zenio/features/onboarding/controller/onboarding_controller.dart';
 import 'package:zenio/features/splash/presentation/widgets/animated_zenio_logo.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/utils/router.dart';
@@ -57,14 +59,27 @@ class _SplashScreenMobileState extends State<SplashScreenMobile>
     _controller.forward();
 
     _navigationTimer =
-        Timer(const Duration(milliseconds: 2600), _navigateToHome);
+        Timer(const Duration(milliseconds: 2600), _navigateToNext);
   }
 
-  void _navigateToHome() {
+  Future<void> _navigateToNext() async {
     if (_hasNavigated || !mounted) return;
     _hasNavigated = true;
     _navigationTimer?.cancel();
-    context.goNamed(AppRouter.home);
+
+    var hasSeenOnboarding = false;
+    try {
+      final sp = await SharedPreferences.getInstance();
+      hasSeenOnboarding =
+          sp.getBool(OnboardingController.keyHasSeenOnboarding) ?? false;
+    } catch (_) {}
+
+    if (!mounted) return;
+    if (hasSeenOnboarding) {
+      context.goNamed(AppRouter.home);
+    } else {
+      context.goNamed(AppRouter.onboarding);
+    }
   }
 
   @override
@@ -88,7 +103,7 @@ class _SplashScreenMobileState extends State<SplashScreenMobile>
         systemNavigationBarDividerColor: Colors.transparent,
       ),
       child: GestureDetector(
-        onTap: _navigateToHome,
+        onTap: _navigateToNext,
         behavior: HitTestBehavior.opaque,
         child: Scaffold(
           backgroundColor: AppColors.black,

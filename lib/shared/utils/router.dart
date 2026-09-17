@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:zenio/features/home/home.dart';
+import 'package:zenio/features/onboarding/onboarding.dart';
 import 'package:zenio/features/splash/splash.dart';
 import 'package:zenio/shared/shared.dart';
 
@@ -59,6 +60,7 @@ class AppRouter {
 
   static const String home = 'home';
   static const String splash = 'splash';
+  static const String onboarding = 'onboarding';
   static const String login = 'login';
 
   late final GoRouter router = GoRouter(
@@ -70,6 +72,14 @@ class AppRouter {
         path: '/splash',
         name: splash,
         builder: (context, state) => const SplashScreen(),
+      ),
+      GoRoute(
+        path: '/onboarding',
+        name: onboarding,
+        pageBuilder: (context, state) => fadeTransition(
+          state,
+          const OnboardingScreen(),
+        ),
       ),
       GoRoute(
         path: '/',
