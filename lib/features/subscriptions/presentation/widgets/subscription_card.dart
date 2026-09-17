@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:zenio/features/subscriptions/controller/categories/subscription_categories_notifier.dart';
 import 'package:zenio/features/subscriptions/domain/models/subscription_model.dart';
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
+import 'package:zenio/shared/shared.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/widgets/swipe_delete_button.dart';
 
@@ -315,10 +316,10 @@ class _SubscriptionCardState extends ConsumerState<SubscriptionCard>
                               children: [
                                 Text(
                                   _formatAmount(widget.subscription.amount),
-                                  style: const TextStyle(
+                                  style: AppFonts.numeric(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
-                                    color: Color(0xFF000000),
+                                    color: const Color(0xFF000000),
                                   ),
                                 ),
                                 const SizedBox(width: 4),
@@ -380,10 +381,10 @@ class _SubscriptionCardState extends ConsumerState<SubscriptionCard>
                                   const SizedBox(height: 4),
                                   Text(
                                     formattedNextBillingDate,
-                                    style: const TextStyle(
+                                    style: AppFonts.numeric(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w400,
-                                      color: Color(0xFF111111),
+                                      color: const Color(0xFF111111),
                                     ),
                                   ),
                                 ],

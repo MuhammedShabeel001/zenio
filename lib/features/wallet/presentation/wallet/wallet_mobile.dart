@@ -5,13 +5,14 @@ import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
 import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
 import 'package:zenio/features/wallet/presentation/widgets/wallet_card_detail_widget.dart';
 import 'package:zenio/features/wallet/presentation/widgets/wallet_card_widget.dart';
+import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
+import 'package:zenio/shared/providers/default_wallet_provider/default_wallet_provider.dart';
+import 'package:zenio/shared/shared.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/widgets/add_transaction_bottom_sheet.dart';
 import 'package:zenio/features/wallet/presentation/widgets/add_wallet_bottom_sheet.dart';
 import 'package:zenio/features/wallet/presentation/widgets/wallet_settings_bottom_sheet.dart';
 import 'package:zenio/features/wallet/presentation/widgets/top_up_wallet_bottom_sheet.dart';
-import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
-import 'package:zenio/shared/providers/default_wallet_provider/default_wallet_provider.dart';
 import 'package:zenio/shared/widgets/custom_navigation_bar.dart';
 
 class WalletScreenMobile extends ConsumerStatefulWidget {
@@ -121,7 +122,7 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                               children: [
                                 TextSpan(
                                   text: '$currencySymbol ',
-                                  style: const TextStyle(
+                                  style: AppFonts.numeric(
                                     fontSize: 32,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.white,
@@ -130,7 +131,7 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                                 ),
                                 TextSpan(
                                   text: _formatWholePart(displayBalance),
-                                  style: const TextStyle(
+                                  style: AppFonts.numeric(
                                     fontSize: 32,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.white,
@@ -139,10 +140,10 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                                 ),
                                 TextSpan(
                                   text: _formatDecimalPart(displayBalance),
-                                  style: const TextStyle(
+                                  style: AppFonts.numeric(
                                     fontSize: 24,
                                     fontWeight: FontWeight.bold,
-                                    color: Color(0xFF808080),
+                                    color: const Color(0xFF808080),
                                   ),
                                 ),
                               ],
@@ -782,8 +783,8 @@ class WalletCardDetailRoute extends ConsumerWidget {
                           RichText(
                             text: TextSpan(
                               children: [
-                                TextSpan(text: '$currencySymbol ', style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
-                                const TextSpan(text: '0', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
+                                TextSpan(text: '$currencySymbol ', style: AppFonts.numeric(fontSize: 32, fontWeight: FontWeight.bold)),
+                                TextSpan(text: '0', style: AppFonts.numeric(fontSize: 32, fontWeight: FontWeight.bold)),
                               ],
                             ),
                           ),

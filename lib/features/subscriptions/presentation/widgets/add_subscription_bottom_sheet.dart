@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:zenio/features/subscriptions/controller/categories/subscription_categories_notifier.dart';
 import 'package:zenio/features/subscriptions/controller/subscriptions/subscriptions_notifier.dart';
 import 'package:zenio/features/subscriptions/domain/models/subscription_model.dart';
 import 'package:zenio/features/transactions/domain/models/category_item_model.dart';
 import 'package:zenio/features/transactions/presentation/widgets/manage_categories_bottom_sheet.dart';
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
+import 'package:zenio/shared/utils/app_fonts.dart';
 
 class AddSubscriptionBottomSheet extends ConsumerStatefulWidget {
   const AddSubscriptionBottomSheet({super.key});
@@ -64,6 +66,16 @@ class _AddSubscriptionBottomSheetState
       initialDate: _selectedDate,
       firstDate: DateTime(2020),
       lastDate: DateTime(2035),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            textTheme: GoogleFonts.instrumentSansTextTheme(
+              Theme.of(context).textTheme,
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
     if (picked != null) {
       setState(() {
@@ -222,17 +234,17 @@ class _AddSubscriptionBottomSheetState
                   }
                   setState(() {});
                 },
-                style: const TextStyle(
+                style: AppFonts.numeric(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF111111),
+                  color: const Color(0xFF111111),
                 ),
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   hintText: '0',
-                  hintStyle: TextStyle(
+                  hintStyle: AppFonts.numeric(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF9E9EA5),
+                    color: const Color(0xFF9E9EA5),
                   ),
                   isDense: true,
                   filled: false,
@@ -439,10 +451,10 @@ class _AddSubscriptionBottomSheetState
                     Expanded(
                       child: Text(
                         formattedDate,
-                        style: const TextStyle(
+                        style: AppFonts.numeric(
                           fontSize: 14,
                           fontWeight: FontWeight.w400,
-                          color: Color(0xFF000000),
+                          color: const Color(0xFF000000),
                         ),
                       ),
                     ),

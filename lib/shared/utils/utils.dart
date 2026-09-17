@@ -1,4 +1,5 @@
 export 'alert.dart';
+export 'app_fonts.dart';
 export 'datetime.dart';
 export 'downloader/downloader.dart';
 export 'excel.dart';

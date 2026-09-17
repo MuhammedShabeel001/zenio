@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
+import 'package:zenio/shared/shared.dart';
 
 class EditWalletBalanceBottomSheet extends ConsumerStatefulWidget {
   const EditWalletBalanceBottomSheet({
@@ -151,15 +152,15 @@ class _EditWalletBalanceBottomSheetState extends ConsumerState<EditWalletBalance
                     );
                   }
                 },
-                style: const TextStyle(
+                style: AppFonts.numeric(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                   color: Colors.black,
                 ),
                 decoration: InputDecoration(
                   hintText: _mode == 'set' ? 'Enter exact balance' : 'Enter amount',
-                  hintStyle: const TextStyle(
-                    color: Color(0xFFA0A0A0),
+                  hintStyle: AppFonts.numeric(
+                    color: const Color(0xFFA0A0A0),
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                   ),

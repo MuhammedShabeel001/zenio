@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:zenio/features/vault/controller/vault/vault_notifier.dart';
 import 'package:zenio/features/vault/controller/vault/vault_state.dart';
 import 'package:zenio/features/vault/domain/models/vault_card_model.dart';
 import 'package:zenio/features/vault/domain/models/vault_note_model.dart';
+import 'package:zenio/shared/utils/app_fonts.dart';
 
 class AddVaultItemBottomSheet extends ConsumerStatefulWidget {
   final VaultMode mode;
@@ -70,6 +72,16 @@ class _AddVaultItemBottomSheetState
       initialDate: _selectedDate,
       firstDate: DateTime(2020),
       lastDate: DateTime(2100),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            textTheme: GoogleFonts.instrumentSansTextTheme(
+              Theme.of(context).textTheme,
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
     if (picked != null && picked != _selectedDate) {
       setState(() {
@@ -157,6 +169,7 @@ class _AddVaultItemBottomSheetState
     List<TextInputFormatter>? inputFormatters,
     int minLines = 1,
     int maxLines = 1,
+    bool isNumeric = false,
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
@@ -171,18 +184,30 @@ class _AddVaultItemBottomSheetState
         inputFormatters: inputFormatters,
         minLines: minLines,
         maxLines: maxLines,
-        style: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w500,
-          color: Color(0xFF111111),
-        ),
+        style: isNumeric
+            ? AppFonts.numeric(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFF111111),
+              )
+            : const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF111111),
+              ),
         decoration: InputDecoration(
           hintText: hintText,
-          hintStyle: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-            color: Color(0xFF9E9EA5),
-          ),
+          hintStyle: isNumeric
+              ? AppFonts.numeric(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xFF9E9EA5),
+                )
+              : const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF9E9EA5),
+                ),
           isDense: true,
           filled: false,
           fillColor: Colors.transparent,
@@ -264,6 +289,7 @@ class _AddVaultItemBottomSheetState
                 _cardNumberController,
                 'Card Number',
                 keyboardType: TextInputType.number,
+                isNumeric: true,
                 inputFormatters: [
                   FilteringTextInputFormatter.digitsOnly,
                   LengthLimitingTextInputFormatter(19),
@@ -273,6 +299,7 @@ class _AddVaultItemBottomSheetState
                 _expiryController,
                 'Expiry (MM/YY)',
                 keyboardType: TextInputType.datetime,
+                isNumeric: true,
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp('^[0-9/]*')),
                   LengthLimitingTextInputFormatter(5),
@@ -282,6 +309,7 @@ class _AddVaultItemBottomSheetState
                 _cvvController,
                 'CVV',
                 keyboardType: TextInputType.number,
+                isNumeric: true,
                 inputFormatters: [
                   FilteringTextInputFormatter.digitsOnly,
                   LengthLimitingTextInputFormatter(4),
@@ -320,10 +348,10 @@ class _AddVaultItemBottomSheetState
                       Expanded(
                         child: Text(
                           formattedDate,
-                          style: const TextStyle(
+                          style: AppFonts.numeric(
                             fontSize: 14,
                             fontWeight: FontWeight.w400,
-                            color: Color(0xFF000000),
+                            color: const Color(0xFF000000),
                           ),
                         ),
                       ),

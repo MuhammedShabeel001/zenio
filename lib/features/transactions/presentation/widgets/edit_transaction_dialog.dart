@@ -10,7 +10,9 @@ import 'package:zenio/features/transactions/presentation/widgets/manage_categori
 import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
 import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
 import 'package:zenio/features/wallet/presentation/widgets/add_wallet_bottom_sheet.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
+import 'package:zenio/shared/utils/app_fonts.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/widgets/zenio_dropdown.dart';
 
@@ -134,6 +136,16 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
       initialDate: _selectedDate,
       firstDate: DateTime(2020),
       lastDate: DateTime(2030),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            textTheme: GoogleFonts.instrumentSansTextTheme(
+              Theme.of(context).textTheme,
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
     if (picked != null) {
       setState(() {
@@ -364,7 +376,7 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                   children: [
                     Text(
                       '$currencySymbol ',
-                      style: TextStyle(
+                      style: AppFonts.numeric(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                         color: isExceedingBalance
@@ -390,15 +402,20 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                           }
                           setState(() {});
                         },
-                        style: TextStyle(
+                        style: AppFonts.numeric(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
                           color: isExceedingBalance
                               ? const Color(0xFFDD3D34)
                               : const Color(0xFF111111),
                         ),
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           hintText: '0',
+                          hintStyle: AppFonts.numeric(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF9E9EA5),
+                          ),
                           isDense: true,
                           filled: false,
                           fillColor: Colors.transparent,
@@ -766,9 +783,10 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                       Expanded(
                         child: Text(
                           formattedDate,
-                          style: const TextStyle(
+                          style: AppFonts.numeric(
                             fontSize: 14,
-                            color: Color(0xFF000000),
+                            fontWeight: FontWeight.w400,
+                            color: const Color(0xFF000000),
                           ),
                         ),
                       ),

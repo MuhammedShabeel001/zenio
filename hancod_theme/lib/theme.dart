@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:hancod_theme/hancod_theme.dart';
 
 // This is to prevent transitions on web
@@ -34,7 +35,8 @@ class AppTheme {
   static const double textFieldBorderRadius = 8;
   static final lightTheme = ThemeData(
     useMaterial3: false,
-    fontFamily: 'Inter',
+    fontFamily: GoogleFonts.montserrat().fontFamily,
+    textTheme: GoogleFonts.montserratTextTheme(),
     colorSchemeSeed: AppColors.brandViolet,
     scaffoldBackgroundColor: AppColors.white,
     inputDecorationTheme: InputDecorationTheme(
@@ -57,7 +59,10 @@ class AppTheme {
     ),
     appBarTheme: AppBarTheme(
       backgroundColor: AppColors.white,
-      titleTextStyle: AppText.largeSB.copyWith(color: AppColors.black),
+      titleTextStyle: AppText.largeSB.copyWith(
+        color: AppColors.black,
+        fontFamily: GoogleFonts.montserrat().fontFamily,
+      ),
       elevation: 0,
     ),
     menuTheme: MenuThemeData(
@@ -75,11 +80,13 @@ class AppTheme {
         alignment: Alignment.center,
       ),
     ),
-    pageTransitionsTheme: const NoTransitionsOnWeb(), dialogTheme: const DialogThemeData(backgroundColor: AppColors.white),
+    pageTransitionsTheme: const NoTransitionsOnWeb(),
+    dialogTheme: const DialogThemeData(backgroundColor: AppColors.white),
   );
   static final darkTheme = ThemeData(
     useMaterial3: false,
-    fontFamily: 'Inter',
+    fontFamily: GoogleFonts.montserrat().fontFamily,
+    textTheme: GoogleFonts.montserratTextTheme(),
     colorSchemeSeed: AppColors.primaryColor,
   );
   static const _inputBorder = OutlineInputBorder(

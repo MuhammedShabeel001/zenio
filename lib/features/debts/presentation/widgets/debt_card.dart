@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:zenio/features/debts/domain/models/debt_model.dart';
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
+import 'package:zenio/shared/shared.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/widgets/swipe_delete_button.dart';
 
@@ -303,10 +304,10 @@ class _DebtCardState extends ConsumerState<DebtCard>
                           children: [
                             Text(
                               _formatAmount(widget.debt.amount),
-                              style: const TextStyle(
+                              style: AppFonts.numeric(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF000000),
+                                color: const Color(0xFF000000),
                               ),
                             ),
                             const SizedBox(width: 4),

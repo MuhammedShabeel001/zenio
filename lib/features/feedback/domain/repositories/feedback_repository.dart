@@ -61,6 +61,20 @@ class FeedbackRepository implements IFeedbackRepository {
         );
       }
     } on DioException catch (e) {
+      if (e.type == DioExceptionType.connectionError ||
+          e.error.toString().contains('Failed host lookup') ||
+          e.error.toString().contains('SocketException') ||
+          (e.message?.contains('Failed host lookup') ?? false)) {
+        throw Exception(
+          'Unable to reach the server. Please check your internet connection and try again.',
+        );
+      } else if (e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.receiveTimeout ||
+          e.type == DioExceptionType.sendTimeout) {
+        throw Exception(
+          'Connection timed out. Please check your network and try again.',
+        );
+      }
       throw Exception(
         e.response?.data?.toString() ?? e.message ?? 'Network error occurred while submitting feedback.',
       );

@@ -6,6 +6,7 @@ import 'package:zenio/features/subscriptions/presentation/widgets/add_subscripti
 import 'package:zenio/features/subscriptions/presentation/widgets/edit_subscription_dialog.dart';
 import 'package:zenio/features/subscriptions/presentation/widgets/subscription_card.dart';
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
+import 'package:zenio/shared/shared.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 
 class SubscriptionsScreenMobile extends ConsumerStatefulWidget {
@@ -64,7 +65,7 @@ class _SubscriptionsScreenMobileState
                           children: [
                             TextSpan(
                               text: '$currencySymbol ',
-                              style: const TextStyle(
+                              style: AppFonts.numeric(
                                 fontSize: 32,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,
@@ -73,7 +74,7 @@ class _SubscriptionsScreenMobileState
                             ),
                             TextSpan(
                               text: _formatWholePart(totalBalance),
-                              style: const TextStyle(
+                              style: AppFonts.numeric(
                                 fontSize: 32,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,
@@ -82,10 +83,10 @@ class _SubscriptionsScreenMobileState
                             ),
                             TextSpan(
                               text: _formatDecimalPart(totalBalance),
-                              style: const TextStyle(
+                              style: AppFonts.numeric(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF808080),
+                                color: const Color(0xFF808080),
                               ),
                             ),
                           ],

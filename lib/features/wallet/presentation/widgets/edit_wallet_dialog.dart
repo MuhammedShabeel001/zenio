@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
 import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
+import 'package:zenio/shared/utils/app_fonts.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/widgets/zenio_dropdown.dart';
 
@@ -294,17 +295,17 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
                   inputFormatters: [
                     FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
                   ],
-                  style: const TextStyle(
+                  style: AppFonts.numeric(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF111111),
+                    color: const Color(0xFF111111),
                   ),
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     hintText: '0.00',
-                    hintStyle: TextStyle(
+                    hintStyle: AppFonts.numeric(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF9E9EA5),
+                      color: const Color(0xFF9E9EA5),
                     ),
                     isDense: true,
                     filled: false,
@@ -484,16 +485,16 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
                           FilteringTextInputFormatter.digitsOnly,
                           LengthLimitingTextInputFormatter(19),
                         ],
-                        style: const TextStyle(
+                        style: AppFonts.numeric(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
-                          color: Color(0xFF111111),
+                          color: const Color(0xFF111111),
                         ),
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           hintText: 'Card number',
-                          hintStyle: TextStyle(
+                          hintStyle: AppFonts.numeric(
                             fontSize: 14,
-                            color: Color(0xFF9E9EA5),
+                            color: const Color(0xFF9E9EA5),
                           ),
                           isDense: true,
                           filled: false,

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:zenio/features/home/domain/models/transaction/transaction_model.dart';
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
+import 'package:zenio/shared/shared.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/utils/datetime.dart';
 import 'package:zenio/shared/widgets/swipe_delete_button.dart';
@@ -288,10 +289,10 @@ class _TransactionCardState extends ConsumerState<TransactionCard>
                       children: [
                         Text(
                           _formatAmount(widget.transaction.amount),
-                          style: const TextStyle(
+                          style: AppFonts.numeric(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF000000),
+                            color: const Color(0xFF000000),
                           ),
                         ),
                         const SizedBox(width: 4),

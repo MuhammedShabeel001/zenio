@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
 import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
+import 'package:zenio/shared/utils/app_fonts.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/widgets/zenio_dropdown.dart';
 
@@ -300,17 +301,17 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
                     );
                   }
                 },
-                style: TextStyle(
+                style: AppFonts.numeric(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                   color: widget.editingCard != null ? Colors.black54 : const Color(0xFF111111),
                 ),
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   hintText: '0.00',
-                  hintStyle: TextStyle(
+                  hintStyle: AppFonts.numeric(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF9E9EA5),
+                    color: const Color(0xFF9E9EA5),
                   ),
                   isDense: true,
                   filled: false,

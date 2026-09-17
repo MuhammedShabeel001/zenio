@@ -9,6 +9,7 @@ import 'package:zenio/features/transactions/controller/categories/categories_not
 import 'package:zenio/features/transactions/domain/models/category_item_model.dart';
 import 'package:zenio/features/transactions/presentation/widgets/manage_categories_bottom_sheet.dart';
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
+import 'package:zenio/shared/shared.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 
 enum CategorySortOption {
@@ -181,7 +182,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                           children: [
                             TextSpan(
                               text: '$currencySymbol ',
-                              style: const TextStyle(
+                              style: AppFonts.numeric(
                                 fontSize: 32,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,
@@ -190,7 +191,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                             ),
                             TextSpan(
                               text: _formatWholePart(totalBalance),
-                              style: const TextStyle(
+                              style: AppFonts.numeric(
                                 fontSize: 32,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,
@@ -199,10 +200,10 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                             ),
                             TextSpan(
                               text: _formatDecimalPart(totalBalance),
-                              style: const TextStyle(
+                              style: AppFonts.numeric(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF808080),
+                                color: const Color(0xFF808080),
                               ),
                             ),
                           ],
@@ -507,7 +508,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                   children: [
                     Text(
                       totalSpent > 0 ? '- ${_formatAmount(totalSpent)}' : '$currencySymbol 0',
-                      style: TextStyle(
+                      style: AppFonts.numeric(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: totalSpent > 0
@@ -631,10 +632,10 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                                 const SizedBox(height: 3),
                                 Text(
                                   '$currencySymbol ${_formatAmount(avgSpend)}',
-                                  style: const TextStyle(
+                                  style: AppFonts.numeric(
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold,
-                                    color: Color(0xFF111111),
+                                    color: const Color(0xFF111111),
                                   ),
                                 ),
                               ],
@@ -666,10 +667,10 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                                 const SizedBox(height: 3),
                                 Text(
                                   '$currencySymbol ${_formatAmount(maxSpend)}',
-                                  style: const TextStyle(
+                                  style: AppFonts.numeric(
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold,
-                                    color: Color(0xFF111111),
+                                    color: const Color(0xFF111111),
                                   ),
                                 ),
                               ],
@@ -769,10 +770,10 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                                 ),
                                 Text(
                                   '- $currencySymbol ${_formatAmount(tx.amount)}',
-                                  style: const TextStyle(
+                                  style: AppFonts.numeric(
                                     fontSize: 13,
                                     fontWeight: FontWeight.bold,
-                                    color: Color(0xFF111111),
+                                    color: const Color(0xFF111111),
                                   ),
                                 ),
                               ],

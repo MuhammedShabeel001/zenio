@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:zenio/shared/shared.dart';
 
 class SettingsItemTile extends StatelessWidget {
   const SettingsItemTile({
@@ -94,10 +95,10 @@ class SettingsItemTile extends StatelessWidget {
                     ),
                     child: Text(
                       badgeText!,
-                      style: const TextStyle(
+                      style: AppFonts.numeric(
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
-                        color: Color(0xFF8E8E93),
+                        color: const Color(0xFF8E8E93),
                       ),
                     ),
                   )

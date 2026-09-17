@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:zenio/features/home/controller/home/home_notifier.dart';
 import 'package:zenio/features/home/domain/models/transaction/transaction_model.dart';
 import 'package:zenio/features/transactions/controller/categories/categories_notifier.dart';
@@ -13,6 +14,7 @@ import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart'
 import 'package:zenio/features/wallet/presentation/widgets/add_wallet_bottom_sheet.dart';
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/providers/default_wallet_provider/default_wallet_provider.dart';
+import 'package:zenio/shared/utils/app_fonts.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/widgets/zenio_dropdown.dart';
 
@@ -96,6 +98,16 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
       initialDate: _selectedDate,
       firstDate: DateTime(2020),
       lastDate: DateTime(2030),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            textTheme: GoogleFonts.instrumentSansTextTheme(
+              Theme.of(context).textTheme,
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
     if (picked != null) {
       setState(() {
@@ -333,7 +345,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                 children: [
                   Text(
                     '$currencySymbol ',
-                    style: TextStyle(
+                    style: AppFonts.numeric(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                       color: isExceedingBalance
@@ -360,19 +372,19 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                         }
                         setState(() {});
                       },
-                      style: TextStyle(
+                      style: AppFonts.numeric(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                         color: isExceedingBalance
                             ? const Color(0xFFDD3D34)
                             : const Color(0xFF111111),
                       ),
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         hintText: '0',
-                        hintStyle: TextStyle(
+                        hintStyle: AppFonts.numeric(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF9E9EA5),
+                          color: const Color(0xFF9E9EA5),
                         ),
                         isDense: true,
                         filled: false,
@@ -488,10 +500,10 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                     Expanded(
                       child: Text(
                         formattedDate,
-                        style: const TextStyle(
+                        style: AppFonts.numeric(
                           fontSize: 14,
-                          fontWeight: FontWeight.w300,
-                          color: Color(0xFF000000),
+                          fontWeight: FontWeight.w400,
+                          color: const Color(0xFF000000),
                         ),
                       ),
                     ),

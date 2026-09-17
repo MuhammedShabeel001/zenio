@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:zenio/shared/utils/app_fonts.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 
 class ZenioDropdownItem<T> {
@@ -123,7 +124,7 @@ class ZenioDropdown<T> extends StatelessWidget {
                                 const SizedBox(width: 6),
                                 Text(
                                   '(${item.subtitle!})',
-                                  style: TextStyle(
+                                  style: AppFonts.numeric(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w500,
                                     color: item.subtitleColor ??
@@ -188,7 +189,7 @@ class ZenioDropdown<T> extends StatelessWidget {
                           const SizedBox(width: 6),
                           Text(
                             '(${selectedItem!.subtitle})',
-                            style: TextStyle(
+                            style: AppFonts.numeric(
                               fontSize: 13,
                               fontWeight: FontWeight.w500,
                               color: selectedItem.subtitleColor ??

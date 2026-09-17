@@ -13,6 +13,7 @@ import 'package:zenio/features/transactions/transactions.dart';
 import 'package:zenio/features/vault/vault.dart';
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/services/services.dart';
+import 'package:zenio/shared/utils/app_fonts.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/widgets/widgets.dart';
 import 'package:zenio/features/transactions/presentation/widgets/edit_transaction_dialog.dart';
@@ -99,7 +100,7 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                               children: [
                                 TextSpan(
                                   text: '$currencySymbol ',
-                                  style: const TextStyle(
+                                  style: AppFonts.numeric(
                                     fontSize: 32,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.white,
@@ -108,7 +109,7 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                                 ),
                                 TextSpan(
                                   text: _formatWholePart(totalBalance),
-                                  style: const TextStyle(
+                                  style: AppFonts.numeric(
                                     fontSize: 32,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.white,
@@ -117,10 +118,10 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                                 ),
                                 TextSpan(
                                   text: _formatDecimalPart(totalBalance),
-                                  style: const TextStyle(
+                                  style: AppFonts.numeric(
                                     fontSize: 24,
                                     fontWeight: FontWeight.bold,
-                                    color: Color(0xFF808080),
+                                    color: const Color(0xFF808080),
                                   ),
                                 ),
                               ],
@@ -382,7 +383,7 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                               const SizedBox(height: 16),
                               Text(
                                 '$currencySymbol ${NumberFormat('#,##0.00').format(income)}',
-                                style: const TextStyle(
+                                style: AppFonts.numeric(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.white,
@@ -391,7 +392,7 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                               const SizedBox(height: 6),
                               Text(
                                 formattedIncomeChange,
-                                style: TextStyle(
+                                style: AppFonts.numeric(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w600,
                                   color: incomeChangeColor,
@@ -440,7 +441,7 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                               const SizedBox(height: 16),
                               Text(
                                 '$currencySymbol ${NumberFormat('#,##0.00').format(expense)}',
-                                style: const TextStyle(
+                                style: AppFonts.numeric(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.white,
@@ -449,7 +450,7 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                               const SizedBox(height: 6),
                               Text(
                                 formattedExpenseChange,
-                                style: TextStyle(
+                                style: AppFonts.numeric(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w600,
                                   color: expenseChangeColor,

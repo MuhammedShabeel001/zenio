@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:hancod_theme/hancod_theme.dart';
 import 'package:zenio/features/splash/presentation/widgets/animated_zenio_logo.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
@@ -55,7 +56,8 @@ class _SplashScreenMobileState extends State<SplashScreenMobile>
 
     _controller.forward();
 
-    _navigationTimer = Timer(const Duration(milliseconds: 2600), _navigateToHome);
+    _navigationTimer =
+        Timer(const Duration(milliseconds: 2600), _navigateToHome);
   }
 
   void _navigateToHome() {
@@ -140,13 +142,12 @@ class _SplashScreenMobileState extends State<SplashScreenMobile>
                           const SizedBox(height: 8),
                           FadeTransition(
                             opacity: _subtitleFade,
-                            child: const Text(
-                              'by aureo',
-                              style: TextStyle(
-                                fontFamily: 'Inter',
+                            child: Text(
+                              'by auren',
+                              style: GoogleFonts.montserrat(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w400,
-                                color: Color(0xFF8E8E93),
+                                color: const Color(0xFF8E8E93),
                                 letterSpacing: 0.6,
                               ),
                             ),

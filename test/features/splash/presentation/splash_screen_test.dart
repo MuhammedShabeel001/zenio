@@ -12,8 +12,8 @@ void main() {
         ),
       );
 
-      // Verify that the 'by aureo' subtitle text is present in the tree
-      expect(find.text('by aureo'), findsOneWidget);
+      // Verify that the 'by auren' subtitle text is present in the tree
+      expect(find.text('by auren'), findsOneWidget);
       expect(find.byType(AnimatedZenioLogo), findsOneWidget);
 
       // Allow animation to progress through reveal and shine sweep
@@ -32,7 +32,7 @@ void main() {
         ),
       );
 
-      expect(find.text('by aureo'), findsOneWidget);
+      expect(find.text('by auren'), findsOneWidget);
       expect(find.byType(AnimatedZenioLogo), findsOneWidget);
       await tester.pump(const Duration(milliseconds: 1000));
     });
@@ -48,7 +48,7 @@ void main() {
         ),
       );
 
-      expect(find.text('by aureo'), findsOneWidget);
+      expect(find.text('by auren'), findsOneWidget);
       expect(find.byType(AnimatedZenioLogo), findsOneWidget);
       await tester.pump(const Duration(milliseconds: 1000));
     });

@@ -735,19 +735,19 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                             ),
                             onTap: () => FeedbackBottomSheet.show(context),
                           ),
-                          SettingsItemTile(
-                            title: 'Contact support',
-                            icon: Assets.icons.support.svg(
-                              width: 24,
-                              height: 24,
-                              colorFilter: const ColorFilter.mode(
-                                Color(0xFF111111),
-                                BlendMode.srcIn,
-                              ),
-                            ),
-                            iconBgColor: const Color(0xFFE6F3FF),
-                            badgeText: settings.supportEmail,
-                          ),
+                          // SettingsItemTile(
+                          //   title: 'Contact support',
+                          //   icon: Assets.icons.support.svg(
+                          //     width: 24,
+                          //     height: 24,
+                          //     colorFilter: const ColorFilter.mode(
+                          //       Color(0xFF111111),
+                          //       BlendMode.srcIn,
+                          //     ),
+                          //   ),
+                          //   iconBgColor: const Color(0xFFE6F3FF),
+                          //   badgeText: settings.supportEmail,
+                          // ),
                           SettingsItemTile(
                             title: 'Version',
                             icon: Assets.icons.info.svg(

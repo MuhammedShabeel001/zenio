@@ -8,6 +8,7 @@ import 'package:zenio/features/analytics/presentation/widgets/category_legend_wi
 import 'package:zenio/features/analytics/presentation/widgets/donut_chart_widget.dart';
 import 'package:zenio/features/analytics/presentation/widgets/top_spent_card.dart';
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
+import 'package:zenio/shared/shared.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/widgets/add_transaction_bottom_sheet.dart';
 import 'package:zenio/shared/widgets/custom_navigation_bar.dart';
@@ -90,7 +91,7 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
                       children: [
                         TextSpan(
                           text: '$currencySymbol ',
-                          style: const TextStyle(
+                          style: AppFonts.numeric(
                             fontSize: 32,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
@@ -99,7 +100,7 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
                         ),
                         TextSpan(
                           text: _formatWholePart(totalBalance),
-                          style: const TextStyle(
+                          style: AppFonts.numeric(
                             fontSize: 32,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
@@ -108,10 +109,10 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
                         ),
                         TextSpan(
                           text: _formatDecimalPart(totalBalance),
-                          style: const TextStyle(
+                          style: AppFonts.numeric(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF808080),
+                            color: const Color(0xFF808080),
                           ),
                         ),
                       ],
@@ -420,10 +421,10 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
                             calendarType: CalendarDatePicker2Type.range,
                             selectedDayHighlightColor: Colors.white,
                             selectedRangeHighlightColor: Colors.white.withOpacity(0.15),
-                            selectedDayTextStyle: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-                            dayTextStyle: const TextStyle(color: Colors.white),
-                            disabledDayTextStyle: const TextStyle(color: Color(0xFF313131)),
-                            yearTextStyle: const TextStyle(color: Colors.white),
+                            selectedDayTextStyle: AppFonts.numeric(color: Colors.black, fontWeight: FontWeight.bold),
+                            dayTextStyle: AppFonts.numeric(color: Colors.white),
+                            disabledDayTextStyle: AppFonts.numeric(color: const Color(0xFF313131)),
+                            yearTextStyle: AppFonts.numeric(color: Colors.white),
                             monthTextStyle: const TextStyle(color: Colors.white),
                             controlsTextStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                             weekdayLabelTextStyle: const TextStyle(color: Color(0xFFD1D1D6)),

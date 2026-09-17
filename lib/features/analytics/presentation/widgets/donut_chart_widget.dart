@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:zenio/features/analytics/domain/models/category_spend/category_spend_model.dart';
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
+import 'package:zenio/shared/shared.dart';
 
 class DonutChartWidget extends ConsumerStatefulWidget {
   const DonutChartWidget({
@@ -173,10 +174,10 @@ class _DonutChartWidgetState extends ConsumerState<DonutChartWidget> {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           textAlign: TextAlign.center,
-          style: const TextStyle(
+          style: AppFonts.numeric(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            color: Color(0xFF111111),
+            color: const Color(0xFF111111),
             letterSpacing: -0.5,
           ),
         ),
@@ -190,7 +191,7 @@ class _DonutChartWidgetState extends ConsumerState<DonutChartWidget> {
           ),
           child: Text(
             '${percent.toStringAsFixed(1)}%',
-            style: TextStyle(
+            style: AppFonts.numeric(
               fontSize: 11,
               fontWeight: FontWeight.bold,
               color: color,

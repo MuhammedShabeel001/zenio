@@ -4,6 +4,7 @@ import 'dart:developer';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zenio/app/app.dart';
 import 'package:zenio/shared/shared.dart';
@@ -60,6 +61,9 @@ Future<void> bootstrap(FutureOr<App> Function() builder) async {
   };
 
   WidgetsFlutterBinding.ensureInitialized();
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+  ]);
   try {
     await NotificationService.instance.initialize();
   } catch (e) {

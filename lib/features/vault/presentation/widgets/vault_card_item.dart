@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:zenio/features/vault/domain/models/vault_card_model.dart';
+import 'package:zenio/shared/shared.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/widgets/swipe_delete_button.dart';
 import 'package:zenio/shared/widgets/zenio_snack_bar.dart';
@@ -287,7 +288,7 @@ class _VaultCardItemState extends State<VaultCardItem>
                       children: [
                         Text(
                           widget.card.cardNumber,
-                          style: const TextStyle(
+                          style: AppFonts.numeric(
                             fontSize: 20,
                             fontWeight: FontWeight.w600,
                             color: Colors.white,
@@ -329,7 +330,7 @@ class _VaultCardItemState extends State<VaultCardItem>
                               children: [
                                 Text(
                                   widget.card.expiry,
-                                  style: const TextStyle(
+                                  style: AppFonts.numeric(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.white,
@@ -371,7 +372,7 @@ class _VaultCardItemState extends State<VaultCardItem>
                               children: [
                                 Text(
                                   widget.card.cvv,
-                                  style: const TextStyle(
+                                  style: AppFonts.numeric(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.white,

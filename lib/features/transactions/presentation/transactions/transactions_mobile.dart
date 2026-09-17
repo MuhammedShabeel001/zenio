@@ -6,6 +6,7 @@ import 'package:zenio/features/transactions/controller/transactions/transactions
 import 'package:zenio/features/transactions/presentation/widgets/transaction_detail_card.dart';
 import 'package:zenio/features/home/home.dart';
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
+import 'package:zenio/shared/shared.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/widgets/add_transaction_bottom_sheet.dart';
 import 'package:zenio/features/transactions/presentation/widgets/edit_transaction_dialog.dart';
@@ -68,7 +69,7 @@ class _TransactionsScreenMobileState
                           children: [
                             TextSpan(
                               text: '$currencySymbol ',
-                              style: const TextStyle(
+                              style: AppFonts.numeric(
                                 fontSize: 32,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,
@@ -77,7 +78,7 @@ class _TransactionsScreenMobileState
                             ),
                             TextSpan(
                               text: _formatWholePart(totalExpenses),
-                              style: const TextStyle(
+                              style: AppFonts.numeric(
                                 fontSize: 32,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,
@@ -86,10 +87,10 @@ class _TransactionsScreenMobileState
                             ),
                             TextSpan(
                               text: _formatDecimalPart(totalExpenses),
-                              style: const TextStyle(
+                              style: AppFonts.numeric(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF808080),
+                                color: const Color(0xFF808080),
                               ),
                             ),
                           ],
@@ -346,10 +347,10 @@ class _TransactionsScreenMobileState
                             calendarType: CalendarDatePicker2Type.range,
                             selectedDayHighlightColor: Colors.white,
                             selectedRangeHighlightColor: Colors.white.withOpacity(0.15),
-                            selectedDayTextStyle: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-                            dayTextStyle: const TextStyle(color: Colors.white),
-                            disabledDayTextStyle: const TextStyle(color: Color(0xFF313131)),
-                            yearTextStyle: const TextStyle(color: Colors.white),
+                            selectedDayTextStyle: AppFonts.numeric(color: Colors.black, fontWeight: FontWeight.bold),
+                            dayTextStyle: AppFonts.numeric(color: Colors.white),
+                            disabledDayTextStyle: AppFonts.numeric(color: const Color(0xFF313131)),
+                            yearTextStyle: AppFonts.numeric(color: Colors.white),
                             monthTextStyle: const TextStyle(color: Colors.white),
                             controlsTextStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                             weekdayLabelTextStyle: const TextStyle(color: Color(0xFFD1D1D6)),

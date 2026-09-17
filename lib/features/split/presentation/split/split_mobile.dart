@@ -8,6 +8,7 @@ import 'package:zenio/features/split/controller/split/split_state.dart';
 import 'package:zenio/features/split/domain/models/split_calculation_model.dart';
 import 'package:zenio/features/split/domain/services/split_share_service.dart';
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
+import 'package:zenio/shared/shared.dart';
 import 'package:zenio/shared/utils/alert.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 
@@ -113,7 +114,7 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
                     children: [
                       Text(
                         '$currencySymbol ',
-                        style: const TextStyle(
+                        style: AppFonts.numeric(
                           fontSize: 32,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
@@ -128,7 +129,7 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
                           inputFormatters: [
                             FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
                           ],
-                          style: const TextStyle(
+                          style: AppFonts.numeric(
                             fontSize: 32,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
@@ -148,12 +149,12 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
                             final parsed = double.tryParse(val) ?? 0.0;
                             notifier.setBillAmount(parsed);
                           },
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             hintText: '0.00',
-                            hintStyle: TextStyle(
+                            hintStyle: AppFonts.numeric(
                               fontSize: 32,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF808080),
+                              color: const Color(0xFF808080),
                               letterSpacing: -0.5,
                             ),
                             isDense: true,
@@ -477,10 +478,10 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
               padding: const EdgeInsets.symmetric(horizontal: 14),
               child: Text(
                 count.toString(),
-                style: const TextStyle(
+                style: AppFonts.numeric(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF000000),
+                  color: const Color(0xFF000000),
                 ),
               ),
             ),
@@ -508,7 +509,9 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
     );
   }
 
-  Widget _buildEqualSummaryContent({required double eachPersonPay}) {
+  Widget _buildEqualSummaryContent({
+    required double eachPersonPay,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisAlignment: MainAxisAlignment.center,
@@ -516,7 +519,7 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
         const Text(
           'Each person pay',
           style: TextStyle(
-            fontSize: 15,
+            fontSize: 13,
             fontWeight: FontWeight.w400,
             color: Color(0xFF9E9EA5),
           ),
@@ -524,10 +527,10 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
         const SizedBox(height: 2),
         Text(
           _formatCurrencyValue(eachPersonPay),
-          style: const TextStyle(
+          style: AppFonts.numeric(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: Color(0xFF111111),
+            color: const Color(0xFF111111),
           ),
         ),
       ],
@@ -557,10 +560,10 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
               const SizedBox(height: 2),
               Text(
                 _formatCurrencyValue(oneWayPay),
-                style: const TextStyle(
+                style: AppFonts.numeric(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF111111),
+                  color: const Color(0xFF111111),
                 ),
               ),
             ],
@@ -592,10 +595,10 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
               const SizedBox(height: 2),
               Text(
                 _formatCurrencyValue(returnersPay),
-                style: const TextStyle(
+                style: AppFonts.numeric(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF111111),
+                  color: const Color(0xFF111111),
                 ),
               ),
             ],

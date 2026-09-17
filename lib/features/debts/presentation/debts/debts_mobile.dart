@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:zenio/features/debts/controller/debts/debts_notifier.dart';
 import 'package:zenio/features/debts/presentation/widgets/debt_card.dart';
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
+import 'package:zenio/shared/shared.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/features/debts/presentation/widgets/add_debt_bottom_sheet.dart';
 import 'package:zenio/features/debts/presentation/widgets/edit_debt_dialog.dart';
@@ -75,7 +76,7 @@ class _DebtsScreenMobileState extends ConsumerState<DebtsScreenMobile> {
                           children: [
                             TextSpan(
                               text: '$currencySymbol ',
-                              style: const TextStyle(
+                              style: AppFonts.numeric(
                                 fontSize: 32,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,
@@ -84,7 +85,7 @@ class _DebtsScreenMobileState extends ConsumerState<DebtsScreenMobile> {
                             ),
                             TextSpan(
                               text: _formatWholePart(totalBalance),
-                              style: const TextStyle(
+                              style: AppFonts.numeric(
                                 fontSize: 32,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,
@@ -93,10 +94,10 @@ class _DebtsScreenMobileState extends ConsumerState<DebtsScreenMobile> {
                             ),
                             TextSpan(
                               text: _formatDecimalPart(totalBalance),
-                              style: const TextStyle(
+                              style: AppFonts.numeric(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF808080),
+                                color: const Color(0xFF808080),
                               ),
                             ),
                           ],

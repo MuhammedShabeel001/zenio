@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
+import 'package:zenio/shared/utils/app_fonts.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 
 class WalletCardWidget extends StatelessWidget {
@@ -106,7 +107,7 @@ class WalletCardWidget extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 12),
               child: Text(
                 '**** **** **** ${card.cardNumber.length >= 4 ? card.cardNumber.substring(card.cardNumber.length - 4) : card.cardNumber}',
-                style: const TextStyle(
+                style: AppFonts.numeric(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,

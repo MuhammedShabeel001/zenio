@@ -5,6 +5,7 @@ import 'package:zenio/features/analytics/domain/models/category_spend/category_s
 import 'package:zenio/features/subscriptions/controller/categories/subscription_categories_notifier.dart';
 import 'package:zenio/features/transactions/controller/categories/categories_notifier.dart';
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
+import 'package:zenio/shared/shared.dart';
 
 class TopSpentCard extends ConsumerWidget {
   const TopSpentCard({
@@ -222,10 +223,10 @@ class TopSpentCard extends ConsumerWidget {
                   children: [
                     Text(
                       '- ${_formatAmount(spend.amount)}',
-                      style: const TextStyle(
+                      style: AppFonts.numeric(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF111111),
+                        color: const Color(0xFF111111),
                       ),
                     ),
                     const SizedBox(width: 4),

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
-import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/features/wallet/presentation/widgets/wallet_card_widget.dart';
+import 'package:zenio/shared/shared.dart';
+import 'package:zenio/shared/utils/assets.gen.dart';
 class WalletCardDetailWidget extends StatelessWidget {
   const WalletCardDetailWidget({
     required this.card,
@@ -56,10 +57,10 @@ class WalletCardDetailWidget extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   card.cardNumber,
-                  style: const TextStyle(
+                  style: AppFonts.numeric(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF111111),
+                    color: const Color(0xFF111111),
                     letterSpacing: 0.5,
                   ),
                 ),
@@ -84,10 +85,10 @@ class WalletCardDetailWidget extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           card.createdAt ?? 'Unknown',
-                          style: const TextStyle(
+                          style: AppFonts.numeric(
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF111111),
+                            color: const Color(0xFF111111),
                           ),
                         ),
                       ],
