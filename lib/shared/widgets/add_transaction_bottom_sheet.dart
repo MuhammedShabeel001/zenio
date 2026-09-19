@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -255,7 +254,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
     final isSourceFrozen = selectedSourceCard?.isFrozen ?? false;
 
     // Live amount validation
-    final enteredAmount = double.tryParse(_amountController.text.trim()) ?? 0.0;
+    final enteredAmount = AppNumberFormat.parseAmount(_amountController.text);
     final isDebit = _selectedType == TransactionType.expense || _selectedType == TransactionType.transfer;
     final isExceedingBalance = isDebit && enteredAmount > availableBalance;
     final isInvalidAmount = enteredAmount <= 0;
@@ -358,16 +357,9 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                       keyboardType:
                           const TextInputType.numberWithOptions(decimal: true),
                       inputFormatters: [
-                        FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                        ThousandsSeparatorInputFormatter(),
                       ],
                       onChanged: (val) {
-                        if (val.length > 1 && val.startsWith('0') && !val.startsWith('0.')) {
-                          final newText = val.replaceFirst(RegExp(r'^0+'), '');
-                          _amountController.value = TextEditingValue(
-                            text: newText.isEmpty ? '0' : newText,
-                            selection: TextSelection.collapsed(offset: newText.length),
-                          );
-                        }
                         setState(() {});
                       },
                       style: AppFonts.numeric(
@@ -825,7 +817,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
               child: ElevatedButton(
                 onPressed: canSave
                     ? () {
-                        final amount = double.tryParse(_amountController.text) ?? 0.0;
+                        final amount = AppNumberFormat.parseAmount(_amountController.text);
                         final note = _noteController.text.trim();
                         final title = _selectedType == TransactionType.transfer
                             ? 'Transfer to $selectedDestination'

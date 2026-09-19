@@ -11,8 +11,9 @@ enum AnalyticsStatus {
 sealed class AnalyticsState with _$AnalyticsState {
   const factory AnalyticsState({
     @Default(AnalyticsStatus.initial) AnalyticsStatus status,
-    @Default(2678.01) double totalBalance,
+    @Default(0.0) double totalBalance,
     @Default('INR') String selectedCurrency,
+    @Default('All Wallets') String selectedWallet,
     @Default('Monthly') String selectedPeriod,
     @Default('September') String selectedTimeframe,
     @Default([]) List<CategorySpendModel> categorySpends,

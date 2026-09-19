@@ -16,7 +16,7 @@ part 'settings_notifier.g.dart';
 class SettingsNotifier extends _$SettingsNotifier {
   @override
   SettingsState build() {
-    _loadSettings();
+    Future.microtask(_loadSettings);
     return SettingsState.initial();
   }
 

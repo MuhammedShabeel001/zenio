@@ -14,6 +14,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/utils/app_fonts.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
+import 'package:zenio/shared/utils/datetime.dart';
 import 'package:zenio/shared/utils/formatters.dart';
 import 'package:zenio/shared/widgets/zenio_dropdown.dart';
 
@@ -89,28 +90,14 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
 
     final amount = tx.amount;
     _amountController = TextEditingController(
-      text: amount == amount.toInt() ? amount.toInt().toString() : amount.toString(),
+      text: AppNumberFormat.formatAmount(amount),
     );
 
     _noteController = TextEditingController(text: tx.note ?? '');
     _sourceWallet = tx.bankName ?? 'Cash';
 
     // Parse date safely
-    _selectedDate = DateTime.now();
-    if (tx.date.isNotEmpty) {
-      final dateStr = tx.date;
-      try {
-        _selectedDate = DateFormat('dd-MM-yyyy').parse(dateStr);
-      } catch (_) {
-        try {
-          _selectedDate = DateFormat('EEEE, MMMM d, yyyy').parse(dateStr);
-        } catch (_) {
-          try {
-            _selectedDate = DateTime.parse(dateStr);
-          } catch (_) {}
-        }
-      }
-    }
+    _selectedDate = DateTimeUtils.parseTransactionDate(tx.date) ?? DateTime.now();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(walletNotifierProvider.notifier).loadWalletData();
@@ -268,7 +255,7 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
     final isSourceFrozen = selectedSourceCard?.isFrozen ?? false;
 
     // Live amount validation
-    final enteredAmount = double.tryParse(_amountController.text.trim()) ?? 0.0;
+    final enteredAmount = AppNumberFormat.parseAmount(_amountController.text);
     final isDebit = !_isIncome; // Expense and transfer are debit
     final isExceedingBalance = isDebit && enteredAmount > availableBalance;
     final isInvalidAmount = enteredAmount <= 0;
@@ -388,16 +375,9 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                         keyboardType:
                             const TextInputType.numberWithOptions(decimal: true),
                         inputFormatters: [
-                          FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                          ThousandsSeparatorInputFormatter(),
                         ],
                         onChanged: (val) {
-                          if (val.length > 1 && val.startsWith('0') && !val.startsWith('0.')) {
-                            final newText = val.replaceFirst(RegExp(r'^0+'), '');
-                            _amountController.value = TextEditingValue(
-                              text: newText.isEmpty ? '0' : newText,
-                              selection: TextSelection.collapsed(offset: newText.length),
-                            );
-                          }
                           setState(() {});
                         },
                         style: AppFonts.numeric(
@@ -809,7 +789,7 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                   onPressed: canSave
                       ? () {
                           final amount =
-                              double.tryParse(_amountController.text) ?? 0.0;
+                              AppNumberFormat.parseAmount(_amountController.text);
                           if (amount <= 0) return;
 
                           final note = _noteController.text.trim();
@@ -826,10 +806,11 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                                     : 'General');
                           }
 
+                          final savedDate = DateFormat('dd-MM-yyyy').format(_selectedDate);
                           final updatedTx = TransactionModel(
                             id: widget.transaction.id,
                             title: title,
-                            date: formattedDate,
+                            date: savedDate,
                             amount: amount,
                             isIncome: _isIncome,
                             currency: currencyCode,

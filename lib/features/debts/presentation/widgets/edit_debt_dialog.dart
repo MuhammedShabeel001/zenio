@@ -6,7 +6,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:zenio/features/debts/controller/debts/debts_notifier.dart';
 import 'package:zenio/features/debts/domain/models/debt_model.dart';
 import 'package:zenio/features/debts/presentation/widgets/add_debt_bottom_sheet.dart';
+import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/utils/app_fonts.dart';
+import 'package:zenio/shared/utils/formatters.dart';
 
 class EditDebtDialog extends ConsumerStatefulWidget {
   const EditDebtDialog({
@@ -47,7 +49,7 @@ class _EditDebtDialogState extends ConsumerState<EditDebtDialog> {
 
     final amount = d.amount;
     _amountController = TextEditingController(
-      text: amount == amount.toInt() ? amount.toInt().toString() : amount.toString(),
+      text: AppNumberFormat.formatAmount(amount),
     );
     _personNameController = TextEditingController(text: d.personName);
     _noteController = TextEditingController(text: d.note ?? '');
@@ -102,7 +104,7 @@ class _EditDebtDialogState extends ConsumerState<EditDebtDialog> {
   }
 
   void _saveChanges() {
-    final amount = double.tryParse(_amountController.text) ?? 0.0;
+    final amount = AppNumberFormat.parseAmount(_amountController.text);
     final personName = _personNameController.text.trim();
     final note = _noteController.text.trim();
 
@@ -127,6 +129,7 @@ class _EditDebtDialogState extends ConsumerState<EditDebtDialog> {
   @override
   Widget build(BuildContext context) {
     final formattedDate = DateFormat('dd MMMM yyyy').format(_selectedDate);
+    final currencySymbol = ref.watch(currencySymbolProvider);
 
     final debtsState = ref.watch(debtsNotifierProvider);
     final existingNames = debtsState.debts
@@ -225,46 +228,53 @@ class _EditDebtDialogState extends ConsumerState<EditDebtDialog> {
                   color: const Color(0xFFF2F2F2),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: TextField(
-                  controller: _amountController,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-                  ],
-                  onChanged: (val) {
-                    if (val.length > 1 && val.startsWith('0') && !val.startsWith('0.')) {
-                      final newText = val.replaceFirst(RegExp(r'^0+'), '');
-                      _amountController.value = TextEditingValue(
-                        text: newText.isEmpty ? '0' : newText,
-                        selection: TextSelection.collapsed(offset: newText.length),
-                      );
-                    }
-                    setState(() {});
-                  },
-                  style: AppFonts.numeric(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF111111),
-                  ),
-                  decoration: InputDecoration(
-                    hintText: '0',
-                    hintStyle: AppFonts.numeric(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF9E9EA5),
+                child: Row(
+                  children: [
+                    Text(
+                      '$currencySymbol ',
+                      style: AppFonts.numeric(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF111111),
+                      ),
                     ),
-                    isDense: true,
-                    filled: false,
-                    fillColor: Colors.transparent,
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    disabledBorder: InputBorder.none,
-                    focusedErrorBorder: InputBorder.none,
-                    errorBorder: InputBorder.none,
-                    contentPadding: EdgeInsets.zero,
-                  ),
+                    Expanded(
+                      child: TextField(
+                        controller: _amountController,
+                        keyboardType:
+                            const TextInputType.numberWithOptions(decimal: true),
+                        inputFormatters: [
+                          ThousandsSeparatorInputFormatter(),
+                        ],
+                        onChanged: (val) {
+                          setState(() {});
+                        },
+                        style: AppFonts.numeric(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF111111),
+                        ),
+                        decoration: InputDecoration(
+                          hintText: '0',
+                          hintStyle: AppFonts.numeric(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF9E9EA5),
+                          ),
+                          isDense: true,
+                          filled: false,
+                          fillColor: Colors.transparent,
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          disabledBorder: InputBorder.none,
+                          focusedErrorBorder: InputBorder.none,
+                          errorBorder: InputBorder.none,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 6),

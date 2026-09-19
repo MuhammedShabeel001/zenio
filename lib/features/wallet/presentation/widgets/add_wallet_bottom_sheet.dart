@@ -1,12 +1,13 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
 import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
+import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/utils/app_fonts.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
+import 'package:zenio/shared/utils/formatters.dart';
 import 'package:zenio/shared/widgets/zenio_dropdown.dart';
 
 class AddWalletBottomSheet extends ConsumerStatefulWidget {
@@ -99,7 +100,7 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
     if (widget.editingCard != null) {
       final card = widget.editingCard!;
       _nameController.text = card.bankName;
-      _balanceController.text = card.balance.toStringAsFixed(2);
+      _balanceController.text = AppNumberFormat.formatAmount(card.balance);
 
       final upper = card.cardType.toUpperCase();
       final matchPreset = _presetTypes.firstWhere(
@@ -209,7 +210,7 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
       }
     }
 
-    final balance = double.tryParse(_balanceController.text.trim()) ?? 0.0;
+    final balance = AppNumberFormat.parseAmount(_balanceController.text);
     final isEditing = widget.editingCard != null;
 
     final r = Random();
@@ -261,6 +262,7 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final currencySymbol = ref.watch(currencySymbolProvider);
 
     return Container(
       decoration: const BoxDecoration(
@@ -318,45 +320,58 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
                 color: const Color(0xFFF2F2F2),
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: TextField(
-                controller: _balanceController,
-                readOnly: widget.editingCard != null,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-                ],
-                onChanged: (val) {
-                  if (val.length > 1 && val.startsWith('0') && !val.startsWith('0.')) {
-                    final newText = val.replaceFirst(RegExp('^0+'), '');
-                    _balanceController.value = TextEditingValue(
-                      text: newText.isEmpty ? '0' : newText,
-                      selection: TextSelection.collapsed(offset: newText.length),
-                    );
-                  }
-                },
-                style: AppFonts.numeric(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: widget.editingCard != null ? Colors.black54 : const Color(0xFF111111),
-                ),
-                decoration: InputDecoration(
-                  hintText: '0.00',
-                  hintStyle: AppFonts.numeric(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF9E9EA5),
+              child: Row(
+                children: [
+                  Text(
+                    '$currencySymbol ',
+                    style: AppFonts.numeric(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: widget.editingCard != null
+                          ? Colors.black54
+                          : const Color(0xFF111111),
+                    ),
                   ),
-                  isDense: true,
-                  filled: false,
-                  fillColor: Colors.transparent,
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  disabledBorder: InputBorder.none,
-                  focusedErrorBorder: InputBorder.none,
-                  errorBorder: InputBorder.none,
-                  contentPadding: EdgeInsets.zero,
-                ),
+                  Expanded(
+                    child: TextField(
+                      controller: _balanceController,
+                      readOnly: widget.editingCard != null,
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [
+                        ThousandsSeparatorInputFormatter(),
+                      ],
+                      onChanged: (val) {
+                        setState(() {});
+                      },
+                      style: AppFonts.numeric(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: widget.editingCard != null
+                            ? Colors.black54
+                            : const Color(0xFF111111),
+                      ),
+                      decoration: InputDecoration(
+                        hintText: '0.00',
+                        hintStyle: AppFonts.numeric(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF9E9EA5),
+                        ),
+                        isDense: true,
+                        filled: false,
+                        fillColor: Colors.transparent,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        disabledBorder: InputBorder.none,
+                        focusedErrorBorder: InputBorder.none,
+                        errorBorder: InputBorder.none,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 6),

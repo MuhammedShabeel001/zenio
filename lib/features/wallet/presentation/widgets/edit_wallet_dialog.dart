@@ -3,8 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
 import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
+import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/utils/app_fonts.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
+import 'package:zenio/shared/utils/formatters.dart';
 import 'package:zenio/shared/widgets/zenio_dropdown.dart';
 
 class EditWalletDialog extends ConsumerStatefulWidget {
@@ -74,9 +76,7 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
     
     final balance = card.balance;
     _balanceController = TextEditingController(
-      text: balance == balance.toInt()
-          ? balance.toInt().toString()
-          : balance.toStringAsFixed(2),
+      text: AppNumberFormat.formatAmount(balance),
     );
 
     // Load custom types from existing cards
@@ -199,7 +199,7 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
     final name = _nameController.text.trim();
     if (name.isEmpty) return;
 
-    final balance = double.tryParse(_balanceController.text.trim()) ?? widget.card.balance;
+    final balance = AppNumberFormat.parseAmount(_balanceController.text);
     final cardNumber = _cardNumberController.text.trim().isNotEmpty
         ? _cardNumberController.text.trim()
         : widget.card.cardNumber;
@@ -231,6 +231,7 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final currencySymbol = ref.watch(currencySymbolProvider);
     return Dialog(
       backgroundColor: Colors.white,
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
@@ -289,35 +290,53 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
                   color: const Color(0xFFF2F2F2),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: TextField(
-                  controller: _balanceController,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-                  ],
-                  style: AppFonts.numeric(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF111111),
-                  ),
-                  decoration: InputDecoration(
-                    hintText: '0.00',
-                    hintStyle: AppFonts.numeric(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF9E9EA5),
+                child: Row(
+                  children: [
+                    Text(
+                      '$currencySymbol ',
+                      style: AppFonts.numeric(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF111111),
+                      ),
                     ),
-                    isDense: true,
-                    filled: false,
-                    fillColor: Colors.transparent,
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    disabledBorder: InputBorder.none,
-                    focusedErrorBorder: InputBorder.none,
-                    errorBorder: InputBorder.none,
-                    contentPadding: EdgeInsets.zero,
-                  ),
+                    Expanded(
+                      child: TextField(
+                        controller: _balanceController,
+                        keyboardType:
+                            const TextInputType.numberWithOptions(decimal: true),
+                        inputFormatters: [
+                          ThousandsSeparatorInputFormatter(),
+                        ],
+                        onChanged: (val) {
+                          setState(() {});
+                        },
+                        style: AppFonts.numeric(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF111111),
+                        ),
+                        decoration: InputDecoration(
+                          hintText: '0.00',
+                          hintStyle: AppFonts.numeric(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF9E9EA5),
+                          ),
+                          isDense: true,
+                          filled: false,
+                          fillColor: Colors.transparent,
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          disabledBorder: InputBorder.none,
+                          focusedErrorBorder: InputBorder.none,
+                          errorBorder: InputBorder.none,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 6),

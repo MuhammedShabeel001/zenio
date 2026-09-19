@@ -7,6 +7,8 @@ import 'package:zenio/features/analytics/presentation/categories/categories_list
 import 'package:zenio/features/analytics/presentation/widgets/category_legend_widget.dart';
 import 'package:zenio/features/analytics/presentation/widgets/donut_chart_widget.dart';
 import 'package:zenio/features/analytics/presentation/widgets/top_spent_card.dart';
+import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
+import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/shared.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
@@ -63,6 +65,8 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(analyticsNotifierProvider);
+    final walletState = ref.watch(walletNotifierProvider);
+    final walletCards = walletState.cards;
     final totalBalance = state.totalBalance;
     final categories = state.categorySpends.take(10).toList();
     final shrinkProgress = (_scrollOffset / 60.0).clamp(0.0, 1.0);
@@ -80,42 +84,52 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Total Balance
-                  RichText(
-                    text: TextSpan(
-                      children: [
-                        TextSpan(
-                          text: '$currencySymbol ',
-                          style: AppFonts.numeric(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            letterSpacing: -0.5,
+                  // Top Row: Total Balance on Left, Wallet Dropdown on Top Right
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Total Balance
+                      Flexible(
+                        child: RichText(
+                          text: TextSpan(
+                            children: [
+                              TextSpan(
+                                text: '$currencySymbol ',
+                                style: AppFonts.numeric(
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                  letterSpacing: -0.5,
+                                ),
+                              ),
+                              TextSpan(
+                                text: _formatWholePart(totalBalance),
+                                style: AppFonts.numeric(
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                  letterSpacing: -0.5,
+                                ),
+                              ),
+                              TextSpan(
+                                text: _formatDecimalPart(totalBalance),
+                                style: AppFonts.numeric(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF808080),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        TextSpan(
-                          text: _formatWholePart(totalBalance),
-                          style: AppFonts.numeric(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                        TextSpan(
-                          text: _formatDecimalPart(totalBalance),
-                          style: AppFonts.numeric(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFF808080),
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(width: 8),
+                      _buildWalletPicker(state.selectedWallet, walletCards),
+                    ],
                   ),
                   const SizedBox(height: 20),
 
-                  // Filter Dropdown Pills Row (Week v, This Week v)
+                  // Filter Dropdown Pills Row (Period v, Timeframe v)
                   Row(
                     children: [
                       _buildPeriodPicker(state.selectedPeriod),
@@ -313,7 +327,11 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
     );
   }
 
-  Widget _buildFilterPill({required String label}) {
+  Widget _buildFilterPill({
+    required String label,
+    Widget? leading,
+    double? maxWidth,
+  }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
@@ -323,20 +341,222 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: Color(0xFFD1D1D6),
+          if (leading != null) ...[
+            leading,
+            const SizedBox(width: 6),
+          ],
+          if (maxWidth != null)
+            ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: maxWidth),
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFFD1D1D6),
+                ),
+              ),
+            )
+          else
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFFD1D1D6),
+              ),
             ),
-          ),
           const SizedBox(width: 8),
           Assets.icons.dropDown.svg(
             width: 24,
             height: 24,
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildWalletPicker(String selectedWallet, List<WalletCardModel> cards) {
+    final isAll = selectedWallet.trim().toLowerCase() == 'all wallets' ||
+        selectedWallet.trim().toLowerCase() == 'all';
+    final matchingCard = isAll
+        ? null
+        : cards.cast<WalletCardModel?>().firstWhere(
+              (c) =>
+                  c?.bankName.trim().toLowerCase() ==
+                  selectedWallet.trim().toLowerCase(),
+              orElse: () => null,
+            );
+
+    Widget leading;
+    if (isAll || matchingCard == null) {
+      leading = const Icon(
+        Icons.account_balance_wallet_rounded,
+        size: 15,
+        color: Color(0xFF2CC56F),
+      );
+    } else {
+      Color startColor;
+      Color endColor;
+      try {
+        var startHex = matchingCard.gradientStartHex.replaceAll('#', '').trim();
+        var endHex = matchingCard.gradientEndHex.replaceAll('#', '').trim();
+        if (startHex.length == 6) startHex = 'FF$startHex';
+        if (endHex.length == 6) endHex = 'FF$endHex';
+        startColor = Color(int.parse('0x$startHex'));
+        endColor = Color(int.parse('0x$endHex'));
+      } catch (_) {
+        startColor = const Color(0xFF2CC56F);
+        endColor = const Color(0xFF10B981);
+      }
+      leading = Container(
+        width: 12,
+        height: 12,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: LinearGradient(
+            colors: [startColor, endColor],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+      );
+    }
+
+    final uniqueBankNames = cards
+        .map((c) => c.bankName.trim())
+        .where((n) => n.isNotEmpty)
+        .toSet()
+        .toList();
+
+    return PopupMenuButton<String>(
+      offset: const Offset(0, 45),
+      elevation: 8,
+      constraints: const BoxConstraints(maxHeight: 300),
+      onSelected: (value) {
+        ref.read(analyticsNotifierProvider.notifier).updateWallet(value);
+      },
+      itemBuilder: (context) {
+        final items = <PopupMenuEntry<String>>[];
+
+        final isAllSelected = isAll;
+        items.add(
+          PopupMenuItem<String>(
+            value: 'All Wallets',
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.account_balance_wallet_rounded,
+                  size: 16,
+                  color: Color(0xFF2CC56F),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'All Wallets',
+                    style: TextStyle(
+                      color: isAllSelected ? Colors.white : const Color(0xFFD1D1D6),
+                      fontSize: 14,
+                      fontWeight:
+                          isAllSelected ? FontWeight.bold : FontWeight.w500,
+                    ),
+                  ),
+                ),
+                if (isAllSelected)
+                  const Icon(
+                    Icons.check_rounded,
+                    size: 18,
+                    color: Color(0xFF2CC56F),
+                  ),
+              ],
+            ),
+          ),
+        );
+
+        if (uniqueBankNames.isNotEmpty) {
+          items.add(
+            const PopupMenuDivider(height: 1),
+          );
+
+          for (final bank in uniqueBankNames) {
+            final card = cards.cast<WalletCardModel?>().firstWhere(
+                  (c) => c?.bankName.trim().toLowerCase() == bank.toLowerCase(),
+                  orElse: () => null,
+                );
+
+            Color sColor = const Color(0xFF2CC56F);
+            Color eColor = const Color(0xFF10B981);
+            if (card != null) {
+              try {
+                var startHex = card.gradientStartHex.replaceAll('#', '').trim();
+                var endHex = card.gradientEndHex.replaceAll('#', '').trim();
+                if (startHex.length == 6) startHex = 'FF$startHex';
+                if (endHex.length == 6) endHex = 'FF$endHex';
+                sColor = Color(int.parse('0x$startHex'));
+                eColor = Color(int.parse('0x$endHex'));
+              } catch (_) {}
+            }
+
+            final isSelected =
+                !isAll && selectedWallet.trim().toLowerCase() == bank.toLowerCase();
+
+            items.add(
+              PopupMenuItem<String>(
+                value: bank,
+                child: Row(
+                  children: [
+                    Container(
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          colors: [sColor, eColor],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        bank,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: isSelected ? Colors.white : const Color(0xFFD1D1D6),
+                          fontSize: 14,
+                          fontWeight:
+                              isSelected ? FontWeight.bold : FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    if (isSelected)
+                      const Icon(
+                        Icons.check_rounded,
+                        size: 18,
+                        color: Color(0xFF2CC56F),
+                      ),
+                  ],
+                ),
+              ),
+            );
+          }
+        }
+
+        return items;
+      },
+      color: const Color(0xFF1A1A1A),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: const BorderSide(color: Color(0xFF313131), width: 1),
+      ),
+      child: _buildFilterPill(
+        label: isAll ? 'All Wallets' : selectedWallet,
+        leading: leading,
+        maxWidth: 110,
       ),
     );
   }

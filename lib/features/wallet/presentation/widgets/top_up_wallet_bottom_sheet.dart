@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
 import 'package:zenio/shared/shared.dart';
@@ -42,8 +41,8 @@ class _EditWalletBalanceBottomSheetState extends ConsumerState<EditWalletBalance
     final amountText = _amountController.text.trim();
     if (amountText.isEmpty) return;
     
-    final amount = double.tryParse(amountText);
-    if (amount == null) return;
+    final amount = AppNumberFormat.parseAmount(amountText);
+    if (amount <= 0 && _mode != 'set') return;
 
     ref.read(walletNotifierProvider.notifier).updateCardBalance(widget.cardIndex, amount, mode: _mode);
     Navigator.of(context).pop();
@@ -82,6 +81,11 @@ class _EditWalletBalanceBottomSheetState extends ConsumerState<EditWalletBalance
 
   @override
   Widget build(BuildContext context) {
+    final walletState = ref.watch(walletNotifierProvider);
+    final card = widget.cardIndex < walletState.cards.length
+        ? walletState.cards[widget.cardIndex]
+        : null;
+    final currencySymbol = ref.watch(currencySymbolProvider);
 
     return Container(
       width: double.infinity,
@@ -106,18 +110,30 @@ class _EditWalletBalanceBottomSheetState extends ConsumerState<EditWalletBalance
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
             
-            const Text(
-              'Edit Balance',
-              style: TextStyle(
+            Text(
+              card?.bankName ?? 'Edit Balance',
+              style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: Colors.black,
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 24),
+            if (card != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                'Current: $currencySymbol ${AppNumberFormat.formatAmount(card.balance, alwaysShowDecimals: true)}',
+                style: AppFonts.numeric(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF8E8E93),
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+            const SizedBox(height: 20),
 
             Row(
               children: [
@@ -137,42 +153,50 @@ class _EditWalletBalanceBottomSheetState extends ConsumerState<EditWalletBalance
                 borderRadius: BorderRadius.circular(16),
               ),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: TextField(
-                controller: _amountController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-                ],
-                onChanged: (val) {
-                  if (val.length > 1 && val.startsWith('0') && !val.startsWith('0.')) {
-                    final newText = val.replaceFirst(RegExp(r'^0+'), '');
-                    _amountController.value = TextEditingValue(
-                      text: newText.isEmpty ? '0' : newText,
-                      selection: TextSelection.collapsed(offset: newText.length),
-                    );
-                  }
-                },
-                style: AppFonts.numeric(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                ),
-                decoration: InputDecoration(
-                  hintText: _mode == 'set' ? 'Enter exact balance' : 'Enter amount',
-                  hintStyle: AppFonts.numeric(
-                    color: const Color(0xFFA0A0A0),
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
+              child: Row(
+                children: [
+                  Text(
+                    '$currencySymbol ',
+                    style: AppFonts.numeric(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
                   ),
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  filled: false,
-                  fillColor: Colors.transparent,
-                  isDense: true,
-                  contentPadding: EdgeInsets.zero,
-                ),
-                autofocus: true,
+                  Expanded(
+                    child: TextField(
+                      controller: _amountController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [
+                        ThousandsSeparatorInputFormatter(),
+                      ],
+                      onChanged: (val) {
+                        setState(() {});
+                      },
+                      style: AppFonts.numeric(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: _mode == 'set' ? '0.00' : '0',
+                        hintStyle: AppFonts.numeric(
+                          color: const Color(0xFFA0A0A0),
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        filled: false,
+                        fillColor: Colors.transparent,
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      autofocus: true,
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 32),

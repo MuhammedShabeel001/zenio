@@ -45,92 +45,126 @@ class AppNumberFormat {
     final decimal = ((absAmount - absAmount.toInt()) * 100).round();
     return '.${decimal.toString().padLeft(2, '0')}';
   }
+
+  /// Parses an amount string that may contain thousands separators or currency symbols.
+  /// (e.g. '12,345.67' or '₹ 12,345' -> 12345.67)
+  static double parseAmount(String? text) {
+    if (text == null || text.trim().isEmpty) return 0;
+    final cleaned = text.replaceAll(',', '').replaceAll(RegExp(r'[^\d.-]'), '').trim();
+    return double.tryParse(cleaned) ?? 0;
+  }
 }
 
-class CurrencyInputFormatter extends TextInputFormatter {
-  CurrencyInputFormatter({
-    this.decimalRange = 2,
-    this.allowNegative = true,
-  });
+/// Automatically formats numbers entered into text fields with commas (thousands separators)
+/// as the user types (e.g. 12345.67 -> 12,345.67), while preserving cursor position.
+class ThousandsSeparatorInputFormatter extends TextInputFormatter {
+  ThousandsSeparatorInputFormatter({this.decimalRange = 2});
 
   final int decimalRange;
-  final bool allowNegative;
 
   @override
   TextEditingValue formatEditUpdate(
     TextEditingValue oldValue,
     TextEditingValue newValue,
   ) {
-    // If whole string is selected and deleted, return 0.00
     if (newValue.text.isEmpty) {
-      return const TextEditingValue(
-        text: '0',
-        selection: TextSelection.collapsed(offset: 0),
-      );
-    }
-    if (oldValue.text == '0') {
-      return TextEditingValue(
-        text: newValue.text.replaceFirst('0', ''),
-        selection: const TextSelection.collapsed(offset: 1),
-      );
+      return newValue;
     }
 
-    if (double.tryParse(newValue.text) == null) {
-      return const TextEditingValue(
-        text: '0',
-        selection: TextSelection.collapsed(offset: 0),
-      );
+    // Only allow digits, commas, and at most one decimal point
+    final stripped = newValue.text.replaceAll(',', '');
+    if (!RegExp(r'^\d*\.?\d*$').hasMatch(stripped)) {
+      return oldValue;
     }
 
-    // restrict to 2 decimal places
-    if (newValue.text.contains('.')) {
-      final decimalIndex = newValue.text.indexOf('.');
-      if (decimalIndex + decimalRange + 1 < newValue.text.length) {
-        return TextEditingValue(
-          text: newValue.text.substring(0, decimalIndex + decimalRange + 1),
-          selection:
-              TextSelection.collapsed(offset: decimalIndex + decimalRange + 1),
-        );
+    // Handle backspace when deleted character was comma
+    var textToFormat = newValue.text;
+    var cursorAdjustment = 0;
+    if (oldValue.text.length - newValue.text.length == 1 &&
+        oldValue.selection.baseOffset > 0 &&
+        oldValue.selection.baseOffset <= oldValue.text.length &&
+        oldValue.text[oldValue.selection.baseOffset - 1] == ',') {
+      final deleteIndex = oldValue.selection.baseOffset - 2;
+      if (deleteIndex >= 0) {
+        final before = oldValue.text.substring(0, deleteIndex);
+        final after = oldValue.text.substring(oldValue.selection.baseOffset);
+        textToFormat = '$before$after';
+        cursorAdjustment = -1;
       }
     }
 
-    return newValue;
+    final raw = textToFormat.replaceAll(',', '');
+    if (raw.isEmpty) {
+      return const TextEditingValue(
+        text: '',
+        selection: TextSelection.collapsed(offset: 0),
+      );
+    }
 
-    // // if new value is whole number return it with 2 decimal places
-    // if (newValue.text.length == 1) {
-    //   return TextEditingValue(
-    //     text: '${newValue.text}.00',
-    //     selection: newValue.selection,
-    //   );
-    // }
-    // if (oldValue.text.contains('.') && !newValue.text.contains('.')) {
-    //   // Find the position of decimal in old value
-    //   final decimalPosition = oldValue.text.indexOf('.');
+    if (raw == '.') {
+      return const TextEditingValue(
+        text: '0.',
+        selection: TextSelection.collapsed(offset: 2),
+      );
+    }
 
-    //   // Return old value with cursor positioned before decimal
-    //   return TextEditingValue(
-    //     text: oldValue.text,
-    //     selection: TextSelection.collapsed(offset: decimalPosition),
-    //   );
-    // }
+    final parts = raw.split('.');
+    var intPart = parts[0];
+    var decPart = parts.length > 1 ? parts.sublist(1).join() : null;
 
-    // final selectionIndex = newValue.selection.end;
-    // final newText = newValue.text;
-    // final oldText = oldValue.text;
-    // late final String value;
-    // // if old value is 0.00 then if new digit is entered replace the old value with the new digit like 1.00
-    // if (double.tryParse(oldText) == 0) {
-    //   value = newText.replaceFirst(RegExp('0'), '');
-    // } else {
-    //   value = newText;
-    // }
+    if (intPart.length > 1 && intPart.startsWith('0')) {
+      intPart = intPart.replaceFirst(RegExp('^0+'), '');
+      if (intPart.isEmpty) intPart = '0';
+    }
 
-    // final newString = double.tryParse(value)?.toStringAsFixed(decimalRange)
-    // ?? '0.00';
+    final formattedInt = intPart.isEmpty
+        ? '0'
+        : intPart.replaceAllMapped(
+            RegExp(r'\B(?=(\d{3})+(?!\d))'),
+            (m) => ',',
+          );
 
-    // return TextEditingValue(
-    //   text: newString,
-    //   selection: TextSelection.collapsed(offset: selectionIndex),
-    // );
+    final String formattedText;
+    if (decPart != null) {
+      if (decPart.length > decimalRange) {
+        decPart = decPart.substring(0, decimalRange);
+      }
+      formattedText = '$formattedInt.$decPart';
+    } else if (textToFormat.endsWith('.')) {
+      formattedText = '$formattedInt.';
+    } else {
+      formattedText = formattedInt;
+    }
+
+    final selOffset = (newValue.selection.baseOffset + cursorAdjustment)
+        .clamp(0, textToFormat.length);
+    final nonCommaBeforeCursor =
+        textToFormat.substring(0, selOffset).replaceAll(',', '').length;
+
+    var newOffset = 0;
+    var count = 0;
+    for (var i = 0; i < formattedText.length; i++) {
+      if (count == nonCommaBeforeCursor) {
+        newOffset = i;
+        break;
+      }
+      if (formattedText[i] != ',') {
+        count++;
+      }
+      newOffset = i + 1;
+    }
+
+    newOffset = newOffset.clamp(0, formattedText.length);
+
+    return TextEditingValue(
+      text: formattedText,
+      selection: TextSelection.collapsed(offset: newOffset),
+    );
   }
+}
+
+class CurrencyInputFormatter extends ThousandsSeparatorInputFormatter {
+  CurrencyInputFormatter({
+    super.decimalRange,
+  });
 }

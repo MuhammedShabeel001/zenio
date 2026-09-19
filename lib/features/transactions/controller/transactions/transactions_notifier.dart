@@ -4,6 +4,7 @@ import 'package:zenio/features/home/controller/home/home_notifier.dart';
 // import 'package:zenio/features/home/controller/home/home_state.dart';
 import 'package:zenio/features/transactions/controller/transactions/transactions_state.dart';
 import 'package:zenio/features/transactions/domain/models/transaction_detail_model.dart';
+import 'package:zenio/shared/utils/datetime.dart';
 
 part 'transactions_notifier.g.dart';
 
@@ -26,14 +27,11 @@ class TransactionsNotifier extends _$TransactionsNotifier {
       }
 
       return allTransactions.where((tx) {
-        try {
-          final txDate = DateFormat('dd-MM-yyyy').parse(tx.date);
-          return txDate.year == targetDate.year &&
-              txDate.month == targetDate.month &&
-              txDate.day == targetDate.day;
-        } catch (_) {
-          return false;
-        }
+        final txDate = DateTimeUtils.parseTransactionDate(tx.date);
+        if (txDate == null) return false;
+        return txDate.year == targetDate.year &&
+            txDate.month == targetDate.month &&
+            txDate.day == targetDate.day;
       }).toList();
     } else if (period.toLowerCase() == 'weekly') {
       final now = DateTime.now();
@@ -43,18 +41,15 @@ class TransactionsNotifier extends _$TransactionsNotifier {
       final DateTime endOfPastWeek = startOfWeek.subtract(const Duration(days: 1));
 
       return allTransactions.where((tx) {
-        try {
-          final txDate = DateFormat('dd-MM-yyyy').parse(tx.date);
-          if (timeframe.toLowerCase() == 'this week') {
-            return txDate.isAfter(startOfWeek.subtract(const Duration(days: 1)));
-          } else if (timeframe.toLowerCase() == 'last week') {
-            return txDate.isAfter(startOfPastWeek.subtract(const Duration(days: 1))) &&
-                txDate.isBefore(endOfPastWeek.add(const Duration(days: 1)));
-          }
-          return true;
-        } catch (_) {
-          return false;
+        final txDate = DateTimeUtils.parseTransactionDate(tx.date);
+        if (txDate == null) return false;
+        if (timeframe.toLowerCase() == 'this week') {
+          return txDate.isAfter(startOfWeek.subtract(const Duration(days: 1)));
+        } else if (timeframe.toLowerCase() == 'last week') {
+          return txDate.isAfter(startOfPastWeek.subtract(const Duration(days: 1))) &&
+              txDate.isBefore(endOfPastWeek.add(const Duration(days: 1)));
         }
+        return true;
       }).toList();
     } else if (period.toLowerCase() == 'monthly') {
       final int monthIndex = [
@@ -66,12 +61,9 @@ class TransactionsNotifier extends _$TransactionsNotifier {
 
       final targetMonth = monthIndex + 1;
       return allTransactions.where((tx) {
-        try {
-          final txDate = DateFormat('dd-MM-yyyy').parse(tx.date);
-          return txDate.month == targetMonth && txDate.year == DateTime.now().year;
-        } catch (_) {
-          return false;
-        }
+        final txDate = DateTimeUtils.parseTransactionDate(tx.date);
+        if (txDate == null) return false;
+        return txDate.month == targetMonth && txDate.year == DateTime.now().year;
       }).toList();
     } else if (period.toLowerCase() == 'custom') {
       if (timeframe.contains(' - ')) {
@@ -85,13 +77,10 @@ class TransactionsNotifier extends _$TransactionsNotifier {
             end = DateTime(now.year, end.month, end.day, 23, 59, 59);
 
             return allTransactions.where((tx) {
-              try {
-                final txDate = DateFormat('dd-MM-yyyy').parse(tx.date);
-                return txDate.isAfter(start.subtract(const Duration(days: 1))) &&
-                    txDate.isBefore(end.add(const Duration(days: 1)));
-              } catch (_) {
-                return false;
-              }
+              final txDate = DateTimeUtils.parseTransactionDate(tx.date);
+              if (txDate == null) return false;
+              return txDate.isAfter(start.subtract(const Duration(days: 1))) &&
+                  txDate.isBefore(end.add(const Duration(days: 1)));
             }).toList();
           } catch (_) {
             return allTransactions;

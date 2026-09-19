@@ -25,6 +25,49 @@ class DateTimeUtils {
   static final invoiceFormat = DateFormat('dd/MM/yyyy - hh:mm a');
   // Wed, May 27, 2020 • 9:27:53 AM
   static final pdfFullFormat = DateFormat('EEE, MMM dd, yyyy • hh:mm:ss a');
+
+  /// Robust date parser for transactions supporting multiple common formats:
+  /// - dd-MM-yyyy (e.g. 17-09-2026)
+  /// - EEEE, MMMM d, yyyy (e.g. Thursday, September 17, 2026)
+  /// - MMMM d, yyyy (e.g. September 17, 2026)
+  /// - yyyy-MM-dd (e.g. 2026-09-17)
+  /// - dd/MM/yyyy (e.g. 17/09/2026)
+  /// - ISO-8601 (DateTime.tryParse)
+  static DateTime? parseTransactionDate(String? dateStr) {
+    if (dateStr == null || dateStr.trim().isEmpty) return null;
+    final clean = dateStr.trim();
+
+    // 1. Try ISO-8601 (yyyy-MM-dd)
+    final iso = DateTime.tryParse(clean);
+    if (iso != null) return iso;
+
+    // 2. Try dd-MM-yyyy
+    try {
+      return DateFormat('dd-MM-yyyy').parseStrict(clean);
+    } catch (_) {}
+
+    // 3. Try EEEE, MMMM d, yyyy
+    try {
+      return DateFormat('EEEE, MMMM d, yyyy').parse(clean);
+    } catch (_) {}
+
+    // 4. Try MMMM d, yyyy
+    try {
+      return DateFormat('MMMM d, yyyy').parse(clean);
+    } catch (_) {}
+
+    // 5. Try dd/MM/yyyy
+    try {
+      return DateFormat('dd/MM/yyyy').parse(clean);
+    } catch (_) {}
+
+    // 6. Relaxed dd-MM-yyyy fallback
+    try {
+      return DateFormat('dd-MM-yyyy').parse(clean);
+    } catch (_) {}
+
+    return null;
+  }
 }
 
 extension DateExtension on String {
@@ -40,8 +83,8 @@ extension DateExtension on String {
 extension RelativeDateExtension on String {
   String get toRelativeDate {
     try {
-      // Handle the 'dd-MM-yyyy' format used in transactions
-      final date = DateFormat('dd-MM-yyyy').parse(this);
+      final date = DateTimeUtils.parseTransactionDate(this);
+      if (date == null) return this;
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
       final yesterday = today.subtract(const Duration(days: 1));

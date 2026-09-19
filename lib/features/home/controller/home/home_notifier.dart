@@ -2,6 +2,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:intl/intl.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:zenio/features/home/home.dart';
+import 'package:zenio/shared/utils/datetime.dart';
 
 part 'home_notifier.freezed.dart';
 part 'home_notifier.g.dart';
@@ -105,12 +106,8 @@ class HomeNotifier extends _$HomeNotifier {
         totalBalance -= tx.amount;
       }
 
-      DateTime txDate;
-      try {
-        txDate = DateFormat('dd-MM-yyyy').parse(tx.date);
-      } catch (_) {
-        continue;
-      }
+      final txDate = DateTimeUtils.parseTransactionDate(tx.date);
+      if (txDate == null) continue;
 
       if (txDate.year == currentMonth.year && txDate.month == currentMonth.month) {
         if (tx.isIncome) {

@@ -7,6 +7,7 @@ import 'package:zenio/features/debts/controller/debts/debts_notifier.dart';
 import 'package:zenio/features/debts/domain/models/debt_model.dart';
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/utils/app_fonts.dart';
+import 'package:zenio/shared/utils/formatters.dart';
 
 enum DebtType { iOwe, owedToMe }
 
@@ -87,6 +88,7 @@ class _AddDebtBottomSheetState extends ConsumerState<AddDebtBottomSheet> {
   @override
   Widget build(BuildContext context) {
     final formattedDate = DateFormat('dd MMMM yyyy').format(_selectedDate);
+    final currencySymbol = ref.watch(currencySymbolProvider);
 
     final debtsState = ref.watch(debtsNotifierProvider);
     final existingNames = debtsState.debts
@@ -162,46 +164,53 @@ class _AddDebtBottomSheetState extends ConsumerState<AddDebtBottomSheet> {
                 color: const Color(0xFFF2F2F2),
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: TextField(
-                controller: _amountController,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-                ],
-                onChanged: (val) {
-                  if (val.length > 1 && val.startsWith('0') && !val.startsWith('0.')) {
-                    final newText = val.replaceFirst(RegExp(r'^0+'), '');
-                    _amountController.value = TextEditingValue(
-                      text: newText.isEmpty ? '0' : newText,
-                      selection: TextSelection.collapsed(offset: newText.length),
-                    );
-                  }
-                  setState(() {});
-                },
-                style: AppFonts.numeric(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF111111),
-                ),
-                decoration: InputDecoration(
-                  hintText: '0',
-                  hintStyle: AppFonts.numeric(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF9E9EA5),
+              child: Row(
+                children: [
+                  Text(
+                    '$currencySymbol ',
+                    style: AppFonts.numeric(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF111111),
+                    ),
                   ),
-                  isDense: true,
-                  filled: false,
-                  fillColor: Colors.transparent,
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  disabledBorder: InputBorder.none,
-                  focusedErrorBorder: InputBorder.none,
-                  errorBorder: InputBorder.none,
-                  contentPadding: EdgeInsets.zero,
-                ),
+                  Expanded(
+                    child: TextField(
+                      controller: _amountController,
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [
+                        ThousandsSeparatorInputFormatter(),
+                      ],
+                      onChanged: (val) {
+                        setState(() {});
+                      },
+                      style: AppFonts.numeric(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF111111),
+                      ),
+                      decoration: InputDecoration(
+                        hintText: '0',
+                        hintStyle: AppFonts.numeric(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF9E9EA5),
+                        ),
+                        isDense: true,
+                        filled: false,
+                        fillColor: Colors.transparent,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        disabledBorder: InputBorder.none,
+                        focusedErrorBorder: InputBorder.none,
+                        errorBorder: InputBorder.none,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 6),
@@ -407,7 +416,7 @@ class _AddDebtBottomSheetState extends ConsumerState<AddDebtBottomSheet> {
               height: 60,
               child: ElevatedButton(
                 onPressed: () {
-                  final amount = double.tryParse(_amountController.text) ?? 0.0;
+                  final amount = AppNumberFormat.parseAmount(_amountController.text);
                   final personName = _personNameController.text.trim();
                   final note = _noteController.text.trim();
                   

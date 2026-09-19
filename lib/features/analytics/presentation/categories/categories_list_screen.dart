@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:zenio/features/analytics/controller/analytics/analytics_notifier.dart';
 import 'package:zenio/features/analytics/domain/models/category_spend/category_spend_model.dart';
 import 'package:zenio/features/home/controller/home/home_notifier.dart';
@@ -8,6 +7,8 @@ import 'package:zenio/features/home/domain/models/transaction/transaction_model.
 import 'package:zenio/features/transactions/controller/categories/categories_notifier.dart';
 import 'package:zenio/features/transactions/domain/models/category_item_model.dart';
 import 'package:zenio/features/transactions/presentation/widgets/manage_categories_bottom_sheet.dart';
+import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
+import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/shared.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
@@ -90,12 +91,17 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
   @override
   Widget build(BuildContext context) {
     final analyticsState = ref.watch(analyticsNotifierProvider);
+    final walletState = ref.watch(walletNotifierProvider);
+    final walletCards = walletState.cards;
     final totalBalance = analyticsState.totalBalance;
     final allCategories = ref.watch(categoriesNotifierProvider);
     final allSpends = analyticsState.categorySpends;
 
     final homeState = ref.watch(homeNotifierProvider);
     final allTransactions = homeState.transactions;
+    final filteredTxs = ref
+        .read(analyticsNotifierProvider.notifier)
+        .filterTransactions(allTransactions);
 
     // Combine category definitions with their calculated spends
     final categoriesWithData = allCategories.map((cat) {
@@ -114,24 +120,43 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
         ),
       );
 
-      // Find matching transactions in this category for this period
-      final matchingTxs = allTransactions.where((tx) {
+      // Find matching transactions in this category for this period & wallet
+      final matchingTxs = filteredTxs.where((tx) {
         if (tx.isIncome || tx.title.startsWith('Transfer to')) return false;
         return tx.title.trim().toLowerCase() == cleanCatName;
       }).toList();
 
-      final ratio = totalBalance > 0 ? (matchSpend.amount / totalBalance).clamp(0.0, 1.0) : 0.0;
+      final matchingAmount = matchingTxs.fold<double>(0.0, (sum, tx) => sum + tx.amount);
+      final actualAmount = matchSpend.amount > 0 ? matchSpend.amount : matchingAmount;
+      final actualCount = matchSpend.spendsCount > 0 ? matchSpend.spendsCount : matchingTxs.length;
+      final effectiveSpend = matchSpend.copyWith(
+        amount: actualAmount,
+        spendsCount: actualCount,
+      );
 
       return _CategoryWithData(
         item: cat,
-        spend: matchSpend,
+        spend: effectiveSpend,
         transactions: matchingTxs,
+        ratio: 0.0,
+      );
+    }).toList();
+
+    final totalFromCategories = categoriesWithData.fold<double>(0.0, (sum, c) => sum + c.spend.amount);
+    final effectiveTotalBalance = totalBalance > 0 ? totalBalance : totalFromCategories;
+
+    final finalCategoriesWithData = categoriesWithData.map((c) {
+      final ratio = effectiveTotalBalance > 0 ? (c.spend.amount / effectiveTotalBalance).clamp(0.0, 1.0) : 0.0;
+      return _CategoryWithData(
+        item: c.item,
+        spend: c.spend,
+        transactions: c.transactions,
         ratio: ratio,
       );
     }).toList();
 
     // Filter by tab
-    var filtered = categoriesWithData;
+    var filtered = finalCategoriesWithData;
     if (_activeTab == CategoryFilterTab.active) {
       filtered = filtered.where((c) => c.spend.amount > 0).toList();
     } else if (_activeTab == CategoryFilterTab.zero) {
@@ -149,7 +174,6 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
     }
 
     final currencySymbol = ref.watch(currencySymbolProvider);
-    final currencyCode = ref.watch(currencyCodeProvider);
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -181,7 +205,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                               ),
                             ),
                             TextSpan(
-                              text: _formatWholePart(totalBalance),
+                              text: _formatWholePart(effectiveTotalBalance),
                               style: AppFonts.numeric(
                                 fontSize: 32,
                                 fontWeight: FontWeight.bold,
@@ -190,7 +214,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                               ),
                             ),
                             TextSpan(
-                              text: _formatDecimalPart(totalBalance),
+                              text: _formatDecimalPart(effectiveTotalBalance),
                               style: AppFonts.numeric(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
@@ -247,13 +271,19 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Bottom Row: Filter Dropdown Pills (Exact match to Subscriptions & Debts)
-                  Row(
-                    children: [
-                      _buildFilterDropdown(),
-                      const SizedBox(width: 10),
-                      _buildSortDropdown(),
-                    ],
+                  // Bottom Row: Filter Dropdown Pills (Wallet, Filter, Sort)
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    child: Row(
+                      children: [
+                        _buildWalletDropdown(analyticsState.selectedWallet, walletCards),
+                        const SizedBox(width: 10),
+                        _buildFilterDropdown(),
+                        const SizedBox(width: 10),
+                        _buildSortDropdown(),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -319,7 +349,11 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
     );
   }
 
-  Widget _buildFilterPill({required String label}) {
+  Widget _buildFilterPill({
+    required String label,
+    Widget? leading,
+    double? maxWidth,
+  }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
@@ -329,20 +363,222 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: Color(0xFFD1D1D6),
+          if (leading != null) ...[
+            leading,
+            const SizedBox(width: 6),
+          ],
+          if (maxWidth != null)
+            ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: maxWidth),
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFFD1D1D6),
+                ),
+              ),
+            )
+          else
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFFD1D1D6),
+              ),
             ),
-          ),
           const SizedBox(width: 8),
           Assets.icons.dropDown.svg(
             width: 24,
             height: 24,
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildWalletDropdown(String selectedWallet, List<WalletCardModel> cards) {
+    final isAll = selectedWallet.trim().toLowerCase() == 'all wallets' ||
+        selectedWallet.trim().toLowerCase() == 'all';
+    final matchingCard = isAll
+        ? null
+        : cards.cast<WalletCardModel?>().firstWhere(
+              (c) =>
+                  c?.bankName.trim().toLowerCase() ==
+                  selectedWallet.trim().toLowerCase(),
+              orElse: () => null,
+            );
+
+    Widget leading;
+    if (isAll || matchingCard == null) {
+      leading = const Icon(
+        Icons.account_balance_wallet_rounded,
+        size: 15,
+        color: Color(0xFF2CC56F),
+      );
+    } else {
+      Color startColor;
+      Color endColor;
+      try {
+        var startHex = matchingCard.gradientStartHex.replaceAll('#', '').trim();
+        var endHex = matchingCard.gradientEndHex.replaceAll('#', '').trim();
+        if (startHex.length == 6) startHex = 'FF$startHex';
+        if (endHex.length == 6) endHex = 'FF$endHex';
+        startColor = Color(int.parse('0x$startHex'));
+        endColor = Color(int.parse('0x$endHex'));
+      } catch (_) {
+        startColor = const Color(0xFF2CC56F);
+        endColor = const Color(0xFF10B981);
+      }
+      leading = Container(
+        width: 12,
+        height: 12,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: LinearGradient(
+            colors: [startColor, endColor],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+      );
+    }
+
+    final uniqueBankNames = cards
+        .map((c) => c.bankName.trim())
+        .where((n) => n.isNotEmpty)
+        .toSet()
+        .toList();
+
+    return PopupMenuButton<String>(
+      offset: const Offset(0, 45),
+      elevation: 8,
+      constraints: const BoxConstraints(maxHeight: 300),
+      onSelected: (value) {
+        ref.read(analyticsNotifierProvider.notifier).updateWallet(value);
+      },
+      itemBuilder: (context) {
+        final items = <PopupMenuEntry<String>>[];
+
+        final isAllSelected = isAll;
+        items.add(
+          PopupMenuItem<String>(
+            value: 'All Wallets',
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.account_balance_wallet_rounded,
+                  size: 16,
+                  color: Color(0xFF2CC56F),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'All Wallets',
+                    style: TextStyle(
+                      color: isAllSelected ? Colors.white : const Color(0xFFD1D1D6),
+                      fontSize: 14,
+                      fontWeight:
+                          isAllSelected ? FontWeight.bold : FontWeight.w500,
+                    ),
+                  ),
+                ),
+                if (isAllSelected)
+                  const Icon(
+                    Icons.check_rounded,
+                    size: 18,
+                    color: Color(0xFF2CC56F),
+                  ),
+              ],
+            ),
+          ),
+        );
+
+        if (uniqueBankNames.isNotEmpty) {
+          items.add(
+            const PopupMenuDivider(height: 1),
+          );
+
+          for (final bank in uniqueBankNames) {
+            final card = cards.cast<WalletCardModel?>().firstWhere(
+                  (c) => c?.bankName.trim().toLowerCase() == bank.toLowerCase(),
+                  orElse: () => null,
+                );
+
+            Color sColor = const Color(0xFF2CC56F);
+            Color eColor = const Color(0xFF10B981);
+            if (card != null) {
+              try {
+                var startHex = card.gradientStartHex.replaceAll('#', '').trim();
+                var endHex = card.gradientEndHex.replaceAll('#', '').trim();
+                if (startHex.length == 6) startHex = 'FF$startHex';
+                if (endHex.length == 6) endHex = 'FF$endHex';
+                sColor = Color(int.parse('0x$startHex'));
+                eColor = Color(int.parse('0x$endHex'));
+              } catch (_) {}
+            }
+
+            final isSelected =
+                !isAll && selectedWallet.trim().toLowerCase() == bank.toLowerCase();
+
+            items.add(
+              PopupMenuItem<String>(
+                value: bank,
+                child: Row(
+                  children: [
+                    Container(
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          colors: [sColor, eColor],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        bank,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: isSelected ? Colors.white : const Color(0xFFD1D1D6),
+                          fontSize: 14,
+                          fontWeight:
+                              isSelected ? FontWeight.bold : FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    if (isSelected)
+                      const Icon(
+                        Icons.check_rounded,
+                        size: 18,
+                        color: Color(0xFF2CC56F),
+                      ),
+                  ],
+                ),
+              ),
+            );
+          }
+        }
+
+        return items;
+      },
+      color: const Color(0xFF1A1A1A),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: const BorderSide(color: Color(0xFF313131), width: 1),
+      ),
+      child: _buildFilterPill(
+        label: isAll ? 'All Wallets' : selectedWallet,
+        leading: leading,
+        maxWidth: 110,
       ),
     );
   }
@@ -423,12 +659,14 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
     // Calculate metrics
     final currencySymbol = ref.watch(currencySymbolProvider);
     final currencyCode = ref.watch(currencyCodeProvider);
-    final totalSpent = data.spend.amount;
-    final txCount = data.transactions.length;
+    final totalSpent = data.spend.amount > 0
+        ? data.spend.amount
+        : data.transactions.fold<double>(0.0, (sum, t) => sum + t.amount);
+    final txCount = data.transactions.isNotEmpty ? data.transactions.length : data.spend.spendsCount;
     final avgSpend = txCount > 0 ? (totalSpent / txCount) : 0.0;
-    final maxSpend = txCount > 0
+    final maxSpend = data.transactions.isNotEmpty
         ? data.transactions.map((t) => t.amount).reduce((a, b) => a > b ? a : b)
-        : 0.0;
+        : totalSpent;
 
     return GestureDetector(
       onTap: onTap,

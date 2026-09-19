@@ -10,6 +10,7 @@ import 'package:zenio/features/transactions/domain/models/category_item_model.da
 import 'package:zenio/features/transactions/presentation/widgets/manage_categories_bottom_sheet.dart';
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/utils/app_fonts.dart';
+import 'package:zenio/shared/utils/formatters.dart';
 
 class AddSubscriptionBottomSheet extends ConsumerStatefulWidget {
   const AddSubscriptionBottomSheet({super.key});
@@ -86,10 +87,9 @@ class _AddSubscriptionBottomSheetState
 
   void _saveSubscription() {
     final title = _titleController.text.trim();
-    final amountText = _amountController.text.trim();
     if (title.isEmpty) return;
 
-    final amount = double.tryParse(amountText) ?? 0.0;
+    final amount = AppNumberFormat.parseAmount(_amountController.text);
     if (amount <= 0) return;
 
     final categories = ref.read(subscriptionCategoriesNotifierProvider);
@@ -158,6 +158,7 @@ class _AddSubscriptionBottomSheetState
     final categories = ref.watch(subscriptionCategoriesNotifierProvider);
     final formattedDate =
         DateFormat('EEEE, MMMM d, yyyy').format(_selectedDate);
+    final currencySymbol = ref.watch(currencySymbolProvider);
 
 
     return Container(
@@ -217,46 +218,53 @@ class _AddSubscriptionBottomSheetState
                 color: const Color(0xFFF2F2F2),
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: TextField(
-                controller: _amountController,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-                ],
-                onChanged: (val) {
-                  if (val.length > 1 && val.startsWith('0') && !val.startsWith('0.')) {
-                    final newText = val.replaceFirst(RegExp(r'^0+'), '');
-                    _amountController.value = TextEditingValue(
-                      text: newText.isEmpty ? '0' : newText,
-                      selection: TextSelection.collapsed(offset: newText.length),
-                    );
-                  }
-                  setState(() {});
-                },
-                style: AppFonts.numeric(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF111111),
-                ),
-                decoration: InputDecoration(
-                  hintText: '0',
-                  hintStyle: AppFonts.numeric(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF9E9EA5),
+              child: Row(
+                children: [
+                  Text(
+                    '$currencySymbol ',
+                    style: AppFonts.numeric(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF111111),
+                    ),
                   ),
-                  isDense: true,
-                  filled: false,
-                  fillColor: Colors.transparent,
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  disabledBorder: InputBorder.none,
-                  focusedErrorBorder: InputBorder.none,
-                  errorBorder: InputBorder.none,
-                  contentPadding: EdgeInsets.zero,
-                ),
+                  Expanded(
+                    child: TextField(
+                      controller: _amountController,
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [
+                        ThousandsSeparatorInputFormatter(),
+                      ],
+                      onChanged: (val) {
+                        setState(() {});
+                      },
+                      style: AppFonts.numeric(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF111111),
+                      ),
+                      decoration: InputDecoration(
+                        hintText: '0',
+                        hintStyle: AppFonts.numeric(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF9E9EA5),
+                        ),
+                        isDense: true,
+                        filled: false,
+                        fillColor: Colors.transparent,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        disabledBorder: InputBorder.none,
+                        focusedErrorBorder: InputBorder.none,
+                        errorBorder: InputBorder.none,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 6),

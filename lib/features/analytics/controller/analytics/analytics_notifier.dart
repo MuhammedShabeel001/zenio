@@ -6,6 +6,8 @@ import 'package:zenio/features/home/controller/home/home_notifier.dart';
 import 'package:zenio/features/home/domain/models/transaction/transaction_model.dart';
 import 'package:zenio/features/subscriptions/controller/categories/subscription_categories_notifier.dart';
 import 'package:zenio/features/transactions/controller/categories/categories_notifier.dart';
+import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
+import 'package:zenio/shared/utils/datetime.dart';
 
 part 'analytics_notifier.freezed.dart';
 part 'analytics_notifier.g.dart';
@@ -17,7 +19,22 @@ class AnalyticsNotifier extends _$AnalyticsNotifier {
     List<TransactionModel> allTransactions,
     String period,
     String timeframe,
+    String wallet,
   ) {
+    var transactions = allTransactions;
+
+    if (wallet.trim().toLowerCase() != 'all wallets' &&
+        wallet.trim().toLowerCase() != 'all') {
+      final targetWallet = wallet.trim().toLowerCase();
+      transactions = transactions.where((tx) {
+        final bName = tx.bankName?.trim().toLowerCase();
+        if (bName == null) return false;
+        return bName == targetWallet ||
+            bName.startsWith('$targetWallet ->') ||
+            bName.endsWith('-> $targetWallet');
+      }).toList();
+    }
+
     if (period.toLowerCase() == 'daily') {
       final now = DateTime.now();
       DateTime targetDate;
@@ -26,18 +43,15 @@ class AnalyticsNotifier extends _$AnalyticsNotifier {
       } else if (timeframe.toLowerCase() == 'yesterday') {
         targetDate = now.subtract(const Duration(days: 1));
       } else {
-        return allTransactions;
+        return transactions;
       }
 
-      return allTransactions.where((tx) {
-        try {
-          final txDate = DateFormat('dd-MM-yyyy').parse(tx.date);
-          return txDate.year == targetDate.year &&
-              txDate.month == targetDate.month &&
-              txDate.day == targetDate.day;
-        } catch (_) {
-          return false;
-        }
+      return transactions.where((tx) {
+        final txDate = DateTimeUtils.parseTransactionDate(tx.date);
+        if (txDate == null) return false;
+        return txDate.year == targetDate.year &&
+            txDate.month == targetDate.month &&
+            txDate.day == targetDate.day;
       }).toList();
     } else if (period.toLowerCase() == 'weekly') {
       final now = DateTime.now();
@@ -46,19 +60,16 @@ class AnalyticsNotifier extends _$AnalyticsNotifier {
       final DateTime startOfPastWeek = startOfWeek.subtract(const Duration(days: 7));
       final DateTime endOfPastWeek = startOfWeek.subtract(const Duration(days: 1));
 
-      return allTransactions.where((tx) {
-        try {
-          final txDate = DateFormat('dd-MM-yyyy').parse(tx.date);
-          if (timeframe.toLowerCase() == 'this week') {
-            return txDate.isAfter(startOfWeek.subtract(const Duration(days: 1)));
-          } else if (timeframe.toLowerCase() == 'last week') {
-            return txDate.isAfter(startOfPastWeek.subtract(const Duration(days: 1))) &&
-                txDate.isBefore(endOfPastWeek.add(const Duration(days: 1)));
-          }
-          return true;
-        } catch (_) {
-          return false;
+      return transactions.where((tx) {
+        final txDate = DateTimeUtils.parseTransactionDate(tx.date);
+        if (txDate == null) return false;
+        if (timeframe.toLowerCase() == 'this week') {
+          return txDate.isAfter(startOfWeek.subtract(const Duration(days: 1)));
+        } else if (timeframe.toLowerCase() == 'last week') {
+          return txDate.isAfter(startOfPastWeek.subtract(const Duration(days: 1))) &&
+              txDate.isBefore(endOfPastWeek.add(const Duration(days: 1)));
         }
+        return true;
       }).toList();
     } else if (period.toLowerCase() == 'monthly') {
       final int monthIndex = [
@@ -66,16 +77,13 @@ class AnalyticsNotifier extends _$AnalyticsNotifier {
         'July', 'August', 'September', 'October', 'November', 'December'
       ].indexWhere((m) => m.toLowerCase() == timeframe.toLowerCase());
 
-      if (monthIndex == -1) return allTransactions;
+      if (monthIndex == -1) return transactions;
 
       final targetMonth = monthIndex + 1;
-      return allTransactions.where((tx) {
-        try {
-          final txDate = DateFormat('dd-MM-yyyy').parse(tx.date);
-          return txDate.month == targetMonth && txDate.year == DateTime.now().year;
-        } catch (_) {
-          return false;
-        }
+      return transactions.where((tx) {
+        final txDate = DateTimeUtils.parseTransactionDate(tx.date);
+        if (txDate == null) return false;
+        return txDate.month == targetMonth && txDate.year == DateTime.now().year;
       }).toList();
     } else if (period.toLowerCase() == 'custom') {
       if (timeframe.contains(' - ')) {
@@ -88,22 +96,19 @@ class AnalyticsNotifier extends _$AnalyticsNotifier {
             start = DateTime(now.year, start.month, start.day);
             end = DateTime(now.year, end.month, end.day, 23, 59, 59);
 
-            return allTransactions.where((tx) {
-              try {
-                final txDate = DateFormat('dd-MM-yyyy').parse(tx.date);
-                return txDate.isAfter(start.subtract(const Duration(days: 1))) &&
-                    txDate.isBefore(end.add(const Duration(days: 1)));
-              } catch (_) {
-                return false;
-              }
+            return transactions.where((tx) {
+              final txDate = DateTimeUtils.parseTransactionDate(tx.date);
+              if (txDate == null) return false;
+              return txDate.isAfter(start.subtract(const Duration(days: 1))) &&
+                  txDate.isBefore(end.add(const Duration(days: 1)));
             }).toList();
           } catch (_) {
-            return allTransactions;
+            return transactions;
           }
         }
       }
     }
-    return allTransactions;
+    return transactions;
   }
 
   (double, List<CategorySpendModel>) _computeAnalytics(List<TransactionModel> txs) {
@@ -219,7 +224,12 @@ class AnalyticsNotifier extends _$AnalyticsNotifier {
   AnalyticsState build() {
     ref.listen(homeNotifierProvider, (previous, next) {
       if (next.status == HomeStatus.success) {
-        final filteredList = _filterTransactions(next.transactions, state.selectedPeriod, state.selectedTimeframe);
+        final filteredList = _filterTransactions(
+          next.transactions,
+          state.selectedPeriod,
+          state.selectedTimeframe,
+          state.selectedWallet,
+        );
         final (balance, spends) = _computeAnalytics(filteredList);
 
         state = state.copyWith(
@@ -233,7 +243,12 @@ class AnalyticsNotifier extends _$AnalyticsNotifier {
     ref.listen(categoriesNotifierProvider, (previous, next) {
       final homeState = ref.read(homeNotifierProvider);
       if (homeState.status == HomeStatus.success) {
-        final filteredList = _filterTransactions(homeState.transactions, state.selectedPeriod, state.selectedTimeframe);
+        final filteredList = _filterTransactions(
+          homeState.transactions,
+          state.selectedPeriod,
+          state.selectedTimeframe,
+          state.selectedWallet,
+        );
         final (balance, spends) = _computeAnalytics(filteredList);
 
         state = state.copyWith(
@@ -242,13 +257,25 @@ class AnalyticsNotifier extends _$AnalyticsNotifier {
       }
     });
 
+    ref.listen(walletNotifierProvider, (previous, next) {
+      if (state.selectedWallet != 'All Wallets' && state.selectedWallet != 'All') {
+        final walletExists = next.cards.any(
+          (c) => c.bankName.trim().toLowerCase() == state.selectedWallet.trim().toLowerCase(),
+        );
+        if (!walletExists) {
+          updateWallet('All Wallets');
+        }
+      }
+    });
+
     final homeState = ref.read(homeNotifierProvider);
     
     final currentMonth = DateFormat('MMMM').format(DateTime.now());
     const initialPeriod = 'Monthly';
     final initialTimeframe = currentMonth;
+    const initialWallet = 'All Wallets';
     
-    final filteredList = _filterTransactions(homeState.transactions, initialPeriod, initialTimeframe);
+    final filteredList = _filterTransactions(homeState.transactions, initialPeriod, initialTimeframe, initialWallet);
     final (balance, spends) = _computeAnalytics(filteredList);
 
     return AnalyticsState(
@@ -257,6 +284,24 @@ class AnalyticsNotifier extends _$AnalyticsNotifier {
       categorySpends: spends,
       selectedPeriod: initialPeriod,
       selectedTimeframe: initialTimeframe,
+      selectedWallet: initialWallet,
+    );
+  }
+
+  void updateWallet(String wallet) {
+    final homeState = ref.read(homeNotifierProvider);
+    final filteredList = _filterTransactions(
+      homeState.transactions,
+      state.selectedPeriod,
+      state.selectedTimeframe,
+      wallet,
+    );
+    final (balance, spends) = _computeAnalytics(filteredList);
+
+    state = state.copyWith(
+      selectedWallet: wallet,
+      totalBalance: balance,
+      categorySpends: spends,
     );
   }
 
@@ -279,7 +324,12 @@ class AnalyticsNotifier extends _$AnalyticsNotifier {
     }
     
     final homeState = ref.read(homeNotifierProvider);
-    final filteredList = _filterTransactions(homeState.transactions, period, defaultTimeframe);
+    final filteredList = _filterTransactions(
+      homeState.transactions,
+      period,
+      defaultTimeframe,
+      state.selectedWallet,
+    );
     final (balance, spends) = _computeAnalytics(filteredList);
     
     state = state.copyWith(
@@ -292,13 +342,27 @@ class AnalyticsNotifier extends _$AnalyticsNotifier {
 
   void updateTimeframe(String timeframe) {
     final homeState = ref.read(homeNotifierProvider);
-    final filteredList = _filterTransactions(homeState.transactions, state.selectedPeriod, timeframe);
+    final filteredList = _filterTransactions(
+      homeState.transactions,
+      state.selectedPeriod,
+      timeframe,
+      state.selectedWallet,
+    );
     final (balance, spends) = _computeAnalytics(filteredList);
 
     state = state.copyWith(
       selectedTimeframe: timeframe,
       totalBalance: balance,
       categorySpends: spends,
+    );
+  }
+
+  List<TransactionModel> filterTransactions(List<TransactionModel> allTransactions) {
+    return _filterTransactions(
+      allTransactions,
+      state.selectedPeriod,
+      state.selectedTimeframe,
+      state.selectedWallet,
     );
   }
 }
