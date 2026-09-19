@@ -13,18 +13,21 @@ class AddWalletBottomSheet extends ConsumerStatefulWidget {
   const AddWalletBottomSheet({
     this.editingCard,
     this.editingIndex,
+    this.isFirstWallet = false,
     super.key,
   });
 
   final WalletCardModel? editingCard;
   final int? editingIndex;
+  final bool isFirstWallet;
 
-  static void show(
+  static Future<bool?> show(
     BuildContext context, {
     WalletCardModel? editingCard,
     int? editingIndex,
+    bool isFirstWallet = false,
   }) {
-    showModalBottomSheet<void>(
+    return showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -33,6 +36,7 @@ class AddWalletBottomSheet extends ConsumerStatefulWidget {
         child: AddWalletBottomSheet(
           editingCard: editingCard,
           editingIndex: editingIndex,
+          isFirstWallet: isFirstWallet,
         ),
       ),
     );
@@ -196,8 +200,14 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
   }
 
   void _onCreateWallet() {
-    final name = _nameController.text.trim();
-    if (name.isEmpty) return;
+    var name = _nameController.text.trim();
+    if (name.isEmpty) {
+      if (widget.isFirstWallet) {
+        name = 'Main Wallet';
+      } else {
+        return;
+      }
+    }
 
     final balance = double.tryParse(_balanceController.text.trim()) ?? 0.0;
     final isEditing = widget.editingCard != null;
@@ -246,7 +256,7 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
       ref.read(walletNotifierProvider.notifier).addCard(newCard, balance);
     }
 
-    Navigator.of(context).pop();
+    Navigator.of(context).pop(true);
   }
 
   @override
@@ -276,7 +286,30 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
                 ),
               ),
             ),
-            const SizedBox(height: 26),
+            const SizedBox(height: 20),
+
+            if (widget.isFirstWallet) ...[
+              Text(
+                'Add your first wallet',
+                style: AppFonts.text(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF111111),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Set up your starting balance and wallet name to begin.',
+                style: AppFonts.text(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w400,
+                  color: const Color(0xFF8E8E93),
+                ),
+              ),
+              const SizedBox(height: 18),
+            ] else ...[
+              const SizedBox(height: 6),
+            ],
 
             // Initial Balance (Amount) Input
             Container(
@@ -294,7 +327,7 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
                 ],
                 onChanged: (val) {
                   if (val.length > 1 && val.startsWith('0') && !val.startsWith('0.')) {
-                    final newText = val.replaceFirst(RegExp(r'^0+'), '');
+                    final newText = val.replaceFirst(RegExp('^0+'), '');
                     _balanceController.value = TextEditingValue(
                       text: newText.isEmpty ? '0' : newText,
                       selection: TextSelection.collapsed(offset: newText.length),
@@ -545,7 +578,11 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
                   ),
                 ),
                 child: Text(
-                  widget.editingCard != null ? 'Save changes' : 'Create wallet',
+                  widget.editingCard != null
+                      ? 'Save changes'
+                      : widget.isFirstWallet
+                          ? 'Add Wallet & Enter Zenio'
+                          : 'Create wallet',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,

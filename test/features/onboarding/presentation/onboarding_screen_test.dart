@@ -93,5 +93,30 @@ void main() {
         findsOneWidget,
       );
     });
+
+    testWidgets('tapping Enter Zenio prompts user to add first wallet',
+        (tester) async {
+      await tester.pumpWidget(
+        const ProviderScope(
+          child: MaterialApp(
+            home: OnboardingScreenMobile(),
+          ),
+        ),
+      );
+
+      // Advance to final slide
+      for (var i = 0; i < 3; i++) {
+        await tester.tap(find.byKey(const ValueKey('onboarding_next_button')));
+        await tester.pumpAndSettle();
+      }
+
+      // Tap Enter Zenio
+      await tester.tap(find.byKey(const ValueKey('onboarding_enter_button')));
+      await tester.pumpAndSettle();
+
+      // Verify Add your first wallet bottom sheet is displayed
+      expect(find.text('Add your first wallet'), findsOneWidget);
+      expect(find.text('Add Wallet & Enter Zenio'), findsOneWidget);
+    });
   });
 }

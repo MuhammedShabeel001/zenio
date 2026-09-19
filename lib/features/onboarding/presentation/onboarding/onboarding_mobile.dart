@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hancod_theme/hancod_theme.dart';
 import 'package:zenio/features/onboarding/controller/onboarding_controller.dart';
 import 'package:zenio/features/onboarding/domain/models/onboarding_page_item.dart';
+import 'package:zenio/features/wallet/presentation/widgets/add_wallet_bottom_sheet.dart';
 import 'package:zenio/shared/utils/app_fonts.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/utils/router.dart';
@@ -55,6 +56,27 @@ class _OnboardingScreenMobileState
     await ref.read(onboardingControllerProvider.notifier).completeOnboarding();
     if (mounted) {
       context.goNamed(AppRouter.home);
+    }
+  }
+
+  Future<void> _onEnterZenio() async {
+    if (_isNavigating) return;
+
+    // Prompt user to add their first wallet
+    await AddWalletBottomSheet.show(
+      context,
+      isFirstWallet: true,
+    );
+
+    // Complete onboarding and proceed to home
+    if (mounted) {
+      _isNavigating = true;
+      await ref
+          .read(onboardingControllerProvider.notifier)
+          .completeOnboarding();
+      if (mounted) {
+        context.goNamed(AppRouter.home);
+      }
     }
   }
 
@@ -353,7 +375,7 @@ class _OnboardingScreenMobileState
                           _OnboardingButton(
                             key: const ValueKey('onboarding_enter_button'),
                             width: 103,
-                            onTap: _onFinishOnboarding,
+                            onTap: _onEnterZenio,
                             backgroundColor: const Color(0xFF05B67B),
                             child: RichText(
                               text: TextSpan(
