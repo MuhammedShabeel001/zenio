@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:zenio/features/analytics/controller/analytics/analytics_notifier.dart';
 import 'package:zenio/features/analytics/domain/models/category_spend/category_spend_model.dart';
 import 'package:zenio/features/home/controller/home/home_notifier.dart';
@@ -7,9 +8,6 @@ import 'package:zenio/features/home/domain/models/transaction/transaction_model.
 import 'package:zenio/features/transactions/controller/categories/categories_notifier.dart';
 import 'package:zenio/features/transactions/domain/models/category_item_model.dart';
 import 'package:zenio/features/transactions/presentation/widgets/manage_categories_bottom_sheet.dart';
-import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
-import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
-import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/shared.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 
@@ -52,6 +50,18 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
   String _formatDecimalPart(double amount) =>
       AppNumberFormat.formatDecimalPart(amount);
 
+  String _formatTxDate(String rawDate) {
+    final parsed = DateTimeUtils.parseTransactionDate(rawDate);
+    if (parsed == null) return rawDate;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final check = DateTime(parsed.year, parsed.month, parsed.day);
+    if (check == today) return 'Today';
+    if (check == yesterday) return 'Yesterday';
+    return DateFormat('d MMM yyyy').format(parsed);
+  }
+
   Color _getBadgeBackgroundColor(String name) {
     final lower = name.toLowerCase();
     if (lower.contains('travel')) return const Color(0xFFFDF3E7);
@@ -91,8 +101,6 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
   @override
   Widget build(BuildContext context) {
     final analyticsState = ref.watch(analyticsNotifierProvider);
-    final walletState = ref.watch(walletNotifierProvider);
-    final walletCards = walletState.cards;
     final totalBalance = analyticsState.totalBalance;
     final allCategories = ref.watch(categoriesNotifierProvider);
     final allSpends = analyticsState.categorySpends;
@@ -120,11 +128,20 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
         ),
       );
 
-      // Find matching transactions in this category for this period & wallet
+      // Find matching transactions in this category for this period & wallet (sorted latest first)
       final matchingTxs = filteredTxs.where((tx) {
         if (tx.isIncome || tx.title.startsWith('Transfer to')) return false;
         return tx.title.trim().toLowerCase() == cleanCatName;
-      }).toList();
+      }).toList()
+        ..sort((a, b) {
+          final aDate = DateTimeUtils.parseTransactionDate(a.date) ??
+              DateTime.fromMillisecondsSinceEpoch(0);
+          final bDate = DateTimeUtils.parseTransactionDate(b.date) ??
+              DateTime.fromMillisecondsSinceEpoch(0);
+          final dateComp = bDate.compareTo(aDate);
+          if (dateComp != 0) return dateComp;
+          return b.id.compareTo(a.id);
+        });
 
       final matchingAmount = matchingTxs.fold<double>(0.0, (sum, tx) => sum + tx.amount);
       final actualAmount = matchSpend.amount > 0 ? matchSpend.amount : matchingAmount;
@@ -271,14 +288,12 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Bottom Row: Filter Dropdown Pills (Wallet, Filter, Sort)
+                  // Bottom Row: Filter Dropdown Pills (Filter, Sort)
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     physics: const BouncingScrollPhysics(),
                     child: Row(
                       children: [
-                        _buildWalletDropdown(analyticsState.selectedWallet, walletCards),
-                        const SizedBox(width: 10),
                         _buildFilterDropdown(),
                         const SizedBox(width: 10),
                         _buildSortDropdown(),
@@ -400,188 +415,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
     );
   }
 
-  Widget _buildWalletDropdown(String selectedWallet, List<WalletCardModel> cards) {
-    final isAll = selectedWallet.trim().toLowerCase() == 'all wallets' ||
-        selectedWallet.trim().toLowerCase() == 'all';
-    final matchingCard = isAll
-        ? null
-        : cards.cast<WalletCardModel?>().firstWhere(
-              (c) =>
-                  c?.bankName.trim().toLowerCase() ==
-                  selectedWallet.trim().toLowerCase(),
-              orElse: () => null,
-            );
 
-    Widget leading;
-    if (isAll || matchingCard == null) {
-      leading = const Icon(
-        Icons.account_balance_wallet_rounded,
-        size: 15,
-        color: Color(0xFF2CC56F),
-      );
-    } else {
-      Color startColor;
-      Color endColor;
-      try {
-        var startHex = matchingCard.gradientStartHex.replaceAll('#', '').trim();
-        var endHex = matchingCard.gradientEndHex.replaceAll('#', '').trim();
-        if (startHex.length == 6) startHex = 'FF$startHex';
-        if (endHex.length == 6) endHex = 'FF$endHex';
-        startColor = Color(int.parse('0x$startHex'));
-        endColor = Color(int.parse('0x$endHex'));
-      } catch (_) {
-        startColor = const Color(0xFF2CC56F);
-        endColor = const Color(0xFF10B981);
-      }
-      leading = Container(
-        width: 12,
-        height: 12,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: LinearGradient(
-            colors: [startColor, endColor],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-      );
-    }
-
-    final uniqueBankNames = cards
-        .map((c) => c.bankName.trim())
-        .where((n) => n.isNotEmpty)
-        .toSet()
-        .toList();
-
-    return PopupMenuButton<String>(
-      offset: const Offset(0, 45),
-      elevation: 8,
-      constraints: const BoxConstraints(maxHeight: 300),
-      onSelected: (value) {
-        ref.read(analyticsNotifierProvider.notifier).updateWallet(value);
-      },
-      itemBuilder: (context) {
-        final items = <PopupMenuEntry<String>>[];
-
-        final isAllSelected = isAll;
-        items.add(
-          PopupMenuItem<String>(
-            value: 'All Wallets',
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.account_balance_wallet_rounded,
-                  size: 16,
-                  color: Color(0xFF2CC56F),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'All Wallets',
-                    style: TextStyle(
-                      color: isAllSelected ? Colors.white : const Color(0xFFD1D1D6),
-                      fontSize: 14,
-                      fontWeight:
-                          isAllSelected ? FontWeight.bold : FontWeight.w500,
-                    ),
-                  ),
-                ),
-                if (isAllSelected)
-                  const Icon(
-                    Icons.check_rounded,
-                    size: 18,
-                    color: Color(0xFF2CC56F),
-                  ),
-              ],
-            ),
-          ),
-        );
-
-        if (uniqueBankNames.isNotEmpty) {
-          items.add(
-            const PopupMenuDivider(height: 1),
-          );
-
-          for (final bank in uniqueBankNames) {
-            final card = cards.cast<WalletCardModel?>().firstWhere(
-                  (c) => c?.bankName.trim().toLowerCase() == bank.toLowerCase(),
-                  orElse: () => null,
-                );
-
-            Color sColor = const Color(0xFF2CC56F);
-            Color eColor = const Color(0xFF10B981);
-            if (card != null) {
-              try {
-                var startHex = card.gradientStartHex.replaceAll('#', '').trim();
-                var endHex = card.gradientEndHex.replaceAll('#', '').trim();
-                if (startHex.length == 6) startHex = 'FF$startHex';
-                if (endHex.length == 6) endHex = 'FF$endHex';
-                sColor = Color(int.parse('0x$startHex'));
-                eColor = Color(int.parse('0x$endHex'));
-              } catch (_) {}
-            }
-
-            final isSelected =
-                !isAll && selectedWallet.trim().toLowerCase() == bank.toLowerCase();
-
-            items.add(
-              PopupMenuItem<String>(
-                value: bank,
-                child: Row(
-                  children: [
-                    Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          colors: [sColor, eColor],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        bank,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: isSelected ? Colors.white : const Color(0xFFD1D1D6),
-                          fontSize: 14,
-                          fontWeight:
-                              isSelected ? FontWeight.bold : FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                    if (isSelected)
-                      const Icon(
-                        Icons.check_rounded,
-                        size: 18,
-                        color: Color(0xFF2CC56F),
-                      ),
-                  ],
-                ),
-              ),
-            );
-          }
-        }
-
-        return items;
-      },
-      color: const Color(0xFF1A1A1A),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: const BorderSide(color: Color(0xFF313131), width: 1),
-      ),
-      child: _buildFilterPill(
-        label: isAll ? 'All Wallets' : selectedWallet,
-        leading: leading,
-        maxWidth: 110,
-      ),
-    );
-  }
 
   Widget _buildFilterDropdown() {
     return PopupMenuButton<CategoryFilterTab>(
@@ -923,9 +757,12 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                           ),
                         ),
                         Text(
-                          '${AppNumberFormat.formatNumber(data.transactions.length)} total',
+                          data.transactions.length > 5
+                              ? 'Latest 5 of ${AppNumberFormat.formatNumber(data.transactions.length)}'
+                              : '${AppNumberFormat.formatNumber(data.transactions.length)} total',
                           style: const TextStyle(
-                            fontSize: 12,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
                             color: Color(0xFF8E8E93),
                           ),
                         ),
@@ -933,7 +770,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                     ),
                     const SizedBox(height: 8),
 
-                    // Transactions List
+                    // Minimal & Redesigned Unified Transaction List (Max 5 items)
                     if (data.transactions.isEmpty)
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -941,8 +778,12 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                           vertical: 12,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF7F7F7),
+                          color: const Color(0xFFF9F9F9),
                           borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: const Color(0xFFEEEEEE),
+                            width: 0.8,
+                          ),
                         ),
                         child: const Center(
                           child: Text(
@@ -955,60 +796,153 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                         ),
                       )
                     else
-                      Column(
-                        children: data.transactions.take(5).map((tx) {
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 6),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 10,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF7F7F7),
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        tx.note != null && tx.note!.isNotEmpty
-                                            ? tx.note!
-                                            : tx.bankName ?? 'Transaction',
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w600,
-                                          color: Color(0xFF111111),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF9F9F9),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: const Color(0xFFEEEEEE),
+                            width: 0.8,
+                          ),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: Column(
+                            children: () {
+                              final recentTxs = data.transactions.take(5).toList();
+                              final items = <Widget>[];
+
+                              for (var i = 0; i < recentTxs.length; i++) {
+                                final tx = recentTxs[i];
+                                final hasNote = tx.note != null && tx.note!.trim().isNotEmpty;
+                                final titleText = hasNote
+                                    ? tx.note!.trim()
+                                    : (tx.bankName?.trim().isNotEmpty ?? false
+                                        ? tx.bankName!.trim()
+                                        : data.item.name);
+
+                                final dateFormatted = _formatTxDate(tx.date);
+
+                                items.add(
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 9,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          width: 26,
+                                          height: 26,
+                                          decoration: const BoxDecoration(
+                                            color: Colors.white,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: const Center(
+                                            child: Icon(
+                                              Icons.arrow_downward_rounded,
+                                              size: 13,
+                                              color: Color(0xFFEF4444),
+                                            ),
+                                          ),
                                         ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        tx.date,
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          color: Color(0xFF8E8E93),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Row(
+                                                children: [
+                                                  Flexible(
+                                                    child: Text(
+                                                      titleText,
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                      style: const TextStyle(
+                                                        fontSize: 13,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        color:
+                                                            Color(0xFF111111),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  if (hasNote &&
+                                                      tx.bankName != null &&
+                                                      tx.bankName!.trim().isNotEmpty) ...[
+                                                    const SizedBox(width: 6),
+                                                    Container(
+                                                      padding: const EdgeInsets
+                                                          .symmetric(
+                                                        horizontal: 6,
+                                                        vertical: 1.5,
+                                                      ),
+                                                      decoration: BoxDecoration(
+                                                        color: const Color(
+                                                            0xFFEFEFEF),
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                                6),
+                                                      ),
+                                                      child: Text(
+                                                        tx.bankName!.trim(),
+                                                        style: const TextStyle(
+                                                          fontSize: 10,
+                                                          fontWeight:
+                                                              FontWeight.w500,
+                                                          color:
+                                                              Color(0xFF666666),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ],
+                                              ),
+                                              const SizedBox(height: 1),
+                                              Text(
+                                                dateFormatted,
+                                                style: const TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w400,
+                                                  color: Color(0xFF8E8E93),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                                         ),
-                                      ),
-                                    ],
+                                        const SizedBox(width: 10),
+                                        Text(
+                                          '- $currencySymbol ${_formatAmount(tx.amount)}',
+                                          style: AppFonts.numeric(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.bold,
+                                            color: const Color(0xFF111111),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                                Text(
-                                  '- $currencySymbol ${_formatAmount(tx.amount)}',
-                                  style: AppFonts.numeric(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                    color: const Color(0xFF111111),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
+                                );
+
+                                if (i < recentTxs.length - 1) {
+                                  items.add(
+                                    const Divider(
+                                      height: 1,
+                                      thickness: 0.6,
+                                      indent: 48,
+                                      endIndent: 12,
+                                      color: Color(0xFFEFEFEF),
+                                    ),
+                                  );
+                                }
+                              }
+
+                              return items;
+                            }(),
+                          ),
+                        ),
                       ),
                   ],
                 ),
