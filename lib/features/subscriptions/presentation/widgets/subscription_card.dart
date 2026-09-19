@@ -137,10 +137,7 @@ class _SubscriptionCardState extends ConsumerState<SubscriptionCard>
   }
 
   String _formatAmount(double amount) {
-    if (amount == amount.toInt()) {
-      return amount.toInt().toString();
-    }
-    return NumberFormat('#,##0.00').format(amount);
+    return AppNumberFormat.formatAmount(amount);
   }
 
   @override

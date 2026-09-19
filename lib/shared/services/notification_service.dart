@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:zenio/features/subscriptions/domain/models/subscription_model.dart';
+import 'package:zenio/shared/utils/formatters.dart';
 
 final notificationServiceProvider = Provider<NotificationService>((ref) {
   return NotificationService.instance;
@@ -152,7 +153,7 @@ class NotificationService {
     final formattedDate =
         DateFormat.yMMMd().format(subscription.nextBillingDate);
     final formattedAmount =
-        '${subscription.currency} ${subscription.amount.toStringAsFixed(2)}';
+        '${subscription.currency} ${AppNumberFormat.formatAmount(subscription.amount, alwaysShowDecimals: true)}';
 
     const androidDetails = AndroidNotificationDetails(
       _channelId,

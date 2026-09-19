@@ -15,6 +15,7 @@ import 'package:zenio/shared/providers/currency_provider/currency_provider.dart'
 import 'package:zenio/shared/services/services.dart';
 import 'package:zenio/shared/utils/app_fonts.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
+import 'package:zenio/shared/utils/formatters.dart';
 import 'package:zenio/shared/widgets/widgets.dart';
 import 'package:zenio/features/transactions/presentation/widgets/edit_transaction_dialog.dart';
 
@@ -34,16 +35,11 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
   int _selectedNavIndex = 0;
   String? _openTransactionId;
 
-  String _formatWholePart(double amount) {
-    final whole = amount.toInt();
-    final formatter = NumberFormat('#,##0');
-    return formatter.format(whole);
-  }
+  String _formatWholePart(double amount) =>
+      AppNumberFormat.formatWholePart(amount);
 
-  String _formatDecimalPart(double amount) {
-    final decimal = ((amount - amount.toInt()).abs() * 100).round();
-    return '.${decimal.toString().padLeft(2, '0')}';
-  }
+  String _formatDecimalPart(double amount) =>
+      AppNumberFormat.formatDecimalPart(amount);
 
   @override
   Widget build(BuildContext context) {
@@ -62,15 +58,15 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
     final currencySymbol = ref.watch(currencySymbolProvider);
 
     final formattedIncomeChange = incomeChange >= 0
-        ? '+ ${incomeChange.toStringAsFixed(2)} %'
-        : '- ${incomeChange.abs().toStringAsFixed(2)} %';
+        ? '+ ${AppNumberFormat.formatAmount(incomeChange, alwaysShowDecimals: true)} %'
+        : '- ${AppNumberFormat.formatAmount(incomeChange.abs(), alwaysShowDecimals: true)} %';
     final incomeChangeColor = incomeChange >= 0
         ? const Color(0xFF10B981)
         : const Color(0xFFDD3D34);
 
     final formattedExpenseChange = expenseChange >= 0
-        ? '+ ${expenseChange.toStringAsFixed(2)} %'
-        : '- ${expenseChange.abs().toStringAsFixed(2)} %';
+        ? '+ ${AppNumberFormat.formatAmount(expenseChange, alwaysShowDecimals: true)} %'
+        : '- ${AppNumberFormat.formatAmount(expenseChange.abs(), alwaysShowDecimals: true)} %';
     final expenseChangeColor = expenseChange >= 0
         ? const Color(0xFFDD3D34)
         : const Color(0xFF10B981);

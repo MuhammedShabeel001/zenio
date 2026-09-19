@@ -23,16 +23,11 @@ class _TransactionsScreenMobileState
     extends ConsumerState<TransactionsScreenMobile> {
   String? _openTransactionId;
   String? _expandedTileId;
-  String _formatWholePart(double amount) {
-    final whole = amount.abs().toInt();
-    final formatter = NumberFormat('#,##0');
-    return formatter.format(whole);
-  }
+  String _formatWholePart(double amount) =>
+      AppNumberFormat.formatWholePart(amount);
 
-  String _formatDecimalPart(double amount) {
-    final decimal = ((amount.abs() - amount.abs().toInt()) * 100).round();
-    return '.${decimal.toString().padLeft(2, '0')}';
-  }
+  String _formatDecimalPart(double amount) =>
+      AppNumberFormat.formatDecimalPart(amount);
 
   @override
   Widget build(BuildContext context) {

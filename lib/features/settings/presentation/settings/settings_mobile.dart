@@ -12,6 +12,7 @@ import 'package:zenio/shared/providers/package_info_provider/package_info_provid
 import 'package:zenio/shared/services/csv_export_service.dart';
 import 'package:zenio/shared/services/csv_import_service.dart';
 import 'package:zenio/shared/services/services.dart';
+import 'package:zenio/shared/shared.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/widgets/widgets.dart';
 
@@ -621,7 +622,7 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                                   ZenioSnackBar.show(
                                     context,
                                     message:
-                                        'Successfully imported $count transaction${count == 1 ? '' : 's'}!',
+                                        'Successfully imported ${AppNumberFormat.formatNumber(count)} transaction${count == 1 ? '' : 's'}!',
                                     type: ZenioSnackBarType.success,
                                   );
                                 }

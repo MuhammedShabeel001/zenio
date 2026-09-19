@@ -19,18 +19,11 @@ class DebtsScreenMobile extends ConsumerStatefulWidget {
 class _DebtsScreenMobileState extends ConsumerState<DebtsScreenMobile> {
   String? _openDebtId;
   String? _expandedTileId;
-  String _formatWholePart(double amount) {
-    final isNegative = amount < 0;
-    final absWhole = amount.abs().toInt();
-    final formatter = NumberFormat('#,##0');
-    final formattedStr = formatter.format(absWhole);
-    return isNegative ? '- $formattedStr' : formattedStr;
-  }
+  String _formatWholePart(double amount) =>
+      AppNumberFormat.formatWholePart(amount);
 
-  String _formatDecimalPart(double amount) {
-    final decimal = ((amount - amount.toInt()).abs() * 100).round();
-    return '.${decimal.toString().padLeft(2, '0')}';
-  }
+  String _formatDecimalPart(double amount) =>
+      AppNumberFormat.formatDecimalPart(amount);
 
   @override
   Widget build(BuildContext context) {

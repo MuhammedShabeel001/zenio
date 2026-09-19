@@ -43,22 +43,13 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
   CategoryFilterTab _activeTab = CategoryFilterTab.all;
   String? _expandedCategoryId;
 
-  String _formatAmount(double amount) {
-    if (amount == amount.toInt()) {
-      return NumberFormat('#,##0').format(amount.toInt());
-    }
-    return NumberFormat('#,##0.00').format(amount);
-  }
+  String _formatAmount(double amount) => AppNumberFormat.formatAmount(amount);
 
-  String _formatWholePart(double amount) {
-    final whole = amount.toInt();
-    return NumberFormat('#,##0').format(whole);
-  }
+  String _formatWholePart(double amount) =>
+      AppNumberFormat.formatWholePart(amount);
 
-  String _formatDecimalPart(double amount) {
-    final decimal = ((amount - amount.toInt()).abs() * 100).round();
-    return '.${decimal.toString().padLeft(2, '0')}';
-  }
+  String _formatDecimalPart(double amount) =>
+      AppNumberFormat.formatDecimalPart(amount);
 
   Color _getBadgeBackgroundColor(String name) {
     final lower = name.toLowerCase();
@@ -490,8 +481,8 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                       Text(
                         totalSpent > 0
                             ? (txCount > 0
-                                ? '$txCount ${txCount == 1 ? 'spend' : 'spends'} • ${percent.toStringAsFixed(1)}%'
-                                : '${data.spend.spendsCount} spends • ${percent.toStringAsFixed(1)}%')
+                                ? '${AppNumberFormat.formatNumber(txCount)} ${txCount == 1 ? 'spend' : 'spends'} • ${percent.toStringAsFixed(1)}%'
+                                : '${AppNumberFormat.formatNumber(data.spend.spendsCount)} spends • ${percent.toStringAsFixed(1)}%')
                             : 'No spends',
                         style: const TextStyle(
                           fontSize: 13,
@@ -507,7 +498,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                   textBaseline: TextBaseline.alphabetic,
                   children: [
                     Text(
-                      totalSpent > 0 ? '- ${_formatAmount(totalSpent)}' : '$currencySymbol 0',
+                      totalSpent > 0 ? '- ${_formatAmount(totalSpent)}' : '$currencySymbol ${_formatAmount(0)}',
                       style: AppFonts.numeric(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -694,7 +685,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                           ),
                         ),
                         Text(
-                          '${data.transactions.length} total',
+                          '${AppNumberFormat.formatNumber(data.transactions.length)} total',
                           style: const TextStyle(
                             fontSize: 12,
                             color: Color(0xFF8E8E93),

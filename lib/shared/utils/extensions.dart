@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zenio/shared/l10n/arb/app_localizations.dart';
+import 'package:zenio/shared/utils/formatters.dart';
 
 extension AppLocalizationsX on BuildContext {
   AppLocalizations get l10n => AppLocalizations.of(this);
@@ -54,6 +55,18 @@ extension IterableExtensions<E> on Iterable<E> {
 
 extension Doublex on double {
   double toPrecision(int n) => double.parse(toStringAsFixed(n));
+}
+
+extension NumFormattingX on num {
+  /// Formats with thousands separators, e.g. 12345 -> '12,345'
+  String get toFormattedNumber => AppNumberFormat.formatNumber(this);
+
+  /// Formats currency/amount with thousands separators, e.g. 12345.67 -> '12,345.67', 12345 -> '12,345'
+  String get toFormattedAmount => AppNumberFormat.formatAmount(toDouble());
+
+  /// Formats currency/amount always with two decimal places, e.g. 12345 -> '12,345.00'
+  String get toFormattedAmountExact =>
+      AppNumberFormat.formatAmount(toDouble(), alwaysShowDecimals: true);
 }
 
 extension SpacingExtension on Flex {

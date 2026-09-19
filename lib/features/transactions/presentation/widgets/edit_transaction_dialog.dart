@@ -14,6 +14,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/utils/app_fonts.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
+import 'package:zenio/shared/utils/formatters.dart';
 import 'package:zenio/shared/widgets/zenio_dropdown.dart';
 
 class EditTransactionDialog extends ConsumerStatefulWidget {
@@ -124,10 +125,7 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
   }
 
   String _formatAmount(double amount) {
-    if (amount == amount.toInt()) {
-      return NumberFormat('#,##0').format(amount.toInt());
-    }
-    return NumberFormat('#,##0.00').format(amount);
+    return AppNumberFormat.formatAmount(amount);
   }
 
   Future<void> _pickDate() async {

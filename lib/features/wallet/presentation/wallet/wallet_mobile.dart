@@ -52,16 +52,11 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
     return (_pageController!.page?.round() ?? 0) % length;
   }
 
-  String _formatWholePart(double amount) {
-    final whole = amount.toInt();
-    final formatter = NumberFormat('#,##0');
-    return formatter.format(whole);
-  }
+  String _formatWholePart(double amount) =>
+      AppNumberFormat.formatWholePart(amount);
 
-  String _formatDecimalPart(double amount) {
-    final decimal = ((amount - amount.toInt()).abs() * 100).round();
-    return '.${decimal.toString().padLeft(2, '0')}';
-  }
+  String _formatDecimalPart(double amount) =>
+      AppNumberFormat.formatDecimalPart(amount);
 
   @override
   Widget build(BuildContext context) {

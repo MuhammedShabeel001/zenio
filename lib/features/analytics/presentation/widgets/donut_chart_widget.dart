@@ -139,10 +139,7 @@ class _DonutChartWidgetState extends ConsumerState<DonutChartWidget> {
   }
 
   String _formatAmount(double amount) {
-    if (amount == amount.toInt()) {
-      return NumberFormat('#,##0').format(amount.toInt());
-    }
-    return NumberFormat('#,##0.00').format(amount);
+    return AppNumberFormat.formatAmount(amount);
   }
 
   Widget _buildCenterInfo(CategorySpendModel category, double total) {

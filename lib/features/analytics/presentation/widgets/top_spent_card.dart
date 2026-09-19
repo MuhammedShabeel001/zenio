@@ -146,10 +146,7 @@ class TopSpentCard extends ConsumerWidget {
   }
 
   String _formatAmount(double amount) {
-    if (amount == amount.toInt()) {
-      return amount.toInt().toString();
-    }
-    return NumberFormat('#,##0.00').format(amount);
+    return AppNumberFormat.formatAmount(amount);
   }
 
   @override
@@ -207,7 +204,7 @@ class TopSpentCard extends ConsumerWidget {
                       ),
                       const SizedBox(height: 3),
                       Text(
-                        '${spend.spendsCount} spends',
+                        '${AppNumberFormat.formatNumber(spend.spendsCount)} spends',
                         style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w400,

@@ -1,4 +1,51 @@
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
+
+/// Centralized utility for formatting numbers, currencies, and balance displays.
+class AppNumberFormat {
+  static final NumberFormat _integerFormatter = NumberFormat('#,##0');
+  static final NumberFormat _decimalFormatter = NumberFormat('#,##0.00');
+
+  /// Formats an integer or whole number count with thousands separators (e.g. 12345 -> '12,345').
+  static String formatNumber(num number) {
+    return _integerFormatter.format(number);
+  }
+
+  /// Formats money / currency amounts with thousands separators.
+  /// When [alwaysShowDecimals] is false, integer amounts have no decimals (e.g. 12,345) and fractional amounts have two decimals (e.g. 12,345.67).
+  /// When [alwaysShowDecimals] is true, amounts always have two decimal places (e.g. 12,345.00).
+  static String formatAmount(double amount, {bool alwaysShowDecimals = false}) {
+    if (!alwaysShowDecimals && amount == amount.toInt()) {
+      return _integerFormatter.format(amount.toInt());
+    }
+    return _decimalFormatter.format(amount);
+  }
+
+  /// Formats currency with optional symbol prefix (e.g. '₹ 12,345.67' or '$ 12,345').
+  static String formatCurrency(
+    double amount, {
+    String symbol = '',
+    bool alwaysShowDecimals = false,
+  }) {
+    final formatted = formatAmount(amount, alwaysShowDecimals: alwaysShowDecimals);
+    return symbol.isEmpty ? formatted : '$symbol $formatted';
+  }
+
+  /// Formats the whole number part for split-styled balance headers (e.g. '12,345' or '- 12,345').
+  static String formatWholePart(double amount) {
+    final isNegative = amount < 0;
+    final absWhole = amount.abs().toInt();
+    final formattedStr = _integerFormatter.format(absWhole);
+    return isNegative ? '- $formattedStr' : formattedStr;
+  }
+
+  /// Formats the two-digit decimal part for split-styled balance headers (e.g. '.67' or '.00').
+  static String formatDecimalPart(double amount) {
+    final absAmount = amount.abs();
+    final decimal = ((absAmount - absAmount.toInt()) * 100).round();
+    return '.${decimal.toString().padLeft(2, '0')}';
+  }
+}
 
 class CurrencyInputFormatter extends TextInputFormatter {
   CurrencyInputFormatter({

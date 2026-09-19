@@ -16,6 +16,7 @@ import 'package:zenio/shared/providers/currency_provider/currency_provider.dart'
 import 'package:zenio/shared/providers/default_wallet_provider/default_wallet_provider.dart';
 import 'package:zenio/shared/utils/app_fonts.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
+import 'package:zenio/shared/utils/formatters.dart';
 import 'package:zenio/shared/widgets/zenio_dropdown.dart';
 
 enum TransactionType { expense, income, transfer }
@@ -78,10 +79,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
   }
 
   String _formatAmount(double amount) {
-    if (amount == amount.toInt()) {
-      return NumberFormat('#,##0').format(amount.toInt());
-    }
-    return NumberFormat('#,##0.00').format(amount);
+    return AppNumberFormat.formatAmount(amount);
   }
 
   void _swapWallets(String currentSource, String currentDestination) {

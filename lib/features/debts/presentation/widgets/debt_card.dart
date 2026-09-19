@@ -138,12 +138,7 @@ class _DebtCardState extends ConsumerState<DebtCard>
   }
 
   String _formatAmount(double amount) {
-    String formatted;
-    if (amount == amount.toInt()) {
-      formatted = amount.toInt().toString();
-    } else {
-      formatted = NumberFormat('#,##0.00').format(amount);
-    }
+    final formatted = AppNumberFormat.formatAmount(amount);
     return widget.debt.isOwed ? '- $formatted' : '+ $formatted';
   }
 
