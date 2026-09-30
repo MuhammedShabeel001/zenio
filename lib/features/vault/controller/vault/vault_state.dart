@@ -1,7 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:zenio/features/vault/domain/models/vault_card_model.dart';
 import 'package:zenio/features/vault/domain/models/vault_note_model.dart';
-import 'package:zenio/features/vault/domain/repositories/implementations/vault_repository.dart';
 
 part 'vault_state.freezed.dart';
 
@@ -19,8 +18,8 @@ abstract class VaultState with _$VaultState {
 
   factory VaultState.initial() => const VaultState(
         mode: VaultMode.cards,
-        cards: defaultVaultCards,
-        notes: defaultVaultNotes,
-        isLoading: false,
+        cards: [],
+        notes: [],
+        isLoading: true,
       );
 }

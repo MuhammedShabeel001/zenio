@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
+import 'package:zenio/shared/widgets/item_actions.dart';
+import 'package:zenio/features/home/domain/models/transaction/transaction_kind.dart';
 import 'package:zenio/features/home/domain/models/transaction/transaction_model.dart';
-import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/shared.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
-import 'package:zenio/shared/utils/datetime.dart';
-import 'package:zenio/shared/widgets/swipe_delete_button.dart';
 
 class TransactionCard extends ConsumerStatefulWidget {
   const TransactionCard({
@@ -35,7 +33,6 @@ class _TransactionCardState extends ConsumerState<TransactionCard>
   late AnimationController _animationController;
   late Animation<double> _animation;
   double _dragOffset = 0;
-  bool _isConfirmingDelete = false;
   static const double _maxDragDistance = 146;
 
   @override
@@ -43,7 +40,7 @@ class _TransactionCardState extends ConsumerState<TransactionCard>
     super.initState();
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 250),
+      duration: ZenioMotion.standard,
     );
 
     _dragOffset = widget.isOpen ? -_maxDragDistance : 0;
@@ -65,7 +62,6 @@ class _TransactionCardState extends ConsumerState<TransactionCard>
     super.didUpdateWidget(oldWidget);
     if (oldWidget.isOpen != widget.isOpen) {
       if (!widget.isOpen && _dragOffset != 0) {
-        _isConfirmingDelete = false;
         _animateTo(0);
       } else if (widget.isOpen && _dragOffset != -_maxDragDistance) {
         _animateTo(-_maxDragDistance);
@@ -80,9 +76,6 @@ class _TransactionCardState extends ConsumerState<TransactionCard>
   }
 
   void _animateTo(double targetOffset) {
-    if (targetOffset == 0 && _isConfirmingDelete) {
-      _isConfirmingDelete = false;
-    }
     _animation = Tween<double>(
       begin: _dragOffset,
       end: targetOffset,
@@ -117,11 +110,6 @@ class _TransactionCardState extends ConsumerState<TransactionCard>
   }
 
   void _close() {
-    if (_isConfirmingDelete) {
-      setState(() {
-        _isConfirmingDelete = false;
-      });
-    }
     if (_dragOffset != 0) {
       _animateTo(0);
       widget.onClose?.call();
@@ -135,9 +123,13 @@ class _TransactionCardState extends ConsumerState<TransactionCard>
   @override
   Widget build(BuildContext context) {
     final currencyCode = ref.watch(currencyCodeProvider);
-    return Container(
+    return ItemActions(
+      onEdit: widget.onEdit,
+      onDelete: widget.onDelete,
+      child: Container(
       margin: const EdgeInsets.only(bottom: 5),
-      height: 70,
+      // Grows with the text size so larger text is not clipped.
+      height: MediaQuery.textScalerOf(context).scale(70),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
@@ -145,47 +137,52 @@ class _TransactionCardState extends ConsumerState<TransactionCard>
           Positioned.fill(
             child: Align(
               alignment: Alignment.centerRight,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Delete Button (First tap: red trash icon; tap again to confirm: red circle with white checkmark)
-                  SwipeDeleteButton(
-                    isConfirming: _isConfirmingDelete,
-                    onTap: () {
-                      if (!_isConfirmingDelete) {
-                        setState(() {
-                          _isConfirmingDelete = true;
-                        });
-                      } else {
+              child: ExcludeSemantics(
+                // Hidden under the card until it is swiped open; the card's own
+                // actions offer Edit and Delete meanwhile.
+                excluding: _dragOffset == 0,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Delete Button (First tap: red trash icon; tap again to confirm: red circle with white checkmark)
+                    SwipeDeleteButton(
+                      isConfirming: false,
+                      onTap: () {
+                        // Deletes straight away; the screen offers Undo.
                         _close();
                         widget.onDelete?.call();
-                      }
-                    },
-                  ),
-                  const SizedBox(width: 3),
-
-                  // Edit Button (White Circle + Pencil Edit Icon)
-                  GestureDetector(
-                    onTap: () {
-                      _close();
-                      widget.onEdit?.call();
-                    },
-                    child: Container(
-                      width: 70,
-                      height: 70,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Center(
-                        child: Assets.icons.edit.svg(
-                          width: 24,
-                          height: 24,
+                      },
+                    ),
+                    const SizedBox(width: 3),
+  
+                    // Edit Button (White Circle + Pencil Edit Icon)
+                    Semantics(
+                      button: true,
+                      label: 'Edit',
+                      excludeSemantics: true,
+                      child: GestureDetector(
+                        onTap: () {
+                          _close();
+                          widget.onEdit?.call();
+                        },
+                        child: Container(
+                          width: 70,
+                          height: 70,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Assets.icons.edit.svg(
+                              width: 24,
+                              height: 24,
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -218,11 +215,11 @@ class _TransactionCardState extends ConsumerState<TransactionCard>
                       width: 60,
                       height: 60,
                       decoration: const BoxDecoration(
-                        color: Color(0xFFF2F2F2),
+                        color: ZenioColors.fieldFill,
                         shape: BoxShape.circle,
                       ),
                       child: Center(
-                        child: widget.transaction.title.startsWith('Transfer to')
+                        child: widget.transaction.resolvedKind == TransactionKind.transfer
                             ? Assets.icons.swap.svg(
                                 width: 24,
                                 height: 24,
@@ -298,7 +295,7 @@ class _TransactionCardState extends ConsumerState<TransactionCard>
                           style: const TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFF8E8E93),
+                            color: ZenioColors.textSecondary,
                           ),
                         ),
                       ],
@@ -310,6 +307,7 @@ class _TransactionCardState extends ConsumerState<TransactionCard>
           ),
         ],
       ),
+    ),
     );
   }
 }

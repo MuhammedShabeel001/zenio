@@ -31,19 +31,28 @@ class AppNumberFormat {
     return symbol.isEmpty ? formatted : '$symbol $formatted';
   }
 
+  /// Splits [amount] into whole units and cents, rounding once to the cent so
+  /// both parts agree (0.999 is 1.00, not 0 and 100 cents). A value that
+  /// rounds to zero is never negative.
+  static ({int whole, int cents, bool isNegative}) _splitCents(double amount) {
+    final totalCents = (amount.abs() * 100).round();
+    return (
+      whole: totalCents ~/ 100,
+      cents: totalCents % 100,
+      isNegative: amount < 0 && totalCents != 0,
+    );
+  }
+
   /// Formats the whole number part for split-styled balance headers (e.g. '12,345' or '- 12,345').
   static String formatWholePart(double amount) {
-    final isNegative = amount < 0;
-    final absWhole = amount.abs().toInt();
-    final formattedStr = _integerFormatter.format(absWhole);
-    return isNegative ? '- $formattedStr' : formattedStr;
+    final parts = _splitCents(amount);
+    final formattedStr = _integerFormatter.format(parts.whole);
+    return parts.isNegative ? '- $formattedStr' : formattedStr;
   }
 
   /// Formats the two-digit decimal part for split-styled balance headers (e.g. '.67' or '.00').
   static String formatDecimalPart(double amount) {
-    final absAmount = amount.abs();
-    final decimal = ((absAmount - absAmount.toInt()) * 100).round();
-    return '.${decimal.toString().padLeft(2, '0')}';
+    return '.${_splitCents(amount).cents.toString().padLeft(2, '0')}';
   }
 
   /// Parses an amount string that may contain thousands separators or currency symbols.
@@ -167,4 +176,30 @@ class CurrencyInputFormatter extends ThousandsSeparatorInputFormatter {
   CurrencyInputFormatter({
     super.decimalRange,
   });
+}
+
+/// Formats card expiry dates as MM/YY while typing, adding the slash.
+class ExpiryDateInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    var digits = newValue.text.replaceAll(RegExp(r'\D'), '');
+    if (digits.length > 4) digits = digits.substring(0, 4);
+    // Deleting the slash also deletes the digit before it.
+    final deletedSlash = oldValue.text.endsWith('/') &&
+        newValue.text.length < oldValue.text.length &&
+        !newValue.text.contains('/');
+    if (deletedSlash && digits.isNotEmpty) {
+      digits = digits.substring(0, digits.length - 1);
+    }
+    final text = digits.length > 2
+        ? '${digits.substring(0, 2)}/${digits.substring(2)}'
+        : (digits.length == 2 && !deletedSlash ? '$digits/' : digits);
+    return TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+  }
 }

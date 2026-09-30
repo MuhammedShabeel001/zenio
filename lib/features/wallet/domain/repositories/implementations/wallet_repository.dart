@@ -1,9 +1,10 @@
-import 'package:zenio/shared/providers/providers.dart';
 import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
 import 'package:zenio/features/wallet/domain/repositories/interfaces/i_wallet_repository.dart';
+import 'package:zenio/shared/providers/providers.dart';
 
 part 'wallet_repository.g.dart';
 
@@ -14,38 +15,29 @@ class WalletRepository implements IWalletRepository {
 
   static const String _balanceKey = 'wallet_card_balance';
   static const String _cardsKey = 'wallet_cards_list';
+  static const String _preMigrationBackupKey =
+      'wallet_cards_list.before_opening_balances';
 
   @override
   Future<double> getCardBalance() async {
-    final balance = _prefs.getDouble(_balanceKey);
-    if (balance != null) {
-      return balance;
-    }
-    const defaultBalance = 0.0;
-    await saveCardBalance(defaultBalance);
-    return defaultBalance;
+    return _prefs.getDouble(_balanceKey) ?? 0;
   }
 
   @override
-  Future<List<WalletCardModel>> getCards() async {
-    final rawJsonList = _prefs.getStringList(_cardsKey);
-    if (rawJsonList != null && rawJsonList.isNotEmpty) {
-      try {
-        return rawJsonList.map((item) {
-          final map = jsonDecode(item) as Map<String, dynamic>;
-          return WalletCardModel.fromJson(map);
-        }).toList();
-      } catch (_) {
-        // Fallback to defaults
-      }
-    }
-
-    return [];
+  Future<List<WalletCardModel>> getCards() {
+    return _prefs.readJsonList(_cardsKey, WalletCardModel.fromJson);
   }
 
   @override
   Future<void> saveCardBalance(double balance) async {
     await _prefs.setDouble(_balanceKey, balance);
+  }
+
+  @override
+  Future<void> backupCardsBeforeMigration() async {
+    final raw = _prefs.getString(_cardsKey);
+    if (raw == null || _prefs.containsKey(_preMigrationBackupKey)) return;
+    await _prefs.setString(_preMigrationBackupKey, raw);
   }
 
   @override
@@ -57,10 +49,9 @@ class WalletRepository implements IWalletRepository {
 
 @Riverpod(keepAlive: true)
 IWalletRepository walletRepositoryRepo(Ref ref) {
-  final prefsAsync = ref.watch(sqlitePrefsProvider);
-  final prefs = prefsAsync.valueOrNull;
+  final prefs = ref.watch(sqlitePrefsProvider).valueOrNull;
   if (prefs == null) {
-    throw Exception('SqlitePrefs not initialized yet');
+    throw StateError('Local storage is not ready yet.');
   }
   return WalletRepository(prefs);
 }

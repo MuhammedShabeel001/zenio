@@ -9,6 +9,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zenio/app/app.dart';
 import 'package:zenio/shared/shared.dart';
 
+/// Debug-only provider logging. It prints provider names and value types,
+/// never the values themselves, so no personal or vault data reaches a log.
 class MyObserver extends ProviderObserver {
   @override
   void didAddProvider(
@@ -16,7 +18,7 @@ class MyObserver extends ProviderObserver {
     Object? value,
     ProviderContainer container,
   ) {
-    log('Provider $provider was initialized with $value');
+    log('Provider ${_name(provider)} initialized (${value.runtimeType})');
   }
 
   @override
@@ -24,17 +26,7 @@ class MyObserver extends ProviderObserver {
     ProviderBase<Object?> provider,
     ProviderContainer container,
   ) {
-    log('Provider $provider was disposed');
-  }
-
-  @override
-  void didUpdateProvider(
-    ProviderBase<Object?> provider,
-    Object? previousValue,
-    Object? newValue,
-    ProviderContainer container,
-  ) {
-    log('Provider $provider updated from $previousValue to $newValue');
+    log('Provider ${_name(provider)} disposed');
   }
 
   @override
@@ -44,12 +36,17 @@ class MyObserver extends ProviderObserver {
     StackTrace stackTrace,
     ProviderContainer container,
   ) {
-    log('Provider $provider threw $error at $stackTrace');
+    log('Provider ${_name(provider)} failed',
+        error: error, stackTrace: stackTrace,);
   }
+
+  static String _name(ProviderBase<Object?> provider) =>
+      provider.name ?? provider.runtimeType.toString();
 }
 
 Future<void> bootstrap(FutureOr<App> Function() builder) async {
   FlutterError.onError = (details) {
+    if (kDebugMode) FlutterError.presentError(details);
     log(details.exceptionAsString(), stackTrace: details.stack);
     // Enable on setting up of firebase project
     // FirebaseCrashlytics.instance.recordFlutterError(details);
@@ -74,11 +71,18 @@ Future<void> bootstrap(FutureOr<App> Function() builder) async {
   // Add cross-flavor configuration here
   runApp(
     ProviderScope(
-      observers: [MyObserver()],
+      observers: [if (kDebugMode) MyObserver()],
       overrides: [
         envProvider.overrideWithValue(app.environment),
         dioProvider.overrideWithValue(
-          Dio(BaseOptions(baseUrl: app.environment.SERVER_URL)),
+          Dio(
+            BaseOptions(
+              baseUrl: app.environment.SERVER_URL,
+              connectTimeout: app.environment.CONNECT_TIMEOUT,
+              sendTimeout: app.environment.CONNECT_TIMEOUT,
+              receiveTimeout: app.environment.RECEIVE_TIMEOUT,
+            ),
+          ),
         ),
       ],
       child: app,

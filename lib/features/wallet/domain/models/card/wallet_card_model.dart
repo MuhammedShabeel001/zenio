@@ -12,7 +12,14 @@ sealed class WalletCardModel with _$WalletCardModel {
     @JsonKey(name: 'card_type') required String cardType,
     @JsonKey(name: 'gradient_start') required String gradientStartHex,
     @JsonKey(name: 'gradient_end') required String gradientEndHex,
+
+    /// The current balance: [openingBalance] plus this wallet's transactions.
+    /// Stored as a cache so older app versions still show the right amount.
     @JsonKey(name: 'balance') @Default(0.0) double balance,
+
+    /// The balance before any recorded transaction. Null for wallets saved
+    /// before balances were derived from transactions (not yet migrated).
+    @JsonKey(name: 'opening_balance') double? openingBalance,
     @JsonKey(name: 'created_at') String? createdAt,
     @JsonKey(name: 'is_frozen') @Default(false) bool isFrozen,
   }) = _WalletCardModel;

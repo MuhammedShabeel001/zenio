@@ -45,7 +45,9 @@ class FeedbackNotifier extends _$FeedbackNotifier {
     } catch (e) {
       state = state.copyWith(
         status: FeedbackSubmissionStatus.error,
-        errorMessage: e.toString().replaceAll('Exception: ', ''),
+        errorMessage: e is FeedbackSubmitException
+            ? e.message
+            : FeedbackSubmitException.unavailable,
       );
       return false;
     }

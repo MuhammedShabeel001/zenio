@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:zenio/features/subscriptions/controller/subscriptions/subscriptions_notifier.dart';
 import 'package:zenio/features/subscriptions/presentation/widgets/add_subscription_bottom_sheet.dart';
 import 'package:zenio/features/subscriptions/presentation/widgets/edit_subscription_dialog.dart';
 import 'package:zenio/features/subscriptions/presentation/widgets/subscription_card.dart';
-import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/shared.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 
 class SubscriptionsScreenMobile extends ConsumerStatefulWidget {
-  const SubscriptionsScreenMobile({super.key});
+  const SubscriptionsScreenMobile({this.initialExpandedId, super.key});
+
+  /// A subscription to show expanded when the screen opens, for example the
+  /// one a reminder was about.
+  final String? initialExpandedId;
 
   @override
   ConsumerState<SubscriptionsScreenMobile> createState() =>
@@ -20,7 +22,7 @@ class SubscriptionsScreenMobile extends ConsumerStatefulWidget {
 class _SubscriptionsScreenMobileState
     extends ConsumerState<SubscriptionsScreenMobile> {
   String? _openSubscriptionId;
-  String? _expandedTileId;
+  late String? _expandedTileId = widget.initialExpandedId;
   String _formatWholePart(double amount) =>
       AppNumberFormat.formatWholePart(amount);
 
@@ -44,9 +46,10 @@ class _SubscriptionsScreenMobileState
         bottom: false,
         child: Column(
           children: [
+            const ScreenTitleBar(title: 'Subscriptions'),
             // Dark Header Section
             Padding(
-              padding: const EdgeInsets.fromLTRB(10, 10, 10, 20),
+              padding: const EdgeInsets.fromLTRB(10, 4, 10, 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -55,36 +58,43 @@ class _SubscriptionsScreenMobileState
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       // Total Balance
-                      RichText(
-                        text: TextSpan(
-                          children: [
-                            TextSpan(
-                              text: '$currencySymbol ',
-                              style: AppFonts.numeric(
-                                fontSize: 32,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                letterSpacing: -0.5,
-                              ),
+                      Flexible(
+                        // Large amounts and text sizes shrink to fit instead of overflowing.
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: RichText(
+                            text: TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: '$currencySymbol ',
+                                  style: AppFonts.numeric(
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: _formatWholePart(totalBalance),
+                                  style: AppFonts.numeric(
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: _formatDecimalPart(totalBalance),
+                                  style: AppFonts.numeric(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color(0xFF808080),
+                                  ),
+                                ),
+                              ],
                             ),
-                            TextSpan(
-                              text: _formatWholePart(totalBalance),
-                              style: AppFonts.numeric(
-                                fontSize: 32,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                letterSpacing: -0.5,
-                              ),
-                            ),
-                            TextSpan(
-                              text: _formatDecimalPart(totalBalance),
-                              style: AppFonts.numeric(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: const Color(0xFF808080),
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
 
@@ -148,7 +158,7 @@ class _SubscriptionsScreenMobileState
               child: Container(
                 width: double.infinity,
                 decoration: const BoxDecoration(
-                  color: Color(0xFFF7F7F7),
+                  color: ZenioColors.sheet,
                   borderRadius: BorderRadius.vertical(
                     top: Radius.circular(30),
                   ),
@@ -160,20 +170,33 @@ class _SubscriptionsScreenMobileState
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(10, 16, 10, 20),
                     children: [
-                      if (subscriptions.isEmpty)
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 40),
-                          child: Center(
-                            child: Text(
-                              'No subscriptions found',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Color(0xFF8E8E93),
-                              ),
-                            ),
+                      if (subscriptions.isEmpty) ...[
+                        if (state.isLoading)
+                          const ListStateMessage.loading()
+                        else if (state.errorMessage != null)
+                          ListStateMessage.error(
+                            onRetry: ref
+                                .read(subscriptionsNotifierProvider.notifier)
+                                .loadData,
+                          )
+                        else if (state.selectedFilter.toLowerCase() == 'all')
+                          ListStateMessage(
+                            title: 'No subscriptions yet',
+                            message:
+                                'Add the services you pay for regularly to see your total and get a reminder before each renewal.',
+                            icon: Icons.autorenew_rounded,
+                            actionLabel: 'Add subscription',
+                            onAction: () =>
+                                AddSubscriptionBottomSheet.show(context),
+                          )
+                        else
+                          ListStateMessage(
+                            title: 'Nothing here',
+                            message:
+                                'No ${state.selectedFilter.toLowerCase()} subscriptions.',
+                            icon: Icons.filter_alt_off_outlined,
                           ),
-                        )
-                      else
+                      ] else
                         ...subscriptions.map(
                           (item) => SubscriptionCard(
                             key: ValueKey(item.id),
@@ -203,10 +226,27 @@ class _SubscriptionsScreenMobileState
                                 });
                               }
                             },
-                            onDelete: () {
-                              ref
-                                  .read(subscriptionsNotifierProvider.notifier)
-                                  .deleteSubscription(item.id);
+                            onDelete: () async {
+                              try {
+                                await ref
+                                    .read(subscriptionsNotifierProvider.notifier)
+                                    .deleteSubscription(item.id);
+                              } catch (_) {
+                                if (!context.mounted) return;
+                                ZenioSnackBar.show(
+                                  context,
+                                  message:
+                                      "Couldn't delete the subscription. Please try again.",
+                                  type: ZenioSnackBarType.error,
+                                );
+                                return;
+                              }
+                              if (!context.mounted) return;
+                              ZenioSnackBar.show(
+                                context,
+                                message: 'Subscription deleted',
+                                type: ZenioSnackBarType.success,
+                              );
                             },
                             onEdit: () {
                               EditSubscriptionDialog.show(
@@ -242,7 +282,7 @@ class _SubscriptionsScreenMobileState
             style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w500,
-              color: Color(0xFFD1D1D6),
+              color: ZenioColors.border,
             ),
           ),
           const SizedBox(width: 8),
@@ -265,23 +305,19 @@ class _SubscriptionsScreenMobileState
       itemBuilder: (context) => [
         const PopupMenuItem(
           value: 'All',
-          child: Text('All', style: TextStyle(color: Color(0xFFD1D1D6), fontSize: 14, fontWeight: FontWeight.w500)),
-        ),
-        const PopupMenuItem(
-          value: 'Daily',
-          child: Text('Daily', style: TextStyle(color: Color(0xFFD1D1D6), fontSize: 14, fontWeight: FontWeight.w500)),
+          child: Text('All', style: TextStyle(color: ZenioColors.border, fontSize: 14, fontWeight: FontWeight.w500)),
         ),
         const PopupMenuItem(
           value: 'Weekly',
-          child: Text('Weekly', style: TextStyle(color: Color(0xFFD1D1D6), fontSize: 14, fontWeight: FontWeight.w500)),
+          child: Text('Weekly', style: TextStyle(color: ZenioColors.border, fontSize: 14, fontWeight: FontWeight.w500)),
         ),
         const PopupMenuItem(
           value: 'Monthly',
-          child: Text('Monthly', style: TextStyle(color: Color(0xFFD1D1D6), fontSize: 14, fontWeight: FontWeight.w500)),
+          child: Text('Monthly', style: TextStyle(color: ZenioColors.border, fontSize: 14, fontWeight: FontWeight.w500)),
         ),
         const PopupMenuItem(
           value: 'Yearly',
-          child: Text('Yearly', style: TextStyle(color: Color(0xFFD1D1D6), fontSize: 14, fontWeight: FontWeight.w500)),
+          child: Text('Yearly', style: TextStyle(color: ZenioColors.border, fontSize: 14, fontWeight: FontWeight.w500)),
         ),
       ],
       color: const Color(0xFF1A1A1A),

@@ -99,7 +99,7 @@ ${vectorPaths.map((p) => '        <path\n            android:fillColor="${p['fil
   print('Generating iOS Icons...');
   
   // Create high-res padded PNG first
-  final shell = await Process.run('sips', [
+  await Process.run('sips', [
     '-s', 'format', 'png',
     '--resampleHeight', '824',
     'assets/images/app_logo.svg',

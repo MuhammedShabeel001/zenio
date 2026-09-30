@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zenio/features/analytics/domain/models/category_spend/category_spend_model.dart';
-import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/shared.dart';
 
 class DonutChartWidget extends ConsumerStatefulWidget {
@@ -173,7 +173,7 @@ class _DonutChartWidgetState extends ConsumerState<DonutChartWidget> {
           style: AppFonts.numeric(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            color: const Color(0xFF111111),
+            color: ZenioColors.textPrimary,
             letterSpacing: -0.5,
           ),
         ),
@@ -248,7 +248,7 @@ class _DonutChartWidgetState extends ConsumerState<DonutChartWidget> {
               height: 104,
               child: Center(
                 child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 200),
+                  duration: ZenioMotion.fast,
                   transitionBuilder: (child, animation) {
                     return FadeTransition(
                       opacity: animation,
@@ -383,8 +383,9 @@ class _ExactCustomDonutPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _ExactCustomDonutPainter oldDelegate) {
-    return oldDelegate.values != values ||
-        oldDelegate.colors != colors ||
+    // Lists are rebuilt on every frame, so compare contents, not identity.
+    return !listEquals(oldDelegate.values, values) ||
+        !listEquals(oldDelegate.colors, colors) ||
         oldDelegate.selectedIndex != selectedIndex;
   }
 }

@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:calendar_date_picker2/calendar_date_picker2.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
+import 'package:zenio/features/home/presentation/widgets/delete_transaction_with_undo.dart';
+import 'package:zenio/shared/utils/period_filter.dart';
+import 'package:zenio/features/home/domain/models/transaction/transaction_kind.dart';
 import 'package:zenio/features/transactions/controller/transactions/transactions_notifier.dart';
 import 'package:zenio/features/transactions/presentation/widgets/transaction_detail_card.dart';
 import 'package:zenio/features/home/home.dart';
-import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/shared.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
-import 'package:zenio/shared/widgets/add_transaction_bottom_sheet.dart';
 import 'package:zenio/features/transactions/presentation/widgets/edit_transaction_dialog.dart';
 
 class TransactionsScreenMobile extends ConsumerStatefulWidget {
@@ -33,11 +33,14 @@ class _TransactionsScreenMobileState
   Widget build(BuildContext context) {
     final state = ref.watch(transactionsNotifierProvider);
     final transactions = state.transactions;
+    final hasAnyTransactions = ref.watch(
+      homeNotifierProvider.select((s) => s.transactions.isNotEmpty),
+    );
+    final loadFailed = ref.watch(
+      homeNotifierProvider.select((s) => s.status == HomeStatus.error),
+    );
     final totalExpenses = transactions
-        .where((tx) =>
-            !tx.isIncome &&
-            !tx.title.startsWith('Transfer to') &&
-            !(tx.bankName?.contains('->') ?? false))
+        .where((tx) => tx.resolvedKind == TransactionKind.expense)
         .fold<double>(0, (sum, tx) => sum + tx.amount);
 
     final currencySymbol = ref.watch(currencySymbolProvider);
@@ -48,9 +51,10 @@ class _TransactionsScreenMobileState
         bottom: false,
         child: Column(
           children: [
+            const ScreenTitleBar(title: 'Transactions'),
             // Dark Header Section
             Padding(
-              padding: const EdgeInsets.fromLTRB(10, 10, 10, 20),
+              padding: const EdgeInsets.fromLTRB(10, 4, 10, 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -59,36 +63,43 @@ class _TransactionsScreenMobileState
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       // Total Balance
-                      RichText(
-                        text: TextSpan(
-                          children: [
-                            TextSpan(
-                              text: '$currencySymbol ',
-                              style: AppFonts.numeric(
-                                fontSize: 32,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                letterSpacing: -0.5,
-                              ),
+                      Flexible(
+                        // Large amounts and text sizes shrink to fit instead of overflowing.
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: RichText(
+                            text: TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: '$currencySymbol ',
+                                  style: AppFonts.numeric(
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: _formatWholePart(totalExpenses),
+                                  style: AppFonts.numeric(
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: _formatDecimalPart(totalExpenses),
+                                  style: AppFonts.numeric(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color(0xFF808080),
+                                  ),
+                                ),
+                              ],
                             ),
-                            TextSpan(
-                              text: _formatWholePart(totalExpenses),
-                              style: AppFonts.numeric(
-                                fontSize: 32,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                letterSpacing: -0.5,
-                              ),
-                            ),
-                            TextSpan(
-                              text: _formatDecimalPart(totalExpenses),
-                              style: AppFonts.numeric(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: const Color(0xFF808080),
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
 
@@ -143,7 +154,8 @@ class _TransactionsScreenMobileState
                     children: [
                       _buildPeriodPicker(state.selectedPeriod),
                       const SizedBox(width: 10),
-                      _buildTimeframePicker(state.selectedPeriod, state.selectedTimeframe),
+                      _buildTimeframePicker(
+                          state.selectedPeriod, state.selectedTimeframe,),
                     ],
                   ),
                 ],
@@ -155,7 +167,7 @@ class _TransactionsScreenMobileState
               child: Container(
                 width: double.infinity,
                 decoration: const BoxDecoration(
-                  color: Color(0xFFF7F7F7),
+                  color: ZenioColors.sheet,
                   borderRadius: BorderRadius.vertical(
                     top: Radius.circular(30),
                   ),
@@ -164,73 +176,88 @@ class _TransactionsScreenMobileState
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(30),
                   ),
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(10, 16, 10, 20),
-                    children: [
-                      if (transactions.isEmpty)
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 40),
-                          child: Center(
-                            child: Text(
-                              'No transactions available',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Color(0xFF8E8E93),
+                  // Built lazily: the list can hold every transaction ever made.
+                  child: transactions.isEmpty
+                      ? ListView(
+                          padding: const EdgeInsets.fromLTRB(10, 16, 10, 20),
+                          children: [
+                            if (state.isLoading)
+                              const ListStateMessage.loading()
+                            else if (loadFailed)
+                              ListStateMessage.error(
+                                onRetry: ref
+                                    .read(homeNotifierProvider.notifier)
+                                    .loadMoneyTrackerData,
+                              )
+                            else if (!hasAnyTransactions)
+                              ListStateMessage(
+                                title: 'No transactions yet',
+                                message:
+                                    'Your spending and income will show up here once you add them.',
+                                icon: Icons.receipt_long_outlined,
+                                actionLabel: 'Add transaction',
+                                onAction: () =>
+                                    AddTransactionBottomSheet.show(context),
+                              )
+                            else
+                              ListStateMessage(
+                                title: 'Nothing in this period',
+                                message:
+                                    'No transactions for ${state.selectedTimeframe.toLowerCase() == 'all time' ? 'this filter' : state.selectedTimeframe}. Try another period.',
+                                icon: Icons.event_busy_outlined,
                               ),
-                            ),
-                          ),
+                          ],
                         )
-                      else
-                        ...transactions.map(
-                          (item) => TransactionDetailCard(
-                            key: ValueKey(item.id),
-                            transaction: item,
-                            isOpen: _openTransactionId == item.id,
-                            isTileExpanded: _expandedTileId == item.id,
-                            note: item.note,
-                            bankName: item.bankName,
-                            timestamp: item.timestamp,
-                            onTileTap: () {
-                              setState(() {
-                                if (_expandedTileId == item.id) {
-                                  _expandedTileId = null;
-                                } else {
-                                  _expandedTileId = item.id;
+                      : ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(10, 16, 10, 20),
+                          itemCount: transactions.length,
+                          itemBuilder: (context, index) {
+                            final item = transactions[index];
+                            return TransactionDetailCard(
+                              key: ValueKey(item.id),
+                              transaction: item,
+                              isOpen: _openTransactionId == item.id,
+                              isTileExpanded: _expandedTileId == item.id,
+                              note: item.note,
+                              bankName: item.bankName,
+                              timestamp: item.timestamp,
+                              onTileTap: () {
+                                setState(() {
+                                  if (_expandedTileId == item.id) {
+                                    _expandedTileId = null;
+                                  } else {
+                                    _expandedTileId = item.id;
+                                  }
+                                });
+                              },
+                              onOpen: () {
+                                if (_openTransactionId != item.id) {
+                                  setState(() {
+                                    _openTransactionId = item.id;
+                                  });
                                 }
-                              });
-                            },
-                            onOpen: () {
-                              if (_openTransactionId != item.id) {
-                                setState(() {
-                                  _openTransactionId = item.id;
-                                });
-                              }
-                            },
-                            onClose: () {
-                              if (_openTransactionId == item.id) {
-                                setState(() {
-                                  _openTransactionId = null;
-                                });
-                              }
-                            },
-                            onDelete: () {
-                              ref
-                                  .read(transactionsNotifierProvider.notifier)
-                                  .deleteTransaction(item.id);
-                              ref
-                                  .read(homeNotifierProvider.notifier)
-                                  .deleteTransaction(item.id);
-                            },
-                            onEdit: () {
-                              EditTransactionDialog.show(
+                              },
+                              onClose: () {
+                                if (_openTransactionId == item.id) {
+                                  setState(() {
+                                    _openTransactionId = null;
+                                  });
+                                }
+                              },
+                              onDelete: () => deleteTransactionWithUndo(
                                 context,
-                                transaction: item,
-                              );
-                            },
-                          ),
+                                ref,
+                                item.id,
+                              ),
+                              onEdit: () {
+                                EditTransactionDialog.show(
+                                  context,
+                                  transaction: item,
+                                );
+                              },
+                            );
+                          },
                         ),
-                    ],
-                  ),
                 ),
               ),
             ),
@@ -255,7 +282,7 @@ class _TransactionsScreenMobileState
             style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w500,
-              color: Color(0xFFD1D1D6),
+              color: ZenioColors.border,
             ),
           ),
           const SizedBox(width: 8),
@@ -267,6 +294,7 @@ class _TransactionsScreenMobileState
       ),
     );
   }
+
   Widget _buildPeriodPicker(String currentPeriod) {
     return PopupMenuButton<String>(
       offset: const Offset(0, 45),
@@ -277,19 +305,35 @@ class _TransactionsScreenMobileState
       itemBuilder: (context) => [
         const PopupMenuItem(
           value: 'Daily',
-          child: Text('Daily', style: TextStyle(color: Color(0xFFD1D1D6), fontSize: 14, fontWeight: FontWeight.w500)),
+          child: Text('Daily',
+              style: TextStyle(
+                  color: ZenioColors.border,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,),),
         ),
         const PopupMenuItem(
           value: 'Weekly',
-          child: Text('Weekly', style: TextStyle(color: Color(0xFFD1D1D6), fontSize: 14, fontWeight: FontWeight.w500)),
+          child: Text('Weekly',
+              style: TextStyle(
+                  color: ZenioColors.border,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,),),
         ),
         const PopupMenuItem(
           value: 'Monthly',
-          child: Text('Monthly', style: TextStyle(color: Color(0xFFD1D1D6), fontSize: 14, fontWeight: FontWeight.w500)),
+          child: Text('Monthly',
+              style: TextStyle(
+                  color: ZenioColors.border,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,),),
         ),
         const PopupMenuItem(
           value: 'Custom',
-          child: Text('Custom', style: TextStyle(color: Color(0xFFD1D1D6), fontSize: 14, fontWeight: FontWeight.w500)),
+          child: Text('Custom',
+              style: TextStyle(
+                  color: ZenioColors.border,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,),),
         ),
       ],
       color: const Color(0xFF1A1A1A),
@@ -335,20 +379,32 @@ class _TransactionsScreenMobileState
                         ),
                         const Text(
                           'Select Date Range',
-                          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,),
                         ),
                         CalendarDatePicker2(
                           config: CalendarDatePicker2Config(
                             calendarType: CalendarDatePicker2Type.range,
                             selectedDayHighlightColor: Colors.white,
-                            selectedRangeHighlightColor: Colors.white.withOpacity(0.15),
-                            selectedDayTextStyle: AppFonts.numeric(color: Colors.black, fontWeight: FontWeight.bold),
+                            selectedRangeHighlightColor:
+                                Colors.white.withOpacity(0.15),
+                            selectedDayTextStyle: AppFonts.numeric(
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold,),
                             dayTextStyle: AppFonts.numeric(color: Colors.white),
-                            disabledDayTextStyle: AppFonts.numeric(color: const Color(0xFF313131)),
-                            yearTextStyle: AppFonts.numeric(color: Colors.white),
-                            monthTextStyle: const TextStyle(color: Colors.white),
-                            controlsTextStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                            weekdayLabelTextStyle: const TextStyle(color: Color(0xFFD1D1D6)),
+                            disabledDayTextStyle: AppFonts.numeric(
+                                color: const Color(0xFF313131),),
+                            yearTextStyle:
+                                AppFonts.numeric(color: Colors.white),
+                            monthTextStyle:
+                                const TextStyle(color: Colors.white),
+                            controlsTextStyle: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,),
+                            weekdayLabelTextStyle:
+                                const TextStyle(color: ZenioColors.border),
                             lastDate: DateTime.now(),
                             firstDate: DateTime(2000),
                           ),
@@ -368,31 +424,41 @@ class _TransactionsScreenMobileState
                                 child: TextButton(
                                   onPressed: () => Navigator.pop(context),
                                   style: TextButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 16,),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(30),
-                                      side: const BorderSide(color: Color(0xFF313131)),
+                                      side: const BorderSide(
+                                          color: Color(0xFF313131),),
                                     ),
                                   ),
-                                  child: const Text('Cancel', style: TextStyle(color: Colors.white)),
+                                  child: const Text('Cancel',
+                                      style: TextStyle(color: Colors.white),),
                                 ),
                               ),
                               const SizedBox(width: 16),
                               Expanded(
                                 child: ElevatedButton(
-                                  onPressed: selectedDates.length == 2 && selectedDates[0] != null && selectedDates[1] != null
-                                      ? () => Navigator.pop(context, selectedDates)
+                                  onPressed: selectedDates.length == 2 &&
+                                          selectedDates[0] != null &&
+                                          selectedDates[1] != null
+                                      ? () =>
+                                          Navigator.pop(context, selectedDates)
                                       : null,
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.white,
                                     foregroundColor: Colors.black,
-                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 16,),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(30),
                                     ),
-                                    disabledBackgroundColor: Colors.white.withOpacity(0.3),
+                                    disabledBackgroundColor:
+                                        Colors.white.withOpacity(0.3),
                                   ),
-                                  child: const Text('Save', style: TextStyle(fontWeight: FontWeight.bold)),
+                                  child: const Text('Save',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold,),),
                                 ),
                               ),
                             ],
@@ -405,10 +471,13 @@ class _TransactionsScreenMobileState
               );
             },
           );
-          if (picked != null && picked.length == 2 && picked[0] != null && picked[1] != null) {
-            final start = DateFormat('dd MMM').format(picked[0]!);
-            final end = DateFormat('dd MMM').format(picked[1]!);
-            ref.read(transactionsNotifierProvider.notifier).updateTimeframe('$start - $end');
+          if (picked != null &&
+              picked.length == 2 &&
+              picked[0] != null &&
+              picked[1] != null) {
+            ref
+                .read(transactionsNotifierProvider.notifier)
+                .updateTimeframe(customRangeTimeframe(picked[0]!, picked[1]!));
           }
         },
         child: _buildFilterPill(label: timeframe),
@@ -422,8 +491,18 @@ class _TransactionsScreenMobileState
       options = ['This week', 'Last week'];
     } else if (period.toLowerCase() == 'monthly') {
       options = [
-        'January', 'February', 'March', 'April', 'May', 'June',
-        'July', 'August', 'September', 'October', 'November', 'December'
+        'January',
+        'February',
+        'March',
+        'April',
+        'May',
+        'June',
+        'July',
+        'August',
+        'September',
+        'October',
+        'November',
+        'December',
       ];
     }
 
@@ -434,10 +513,16 @@ class _TransactionsScreenMobileState
       onSelected: (value) {
         ref.read(transactionsNotifierProvider.notifier).updateTimeframe(value);
       },
-      itemBuilder: (context) => options.map((opt) => PopupMenuItem(
-        value: opt, 
-        child: Text(opt, style: const TextStyle(color: Color(0xFFD1D1D6), fontSize: 14, fontWeight: FontWeight.w500)),
-      )).toList(),
+      itemBuilder: (context) => options
+          .map((opt) => PopupMenuItem(
+                value: opt,
+                child: Text(opt,
+                    style: const TextStyle(
+                        color: ZenioColors.border,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,),),
+              ),)
+          .toList(),
       color: const Color(0xFF1A1A1A),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:zenio/shared/theme/zenio_tokens.dart';
 import 'package:zenio/shared/utils/app_fonts.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 
@@ -92,7 +93,7 @@ class ZenioDropdown<T> extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                      color: isSelected ? const Color(0xFFF2F2F2) : Colors.transparent,
+                      color: isSelected ? ZenioColors.fieldFill : Colors.transparent,
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: Row(
@@ -114,7 +115,7 @@ class ZenioDropdown<T> extends StatelessWidget {
                                         ? FontWeight.w600
                                         : FontWeight.w500,
                                     color: item.labelColor ??
-                                        const Color(0xFF111111),
+                                        ZenioColors.textPrimary,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -128,7 +129,7 @@ class ZenioDropdown<T> extends StatelessWidget {
                                     fontSize: 12,
                                     fontWeight: FontWeight.w500,
                                     color: item.subtitleColor ??
-                                        const Color(0xFF8E8E93),
+                                        ZenioColors.textSecondary,
                                   ),
                                 ),
                               ],
@@ -144,7 +145,7 @@ class ZenioDropdown<T> extends StatelessWidget {
                           const Icon(
                             Icons.check_circle_rounded,
                             size: 18,
-                            color: Color(0xFF10B981),
+                            color: ZenioColors.primary,
                           ),
                         ],
                       ],
@@ -157,7 +158,7 @@ class ZenioDropdown<T> extends StatelessWidget {
               margin: margin,
               padding: padding,
               decoration: BoxDecoration(
-                color: const Color(0xFFF2F2F2),
+                color: ZenioColors.fieldFill,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Row(
@@ -178,8 +179,8 @@ class ZenioDropdown<T> extends StatelessWidget {
                               fontWeight: FontWeight.w500,
                               color: selectedItem != null
                                   ? (selectedItem.labelColor ??
-                                      const Color(0xFF111111))
-                                  : const Color(0xFF9E9EA5),
+                                      ZenioColors.textPrimary)
+                                  : ZenioColors.textPlaceholder,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -193,7 +194,7 @@ class ZenioDropdown<T> extends StatelessWidget {
                               fontSize: 13,
                               fontWeight: FontWeight.w500,
                               color: selectedItem.subtitleColor ??
-                                  const Color(0xFF8E8E93),
+                                  ZenioColors.textSecondary,
                             ),
                           ),
                         ],
@@ -208,7 +209,7 @@ class ZenioDropdown<T> extends StatelessWidget {
                     width: 20,
                     height: 20,
                     colorFilter: const ColorFilter.mode(
-                      Color(0xFF111111),
+                      ZenioColors.textPrimary,
                       BlendMode.srcIn,
                     ),
                   ),

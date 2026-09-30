@@ -14,6 +14,11 @@ abstract class SubscriptionModel with _$SubscriptionModel {
     required DateTime nextBillingDate,
     required String billingCycle,
     required String iconName,
+
+    /// The day of the month it renews on. Kept so that a subscription on the
+    /// 31st returns to the 31st after a shorter month. Null for subscriptions
+    /// saved before this was stored; [nextBillingDate]'s day is used then.
+    int? billingDay,
   }) = _SubscriptionModel;
 
   factory SubscriptionModel.fromJson(Map<String, dynamic> json) =>

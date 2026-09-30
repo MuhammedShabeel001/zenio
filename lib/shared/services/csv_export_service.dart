@@ -1,8 +1,11 @@
 import 'dart:io';
+import 'dart:ui';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:zenio/features/home/domain/models/transaction/transaction_kind.dart';
 import 'package:zenio/shared/services/local_database_service.dart';
 
 final csvExportServiceProvider = Provider<CsvExportService>((ref) {
@@ -10,71 +13,115 @@ final csvExportServiceProvider = Provider<CsvExportService>((ref) {
   return CsvExportService(dbService);
 });
 
+/// Characters that make spreadsheet apps treat a cell as a formula.
+const _formulaTriggers = {'=', '+', '-', '@', '\t', '\r'};
+
 class CsvExportService {
   CsvExportService(this._dbService);
 
   final LocalDatabaseService _dbService;
 
-  Future<void> exportDataToCsv() async {
-    final transactions = await _dbService.getTransactionsMap();
-
+  /// Builds the CSV text for [transactions] (rows as stored in the database).
+  static String buildCsv(List<Map<String, dynamic>> transactions) {
     final buffer = StringBuffer()
-      ..writeln('Date,Type,Category/Title,Amount,Currency,Wallet,Note,Transaction ID');
+      ..writeln(
+        'Date,Type,Category/Title,Amount,Currency,Wallet,Note,Transaction ID',
+      );
 
     for (final tx in transactions) {
-      final date = tx['date'] ?? '';
-      final title = tx['title'] ?? '';
+      final title = (tx['title'] ?? '').toString();
       final isIncome = tx['is_income'] == 1 || tx['is_income'] == true;
-      final amount = tx['amount'] ?? 0;
-      final currency = tx['currency'] ?? 'INR';
-      final wallet = tx['bank_name'] ?? '';
-      final note = tx['note'] ?? '';
-      final id = tx['id'] ?? '';
-
-      String type;
-      if (title.toString().toLowerCase().startsWith('transfer')) {
-        type = 'Transfer';
-      } else if (isIncome) {
-        type = 'Income';
-      } else {
-        type = 'Expense';
-      }
+      final kind = resolveTransactionKind(
+        kind: tx['kind'] as String?,
+        title: title,
+        bankName: tx['bank_name'] as String?,
+        isIncome: isIncome,
+      );
+      final amount = tx['amount'];
+      final type = switch (kind) {
+        TransactionKind.expense => 'Expense',
+        TransactionKind.income => 'Income',
+        TransactionKind.transfer => 'Transfer',
+        TransactionKind.adjustment => 'Adjustment',
+      };
 
       final row = [
-        _escapeCsv(date),
-        _escapeCsv(type),
-        _escapeCsv(title),
-        _escapeCsv(amount),
-        _escapeCsv(currency),
-        _escapeCsv(wallet),
-        _escapeCsv(note),
-        _escapeCsv(id),
+        _textCell(tx['date']),
+        type,
+        _textCell(title),
+        // An adjustment's direction is kept in the sign of its amount.
+        _numberCell(
+          kind == TransactionKind.adjustment && !isIncome && amount is num
+              ? -amount
+              : amount,
+        ),
+        _textCell(tx['currency'] ?? 'INR'),
+        _textCell(tx['bank_name']),
+        _textCell(tx['note']),
+        _textCell(tx['id']),
       ];
       buffer.writeln(row.join(','));
     }
-
-    final tempDir = await getTemporaryDirectory();
-    final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
-    final filePath = '${tempDir.path}/zenio_transactions_$timestamp.csv';
-    final file = File(filePath);
-    await file.writeAsString(buffer.toString());
-
-    final xFile = XFile(filePath, mimeType: 'text/csv');
-    await SharePlus.instance.share(
-      ShareParams(
-        files: [xFile],
-        text: 'Zenio Financial Data Export ($timestamp)',
-        subject: 'Zenio CSV Export',
-      ),
-    );
+    return buffer.toString();
   }
 
-  String _escapeCsv(dynamic value) {
+  /// Shares all transactions as a CSV file and returns how many were
+  /// exported. Nothing is shared when there are none. [sharePositionOrigin]
+  /// anchors the share sheet on iPad.
+  Future<int> exportDataToCsv({Rect? sharePositionOrigin}) async {
+    final transactions = await _dbService.getTransactionsMap();
+    if (transactions.isEmpty) return 0;
+
+    final tempDir = await getTemporaryDirectory();
+    // Earlier exports hold the whole history; remove them now rather than
+    // right after sharing, when the receiving app may still be reading one.
+    try {
+      for (final old in tempDir.listSync()) {
+        final name = old.uri.pathSegments.last;
+        if (name.startsWith('zenio_transactions_') && name.endsWith('.csv')) {
+          old.deleteSync();
+        }
+      }
+    } catch (_) {}
+    final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+    final filePath = '${tempDir.path}/zenio_transactions_$timestamp.csv';
+    await File(filePath).writeAsString(buildCsv(transactions));
+
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [XFile(filePath, mimeType: 'text/csv')],
+        text: 'Zenio transactions export ($timestamp)',
+        subject: 'Zenio transactions',
+        sharePositionOrigin: sharePositionOrigin,
+      ),
+    );
+    return transactions.length;
+  }
+
+  /// A text cell that spreadsheet apps will not run as a formula: a leading
+  /// trigger character is escaped with an apostrophe (removed again by the
+  /// importer).
+  static String _textCell(Object? value) {
     if (value == null) return '';
-    final str = value.toString();
-    if (str.contains(',') || str.contains('"') || str.contains('\n') || str.contains('\r')) {
-      return '"${str.replaceAll('"', '""')}"';
+    var text = value.toString();
+    if (text.isNotEmpty && _formulaTriggers.contains(text[0])) {
+      text = "'$text";
     }
-    return str;
+    return _quoted(text);
+  }
+
+  static String _numberCell(Object? value) {
+    final number = value is num ? value : num.tryParse('$value');
+    return number?.toString() ?? '';
+  }
+
+  static String _quoted(String text) {
+    if (text.contains(',') ||
+        text.contains('"') ||
+        text.contains('\n') ||
+        text.contains('\r')) {
+      return '"${text.replaceAll('"', '""')}"';
+    }
+    return text;
   }
 }

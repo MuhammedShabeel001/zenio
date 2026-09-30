@@ -1,10 +1,11 @@
 import 'package:intl/intl.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:zenio/shared/utils/period_filter.dart';
 import 'package:zenio/features/home/controller/home/home_notifier.dart';
+import 'package:zenio/features/home/domain/models/transaction/transaction_kind.dart';
 // import 'package:zenio/features/home/controller/home/home_state.dart';
 import 'package:zenio/features/transactions/controller/transactions/transactions_state.dart';
 import 'package:zenio/features/transactions/domain/models/transaction_detail_model.dart';
-import 'package:zenio/shared/utils/datetime.dart';
 
 part 'transactions_notifier.g.dart';
 
@@ -15,92 +16,13 @@ class TransactionsNotifier extends _$TransactionsNotifier {
     String period,
     String timeframe,
   ) {
-    if (period.toLowerCase() == 'daily') {
-      final now = DateTime.now();
-      DateTime targetDate;
-      if (timeframe.toLowerCase() == 'today') {
-        targetDate = now;
-      } else if (timeframe.toLowerCase() == 'yesterday') {
-        targetDate = now.subtract(const Duration(days: 1));
-      } else {
-        return allTransactions;
-      }
-
-      return allTransactions.where((tx) {
-        final txDate = DateTimeUtils.parseTransactionDate(tx.date);
-        if (txDate == null) return false;
-        return txDate.year == targetDate.year &&
-            txDate.month == targetDate.month &&
-            txDate.day == targetDate.day;
-      }).toList();
-    } else if (period.toLowerCase() == 'weekly') {
-      final now = DateTime.now();
-      final int currentDay = now.weekday; // 1 = Monday, 7 = Sunday
-      final DateTime startOfWeek = now.subtract(Duration(days: currentDay - 1));
-      final DateTime startOfPastWeek = startOfWeek.subtract(const Duration(days: 7));
-      final DateTime endOfPastWeek = startOfWeek.subtract(const Duration(days: 1));
-
-      return allTransactions.where((tx) {
-        final txDate = DateTimeUtils.parseTransactionDate(tx.date);
-        if (txDate == null) return false;
-        if (timeframe.toLowerCase() == 'this week') {
-          return txDate.isAfter(startOfWeek.subtract(const Duration(days: 1)));
-        } else if (timeframe.toLowerCase() == 'last week') {
-          return txDate.isAfter(startOfPastWeek.subtract(const Duration(days: 1))) &&
-              txDate.isBefore(endOfPastWeek.add(const Duration(days: 1)));
-        }
-        return true;
-      }).toList();
-    } else if (period.toLowerCase() == 'monthly') {
-      final int monthIndex = [
-        'January', 'February', 'March', 'April', 'May', 'June',
-        'July', 'August', 'September', 'October', 'November', 'December'
-      ].indexWhere((m) => m.toLowerCase() == timeframe.toLowerCase());
-
-      if (monthIndex == -1) return allTransactions;
-
-      final targetMonth = monthIndex + 1;
-      return allTransactions.where((tx) {
-        final txDate = DateTimeUtils.parseTransactionDate(tx.date);
-        if (txDate == null) return false;
-        return txDate.month == targetMonth && txDate.year == DateTime.now().year;
-      }).toList();
-    } else if (period.toLowerCase() == 'custom') {
-      if (timeframe.contains(' - ')) {
-        final parts = timeframe.split(' - ');
-        if (parts.length == 2) {
-          try {
-            final now = DateTime.now();
-            var start = DateFormat('dd MMM').parse(parts[0]);
-            var end = DateFormat('dd MMM').parse(parts[1]);
-            start = DateTime(now.year, start.month, start.day);
-            end = DateTime(now.year, end.month, end.day, 23, 59, 59);
-
-            return allTransactions.where((tx) {
-              final txDate = DateTimeUtils.parseTransactionDate(tx.date);
-              if (txDate == null) return false;
-              return txDate.isAfter(start.subtract(const Duration(days: 1))) &&
-                  txDate.isBefore(end.add(const Duration(days: 1)));
-            }).toList();
-          } catch (_) {
-            return allTransactions;
-          }
-        }
-      }
-      return allTransactions;
-    }
-
-    return allTransactions;
+    return filterByPeriod(allTransactions, (tx) => tx.date, period, timeframe);
   }
 
   double _calculateTotalExpenses(List<TransactionDetailModel> txs) {
     double total = 0;
     for (final tx in txs) {
-      final isTransfer = tx.title.startsWith('Transfer to') ||
-          (tx.bankName?.contains('->') ?? false);
-      if (isTransfer) continue;
-
-      if (!tx.isIncome) {
+      if (tx.resolvedKind == TransactionKind.expense) {
         total += tx.amount;
       }
     }
@@ -110,6 +32,11 @@ class TransactionsNotifier extends _$TransactionsNotifier {
   @override
   TransactionsState build() {
     ref.listen(homeNotifierProvider, (previous, next) {
+      if (next.status == HomeStatus.error) {
+        // Stop the spinner; the screen offers a retry.
+        state = state.copyWith(isLoading: false);
+        return;
+      }
       if (next.status == HomeStatus.success) {
         final list = next.transactions.map((t) => TransactionDetailModel(
               id: t.id,
@@ -121,7 +48,8 @@ class TransactionsNotifier extends _$TransactionsNotifier {
               note: t.note,
               bankName: t.bankName,
               timestamp: t.timestamp,
-            )).toList();
+              kind: t.kind,
+            ),).toList();
         
         final filteredList = _filterTransactions(list, state.selectedPeriod, state.selectedTimeframe);
         final filteredBalance = _calculateTotalExpenses(filteredList);
@@ -145,7 +73,8 @@ class TransactionsNotifier extends _$TransactionsNotifier {
           note: t.note,
           bankName: t.bankName,
           timestamp: t.timestamp,
-        )).toList();
+              kind: t.kind,
+        ),).toList();
 
     const initialPeriod = 'Monthly';
     final initialTimeframe = DateFormat('MMMM').format(DateTime.now());
@@ -175,7 +104,7 @@ class TransactionsNotifier extends _$TransactionsNotifier {
         defaultTimeframe = currentMonth;
         break;
       case 'custom':
-        defaultTimeframe = 'Select Range';
+        defaultTimeframe = allTimeTimeframe;
         break;
     }
     
@@ -190,7 +119,8 @@ class TransactionsNotifier extends _$TransactionsNotifier {
           note: t.note,
           bankName: t.bankName,
           timestamp: t.timestamp,
-        )).toList();
+              kind: t.kind,
+        ),).toList();
         
     final filteredList = _filterTransactions(list, period, defaultTimeframe);
     final filteredBalance = _calculateTotalExpenses(filteredList);
@@ -215,7 +145,8 @@ class TransactionsNotifier extends _$TransactionsNotifier {
           note: t.note,
           bankName: t.bankName,
           timestamp: t.timestamp,
-        )).toList();
+              kind: t.kind,
+        ),).toList();
         
     final filteredList = _filterTransactions(list, state.selectedPeriod, timeframe);
     final filteredBalance = _calculateTotalExpenses(filteredList);
@@ -225,15 +156,5 @@ class TransactionsNotifier extends _$TransactionsNotifier {
       transactions: filteredList,
       totalBalance: filteredBalance,
     );
-  }
-
-  Future<void> deleteTransaction(String id) async {
-    await ref.read(homeNotifierProvider.notifier).deleteTransaction(id);
-  }
-
-  Future<void> addTransaction(TransactionDetailModel tx) async {
-    // Only required because AddTransactionBottomSheet uses both providers temporarily
-    // but in reality we only need to call homeNotifierProvider.
-    // For safety against double-saving, we will rely on homeNotifierProvider directly.
   }
 }

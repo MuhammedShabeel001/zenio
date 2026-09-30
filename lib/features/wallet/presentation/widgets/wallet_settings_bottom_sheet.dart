@@ -4,8 +4,10 @@ import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
 import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
 import 'package:zenio/features/wallet/presentation/widgets/edit_wallet_dialog.dart';
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
+import 'package:zenio/shared/theme/zenio_tokens.dart';
 import 'package:zenio/shared/utils/app_fonts.dart';
 import 'package:zenio/shared/utils/formatters.dart';
+import 'package:zenio/shared/widgets/zenio_snack_bar.dart';
 
 class WalletSettingsBottomSheet extends ConsumerWidget {
   const WalletSettingsBottomSheet({
@@ -26,6 +28,57 @@ class WalletSettingsBottomSheet extends ConsumerWidget {
         cardIndex: cardIndex,
       ),
     );
+  }
+
+  Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
+    final notifier = ref.read(walletNotifierProvider.notifier);
+    final count = notifier.transactionCountFor(cardIndex);
+    final history = count == 0
+        ? ''
+        : ' Its ${AppNumberFormat.formatNumber(count)} '
+            'transaction${count == 1 ? '' : 's'} will stay in your history.';
+
+    final navigator = Navigator.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        title: Text('Delete ${card.bankName}?'),
+        content: Text('This removes the wallet and its balance.$history'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style:
+                TextButton.styleFrom(foregroundColor: ZenioColors.danger),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    navigator.pop();
+    try {
+      await notifier.deleteCard(cardIndex);
+      if (!navigator.context.mounted) return;
+      ZenioSnackBar.show(
+        navigator.context,
+        message: '${card.bankName} deleted',
+        type: ZenioSnackBarType.success,
+      );
+    } catch (_) {
+      if (!navigator.context.mounted) return;
+      ZenioSnackBar.show(
+        navigator.context,
+        message: "Couldn't delete the wallet. Please try again.",
+        type: ZenioSnackBarType.error,
+      );
+    }
   }
 
   @override
@@ -56,7 +109,7 @@ class WalletSettingsBottomSheet extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: const Color(0xFFF7F7F7),
+              color: ZenioColors.sheet,
               borderRadius: BorderRadius.circular(16),
             ),
             child: Row(
@@ -70,7 +123,7 @@ class WalletSettingsBottomSheet extends ConsumerWidget {
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF111111),
+                          color: ZenioColors.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -80,7 +133,7 @@ class WalletSettingsBottomSheet extends ConsumerWidget {
                             : card.cardType,
                         style: const TextStyle(
                           fontSize: 12,
-                          color: Color(0xFF8E8E93),
+                          color: ZenioColors.textSecondary,
                         ),
                       ),
                     ],
@@ -91,14 +144,14 @@ class WalletSettingsBottomSheet extends ConsumerWidget {
                   style: AppFonts.numeric(
                     fontSize: 17,
                     fontWeight: FontWeight.bold,
-                    color: const Color(0xFF111111),
+                    color: ZenioColors.textPrimary,
                   ),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 12),
-          
+
           ListTile(
             leading: const Icon(Icons.edit, color: Colors.black87),
             title: const Text(
@@ -110,9 +163,10 @@ class WalletSettingsBottomSheet extends ConsumerWidget {
               ),
             ),
             onTap: () {
-              Navigator.of(context).pop();
+              // Open the dialog from the navigator, not from this closing sheet.
+              final navigator = Navigator.of(context)..pop();
               EditWalletDialog.show(
-                context,
+                navigator.context,
                 card: card,
                 cardIndex: cardIndex,
               );
@@ -129,10 +183,7 @@ class WalletSettingsBottomSheet extends ConsumerWidget {
                 color: Colors.redAccent,
               ),
             ),
-            onTap: () {
-              ref.read(walletNotifierProvider.notifier).deleteCard(cardIndex);
-              Navigator.of(context).pop();
-            },
+            onTap: () => _confirmDelete(context, ref),
           ),
         ],
       ),

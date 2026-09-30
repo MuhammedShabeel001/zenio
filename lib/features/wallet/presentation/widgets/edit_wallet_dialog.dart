@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
 import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
+import 'package:zenio/shared/theme/zenio_tokens.dart';
 import 'package:zenio/shared/utils/app_fonts.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/utils/formatters.dart';
@@ -156,7 +157,7 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
             width: 18,
             height: 18,
             colorFilter: const ColorFilter.mode(
-              Color(0xFF8E8E93),
+              ZenioColors.textSecondary,
               BlendMode.srcIn,
             ),
           ),
@@ -174,7 +175,7 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
               width: 18,
               height: 18,
               colorFilter: const ColorFilter.mode(
-                Color(0xFF8E8E93),
+                ZenioColors.textSecondary,
                 BlendMode.srcIn,
               ),
             ),
@@ -187,17 +188,29 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
       const ZenioDropdownItem<String>(
         value: '__CUSTOM__',
         label: 'Custom...',
-        labelColor: Color(0xFF10B981),
-        icon: Icon(Icons.add_rounded, size: 18, color: Color(0xFF10B981)),
+        labelColor: ZenioColors.primary,
+        icon: Icon(Icons.add_rounded, size: 18, color: ZenioColors.primary),
       ),
     );
 
     return items;
   }
 
-  void _saveChanges() {
+  bool _isSaving = false;
+  String? _nameError;
+
+  Future<void> _saveChanges() async {
+    if (_isSaving) return;
     final name = _nameController.text.trim();
-    if (name.isEmpty) return;
+    if (name.isEmpty) {
+      setState(() => _nameError = 'Enter a wallet name');
+      return;
+    }
+    final notifier = ref.read(walletNotifierProvider.notifier);
+    if (notifier.isNameTaken(name, exceptId: widget.card.id)) {
+      setState(() => _nameError = 'You already have a wallet with this name');
+      return;
+    }
 
     final balance = AppNumberFormat.parseAmount(_balanceController.text);
     final cardNumber = _cardNumberController.text.trim().isNotEmpty
@@ -222,10 +235,31 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
       cardType: finalType,
       gradientStartHex: 'image:$selectedImage',
       gradientEndHex: 'image:$selectedImage',
-      balance: balance,
     );
 
-    ref.read(walletNotifierProvider.notifier).editCard(widget.cardIndex, updatedCard);
+    setState(() {
+      _isSaving = true;
+      _nameError = null;
+    });
+    try {
+      await notifier.editCard(widget.cardIndex, updatedCard);
+      // A different balance is recorded as an adjustment, so the change is
+      // visible in the history instead of silently overwriting it.
+      if (balance != widget.card.balance) {
+        await notifier.adjustBalance(widget.card.id, balance);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      // Shown in the dialog: a snackbar would appear behind its barrier.
+      setState(() {
+        _isSaving = false;
+        _nameError = e is WalletNameConflictException
+            ? e.message
+            : "Couldn't save the wallet. Please try again.";
+      });
+      return;
+    }
+    if (!mounted) return;
     Navigator.of(context).pop();
   }
 
@@ -257,17 +291,26 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF111111),
+                      color: ZenioColors.textPrimary,
                     ),
                   ),
-                  GestureDetector(
+                  Semantics(
+                    button: true,
+                    label: 'Close',
+                    excludeSemantics: true,
                     onTap: () => Navigator.of(context).pop(),
-                    behavior: HitTestBehavior.opaque,
-                    child: Container(
+                    child: GestureDetector(
+                      onTap: () => Navigator.of(context).pop(),
+                      behavior: HitTestBehavior.opaque,
+                      // A 44dp touch area around the 32dp circle.
+                      child: SizedBox.square(
+                        dimension: 44,
+                        child: Center(
+                          child: Container(
                       width: 32,
                       height: 32,
                       decoration: const BoxDecoration(
-                        color: Color(0xFFF2F2F2),
+                        color: ZenioColors.fieldFill,
                         shape: BoxShape.circle,
                       ),
                       child: const Center(
@@ -275,6 +318,9 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
                           Icons.close_rounded,
                           size: 18,
                           color: Color(0xFF555555),
+                        ),
+                      ),
+                    ),
                         ),
                       ),
                     ),
@@ -287,7 +333,7 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF2F2F2),
+                  color: ZenioColors.fieldFill,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -297,7 +343,7 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
                       style: AppFonts.numeric(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
-                        color: const Color(0xFF111111),
+                        color: ZenioColors.textPrimary,
                       ),
                     ),
                     Expanded(
@@ -314,14 +360,14 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
                         style: AppFonts.numeric(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          color: const Color(0xFF111111),
+                          color: ZenioColors.textPrimary,
                         ),
                         decoration: InputDecoration(
                           hintText: '0.00',
                           hintStyle: AppFonts.numeric(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            color: const Color(0xFF9E9EA5),
+                            color: ZenioColors.textPlaceholder,
                           ),
                           isDense: true,
                           filled: false,
@@ -345,7 +391,7 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF2F2F2),
+                  color: ZenioColors.fieldFill,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -354,7 +400,7 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
                       width: 20,
                       height: 20,
                       colorFilter: const ColorFilter.mode(
-                        Color(0xFF8E8E93),
+                        ZenioColors.textSecondary,
                         BlendMode.srcIn,
                       ),
                     ),
@@ -362,16 +408,23 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
                     Expanded(
                       child: TextField(
                         controller: _nameController,
+                        textCapitalization: TextCapitalization.words,
+                        textInputAction: TextInputAction.next,
+                        onChanged: (_) {
+                          if (_nameError != null) {
+                            setState(() => _nameError = null);
+                          }
+                        },
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
-                          color: Color(0xFF111111),
+                          color: ZenioColors.textPrimary,
                         ),
                         decoration: const InputDecoration(
                           hintText: 'Wallet name',
                           hintStyle: TextStyle(
                             fontSize: 14,
-                            color: Color(0xFF9E9EA5),
+                            color: ZenioColors.textPlaceholder,
                           ),
                           isDense: true,
                           filled: false,
@@ -389,6 +442,17 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
                   ],
                 ),
               ),
+              if (_nameError != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 6, 20, 0),
+                  child: Text(
+                    _nameError!,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: ZenioColors.danger,
+                    ),
+                  ),
+                ),
               const SizedBox(height: 6),
 
               // Field 2: Wallet Type Dropdown
@@ -398,7 +462,7 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
                   width: 20,
                   height: 20,
                   colorFilter: const ColorFilter.mode(
-                    Color(0xFF8E8E93),
+                    ZenioColors.textSecondary,
                     BlendMode.srcIn,
                   ),
                 ),
@@ -417,7 +481,7 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF2F2F2),
+                    color: ZenioColors.fieldFill,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
@@ -429,13 +493,13 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
                           autofocus: true,
                           style: const TextStyle(
                             fontSize: 14,
-                            color: Color(0xFF111111),
+                            color: ZenioColors.textPrimary,
                             fontWeight: FontWeight.w500,
                           ),
                           decoration: const InputDecoration(
                             hintText: 'Enter custom type (e.g. Crypto)',
                             hintStyle: TextStyle(
-                              color: Color(0xFF9E9EA5),
+                              color: ZenioColors.textPlaceholder,
                               fontSize: 14,
                             ),
                             isDense: true,
@@ -457,7 +521,7 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
                           height: 38,
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF10B981),
+                            color: ZenioColors.primary,
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: const Center(
@@ -482,7 +546,7 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF2F2F2),
+                  color: ZenioColors.fieldFill,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -491,7 +555,7 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
                       width: 20,
                       height: 20,
                       colorFilter: const ColorFilter.mode(
-                        Color(0xFF8E8E93),
+                        ZenioColors.textSecondary,
                         BlendMode.srcIn,
                       ),
                     ),
@@ -507,13 +571,13 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
                         style: AppFonts.numeric(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
-                          color: const Color(0xFF111111),
+                          color: ZenioColors.textPrimary,
                         ),
                         decoration: InputDecoration(
                           hintText: 'Card number',
                           hintStyle: AppFonts.numeric(
                             fontSize: 14,
-                            color: const Color(0xFF9E9EA5),
+                            color: ZenioColors.textPlaceholder,
                           ),
                           isDense: true,
                           filled: false,
@@ -537,7 +601,7 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
               Container(
                 clipBehavior: Clip.antiAlias,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF2F2F2),
+                  color: ZenioColors.fieldFill,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Column(
@@ -550,7 +614,7 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
-                          color: Color(0xFF8E8E93),
+                          color: ZenioColors.textSecondary,
                         ),
                       ),
                     ),
@@ -579,7 +643,7 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
                                 borderRadius: BorderRadius.circular(10),
                                 border: isSelected
                                     ? Border.all(
-                                        color: const Color(0xFF10B981),
+                                        color: ZenioColors.primary,
                                         width: 2.5,
                                       )
                                     : Border.all(
@@ -604,9 +668,9 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
                 height: 55,
                 margin: const EdgeInsets.only(top: 20),
                 child: ElevatedButton(
-                  onPressed: _saveChanges,
+                  onPressed: _isSaving ? null : _saveChanges,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF10B981),
+                    backgroundColor: ZenioColors.primary,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:zenio/shared/theme/zenio_tokens.dart';
 
 enum ZenioSnackBarType { info, success, error, warning }
 
@@ -19,12 +20,12 @@ class ZenioSnackBar {
     final (badgeBg, iconColor, iconData) = switch (type) {
       ZenioSnackBarType.success => (
           const Color(0xFFE8F8F0),
-          const Color(0xFF10B981),
+          ZenioColors.primary,
           Icons.check_circle_rounded,
         ),
       ZenioSnackBarType.error => (
           const Color(0xFFFFEAEA),
-          const Color(0xFFDD3D34),
+          ZenioColors.danger,
           Icons.error_rounded,
         ),
       ZenioSnackBarType.warning => (
@@ -88,24 +89,28 @@ class ZenioSnackBar {
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF111111),
+                    color: ZenioColors.textPrimary,
                     height: 1.3,
                   ),
                 ),
               ),
               if (actionLabel != null && onAction != null) ...[
                 const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: () {
+                TextButton(
+                  onPressed: () {
                     messenger.hideCurrentSnackBar();
                     onAction();
                   },
+                  style: TextButton.styleFrom(
+                    foregroundColor: iconColor,
+                    minimumSize: const Size(48, 40),
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                  ),
                   child: Text(
                     actionLabel,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
-                      color: iconColor,
                     ),
                   ),
                 ),

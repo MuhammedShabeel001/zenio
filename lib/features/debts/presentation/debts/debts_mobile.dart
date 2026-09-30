@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:zenio/features/debts/controller/debts/debts_notifier.dart';
 import 'package:zenio/features/debts/presentation/widgets/debt_card.dart';
-import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/shared.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/features/debts/presentation/widgets/add_debt_bottom_sheet.dart';
@@ -32,7 +30,7 @@ class _DebtsScreenMobileState extends ConsumerState<DebtsScreenMobile> {
 
     final filteredDebts = debts.where((debt) {
       if (state.selectedFilter == 'I Owe') return debt.isOwed;
-      if (state.selectedFilter == 'I Own') return !debt.isOwed;
+      if (state.selectedFilter == 'Owed to me') return !debt.isOwed;
       return true;
     }).toList();
 
@@ -53,9 +51,10 @@ class _DebtsScreenMobileState extends ConsumerState<DebtsScreenMobile> {
         bottom: false,
         child: Column(
           children: [
+            const ScreenTitleBar(title: 'Debts'),
             // Dark Top Header Section
             Padding(
-              padding: const EdgeInsets.fromLTRB(10, 10, 10, 20),
+              padding: const EdgeInsets.fromLTRB(10, 4, 10, 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -64,36 +63,43 @@ class _DebtsScreenMobileState extends ConsumerState<DebtsScreenMobile> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       // Total Balance (₹ - 268.01)
-                      RichText(
-                        text: TextSpan(
-                          children: [
-                            TextSpan(
-                              text: '$currencySymbol ',
-                              style: AppFonts.numeric(
-                                fontSize: 32,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                letterSpacing: -0.5,
-                              ),
+                      Flexible(
+                        // Large amounts and text sizes shrink to fit instead of overflowing.
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: RichText(
+                            text: TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: '$currencySymbol ',
+                                  style: AppFonts.numeric(
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: _formatWholePart(totalBalance),
+                                  style: AppFonts.numeric(
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: _formatDecimalPart(totalBalance),
+                                  style: AppFonts.numeric(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color(0xFF808080),
+                                  ),
+                                ),
+                              ],
                             ),
-                            TextSpan(
-                              text: _formatWholePart(totalBalance),
-                              style: AppFonts.numeric(
-                                fontSize: 32,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                letterSpacing: -0.5,
-                              ),
-                            ),
-                            TextSpan(
-                              text: _formatDecimalPart(totalBalance),
-                              style: AppFonts.numeric(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: const Color(0xFF808080),
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
 
@@ -158,7 +164,7 @@ class _DebtsScreenMobileState extends ConsumerState<DebtsScreenMobile> {
               child: Container(
                 width: double.infinity,
                 decoration: const BoxDecoration(
-                  color: Color(0xFFF7F7F7),
+                  color: ZenioColors.sheet,
                   borderRadius: BorderRadius.vertical(
                     top: Radius.circular(30),
                   ),
@@ -170,20 +176,29 @@ class _DebtsScreenMobileState extends ConsumerState<DebtsScreenMobile> {
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(10, 16, 10, 20),
                     children: [
-                      if (filteredDebts.isEmpty)
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 40),
-                          child: Center(
-                            child: Text(
-                              'No debts found',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Color(0xFF8E8E93),
-                              ),
-                            ),
+                      if (filteredDebts.isEmpty) ...[
+                        if (state.isLoading)
+                          const ListStateMessage.loading()
+                        else if (debts.isEmpty && state.errorMessage != null)
+                          ListStateMessage.error(
+                            onRetry: ref.read(debtsNotifierProvider.notifier).loadData,
+                          )
+                        else if (debts.isEmpty)
+                          ListStateMessage(
+                            title: 'No debts yet',
+                            message:
+                                'Keep track of money you owe and money owed to you.',
+                            icon: Icons.handshake_outlined,
+                            actionLabel: 'Add debt',
+                            onAction: () => AddDebtBottomSheet.show(context),
+                          )
+                        else
+                          const ListStateMessage(
+                            title: 'Nothing here',
+                            message: 'No debts match this filter.',
+                            icon: Icons.filter_alt_off_outlined,
                           ),
-                        )
-                      else
+                      ] else
                         ...filteredDebts.map(
                           (item) => DebtCard(
                             key: ValueKey('${item.id}_${item.isOwed}'),
@@ -213,10 +228,27 @@ class _DebtsScreenMobileState extends ConsumerState<DebtsScreenMobile> {
                                 });
                               }
                             },
-                            onDelete: () {
-                              ref
-                                  .read(debtsNotifierProvider.notifier)
-                                  .deleteDebt(item.id);
+                            onDelete: () async {
+                              try {
+                                await ref
+                                    .read(debtsNotifierProvider.notifier)
+                                    .deleteDebt(item.id);
+                              } catch (_) {
+                                if (!context.mounted) return;
+                                ZenioSnackBar.show(
+                                  context,
+                                  message:
+                                      "Couldn't delete the debt. Please try again.",
+                                  type: ZenioSnackBarType.error,
+                                );
+                                return;
+                              }
+                              if (!context.mounted) return;
+                              ZenioSnackBar.show(
+                                context,
+                                message: 'Debt deleted',
+                                type: ZenioSnackBarType.success,
+                              );
                             },
                             onEdit: () {
                               EditDebtDialog.show(
@@ -252,8 +284,8 @@ class _DebtsScreenMobileState extends ConsumerState<DebtsScreenMobile> {
           child: Text('I Owe', style: TextStyle(color: Colors.white)),
         ),
         const PopupMenuItem(
-          value: 'I Own',
-          child: Text('I Own', style: TextStyle(color: Colors.white)),
+          value: 'Owed to me',
+          child: Text('Owed to me', style: TextStyle(color: Colors.white)),
         ),
       ],
       offset: const Offset(0, 40),
@@ -273,7 +305,7 @@ class _DebtsScreenMobileState extends ConsumerState<DebtsScreenMobile> {
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
-                color: Color(0xFFD1D1D6),
+                color: ZenioColors.border,
               ),
             ),
             const SizedBox(width: 8),

@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import 'package:zenio/features/vault/controller/vault/vault_notifier.dart';
 import 'package:zenio/features/vault/domain/models/vault_card_model.dart';
 import 'package:zenio/features/vault/domain/models/vault_note_model.dart';
+import 'package:zenio/features/vault/domain/repositories/implementations/vault_repository.dart';
+import 'package:zenio/features/vault/domain/vault_card_validation.dart';
+import 'package:zenio/shared/theme/zenio_tokens.dart';
 import 'package:zenio/shared/utils/app_fonts.dart';
+import 'package:zenio/shared/utils/formatters.dart';
 
 enum EditVaultType { card, note }
 
@@ -121,14 +125,36 @@ class _EditVaultItemDialogState extends ConsumerState<EditVaultItemDialog> {
     }
   }
 
-  void _saveChanges() {
+  bool _isSaving = false;
+
+  /// Why the item could not be saved, shown above the button.
+  String? _formError;
+
+  Future<void> _saveChanges() async {
+    if (_isSaving) return;
+    late Future<void> Function() save;
     if (widget.type == EditVaultType.card) {
       final type = _cardTypeController.text.trim();
       final number = _cardNumberController.text.trim();
       final expiry = _expiryController.text.trim();
       final cvv = _cvvController.text.trim();
 
-      if (type.isEmpty || number.isEmpty || expiry.isEmpty || cvv.isEmpty) return;
+      final saved = widget.card!;
+      final problem = validateVaultCard(
+        type: type,
+        number: number,
+        expiry: expiry,
+        cvv: cvv,
+        original: (
+          number: saved.cardNumber,
+          expiry: saved.expiry,
+          cvv: saved.cvv,
+        ),
+      );
+      if (problem != null) {
+        setState(() => _formError = problem);
+        return;
+      }
 
       final updatedCard = widget.card!.copyWith(
         cardType: type,
@@ -137,10 +163,13 @@ class _EditVaultItemDialogState extends ConsumerState<EditVaultItemDialog> {
         cvv: cvv,
       );
 
-      ref.read(vaultNotifierProvider.notifier).updateCard(updatedCard);
+      save = () => ref.read(vaultNotifierProvider.notifier).updateCard(updatedCard);
     } else {
       final content = _noteContentController.text.trim();
-      if (content.isEmpty) return;
+      if (content.isEmpty) {
+        setState(() => _formError = 'Write something to save');
+        return;
+      }
 
       final formattedDate = DateFormat('dd MMMM yyyy').format(_selectedDate);
       final updatedNote = widget.note!.copyWith(
@@ -148,10 +177,29 @@ class _EditVaultItemDialogState extends ConsumerState<EditVaultItemDialog> {
         content: content,
       );
 
-      ref.read(vaultNotifierProvider.notifier).updateNote(updatedNote);
+      save = () => ref.read(vaultNotifierProvider.notifier).updateNote(updatedNote);
     }
 
-    Navigator.of(context).pop();
+    final navigator = Navigator.of(context);
+    setState(() {
+      _isSaving = true;
+      _formError = null;
+    });
+    try {
+      await save();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isSaving = false;
+        _formError = e is VaultUnavailableException
+            ? e.toString()
+            : "Couldn't save. Please try again.";
+      });
+      return;
+    }
+    // The form may have been closed (or the Vault locked) meanwhile.
+    if (!mounted) return;
+    navigator.pop();
   }
 
   @override
@@ -184,17 +232,26 @@ class _EditVaultItemDialogState extends ConsumerState<EditVaultItemDialog> {
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF111111),
+                      color: ZenioColors.textPrimary,
                     ),
                   ),
-                  GestureDetector(
+                  Semantics(
+                    button: true,
+                    label: 'Close',
+                    excludeSemantics: true,
                     onTap: () => Navigator.of(context).pop(),
-                    behavior: HitTestBehavior.opaque,
-                    child: Container(
+                    child: GestureDetector(
+                      onTap: () => Navigator.of(context).pop(),
+                      behavior: HitTestBehavior.opaque,
+                      // A 44dp touch area around the 32dp circle.
+                      child: SizedBox.square(
+                        dimension: 44,
+                        child: Center(
+                          child: Container(
                       width: 32,
                       height: 32,
                       decoration: const BoxDecoration(
-                        color: Color(0xFFF2F2F2),
+                        color: ZenioColors.fieldFill,
                         shape: BoxShape.circle,
                       ),
                       child: const Center(
@@ -202,6 +259,9 @@ class _EditVaultItemDialogState extends ConsumerState<EditVaultItemDialog> {
                           Icons.close_rounded,
                           size: 18,
                           color: Color(0xFF555555),
+                        ),
+                      ),
+                    ),
                         ),
                       ),
                     ),
@@ -215,7 +275,7 @@ class _EditVaultItemDialogState extends ConsumerState<EditVaultItemDialog> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 15),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF2F2F2),
+                    color: ZenioColors.fieldFill,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: TextField(
@@ -223,13 +283,13 @@ class _EditVaultItemDialogState extends ConsumerState<EditVaultItemDialog> {
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w500,
-                      color: Color(0xFF111111),
+                      color: ZenioColors.textPrimary,
                     ),
                     decoration: const InputDecoration(
                       hintText: 'Card Type (e.g. Debit Card)',
                       hintStyle: TextStyle(
                         fontSize: 15,
-                        color: Color(0xFF9E9EA5),
+                        color: ZenioColors.textPlaceholder,
                       ),
                       isDense: true,
                       filled: false,
@@ -250,7 +310,7 @@ class _EditVaultItemDialogState extends ConsumerState<EditVaultItemDialog> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 15),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF2F2F2),
+                    color: ZenioColors.fieldFill,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: TextField(
@@ -263,13 +323,13 @@ class _EditVaultItemDialogState extends ConsumerState<EditVaultItemDialog> {
                     style: AppFonts.numeric(
                       fontSize: 15,
                       fontWeight: FontWeight.w500,
-                      color: const Color(0xFF111111),
+                      color: ZenioColors.textPrimary,
                     ),
                     decoration: InputDecoration(
                       hintText: 'Card Number',
                       hintStyle: AppFonts.numeric(
                         fontSize: 15,
-                        color: const Color(0xFF9E9EA5),
+                        color: ZenioColors.textPlaceholder,
                       ),
                       isDense: true,
                       filled: false,
@@ -296,26 +356,25 @@ class _EditVaultItemDialogState extends ConsumerState<EditVaultItemDialog> {
                           vertical: 15,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF2F2F2),
+                          color: ZenioColors.fieldFill,
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: TextField(
                           controller: _expiryController,
                           keyboardType: TextInputType.datetime,
                           inputFormatters: [
-                            FilteringTextInputFormatter.allow(RegExp('^[0-9/]*')),
-                            LengthLimitingTextInputFormatter(5),
+                            ExpiryDateInputFormatter(),
                           ],
                           style: AppFonts.numeric(
                             fontSize: 15,
                             fontWeight: FontWeight.w500,
-                            color: const Color(0xFF111111),
+                            color: ZenioColors.textPrimary,
                           ),
                           decoration: InputDecoration(
                             hintText: 'MM/YY',
                             hintStyle: AppFonts.numeric(
                               fontSize: 15,
-                              color: const Color(0xFF9E9EA5),
+                              color: ZenioColors.textPlaceholder,
                             ),
                             isDense: true,
                             filled: false,
@@ -339,7 +398,7 @@ class _EditVaultItemDialogState extends ConsumerState<EditVaultItemDialog> {
                           vertical: 15,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF2F2F2),
+                          color: ZenioColors.fieldFill,
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: TextField(
@@ -353,13 +412,13 @@ class _EditVaultItemDialogState extends ConsumerState<EditVaultItemDialog> {
                           style: AppFonts.numeric(
                             fontSize: 15,
                             fontWeight: FontWeight.w500,
-                            color: const Color(0xFF111111),
+                            color: ZenioColors.textPrimary,
                           ),
                           decoration: InputDecoration(
                             hintText: 'CVV',
                             hintStyle: AppFonts.numeric(
                               fontSize: 15,
-                              color: const Color(0xFF9E9EA5),
+                              color: ZenioColors.textPlaceholder,
                             ),
                             isDense: true,
                             filled: false,
@@ -382,7 +441,7 @@ class _EditVaultItemDialogState extends ConsumerState<EditVaultItemDialog> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 15),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF2F2F2),
+                    color: ZenioColors.fieldFill,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: TextField(
@@ -392,13 +451,13 @@ class _EditVaultItemDialogState extends ConsumerState<EditVaultItemDialog> {
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w400,
-                      color: Color(0xFF111111),
+                      color: ZenioColors.textPrimary,
                     ),
                     decoration: const InputDecoration(
                       hintText: 'Note content...',
                       hintStyle: TextStyle(
                         fontSize: 15,
-                        color: Color(0xFF9E9EA5),
+                        color: ZenioColors.textPlaceholder,
                       ),
                       isDense: true,
                       filled: false,
@@ -425,7 +484,7 @@ class _EditVaultItemDialogState extends ConsumerState<EditVaultItemDialog> {
                       vertical: 12,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF2F2F2),
+                      color: ZenioColors.fieldFill,
                       borderRadius: BorderRadius.circular(18),
                     ),
                     child: Row(
@@ -433,7 +492,7 @@ class _EditVaultItemDialogState extends ConsumerState<EditVaultItemDialog> {
                         const Icon(
                           Icons.calendar_today_rounded,
                           size: 18,
-                          color: Color(0xFF8E8E93),
+                          color: ZenioColors.textSecondary,
                         ),
                         const SizedBox(width: 10),
                         Expanded(
@@ -450,7 +509,7 @@ class _EditVaultItemDialogState extends ConsumerState<EditVaultItemDialog> {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
-                            color: Color(0xFF8E8E93),
+                            color: ZenioColors.textSecondary,
                           ),
                         ),
                       ],
@@ -460,13 +519,21 @@ class _EditVaultItemDialogState extends ConsumerState<EditVaultItemDialog> {
               ],
               const SizedBox(height: 16),
 
+              if (_formError != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    _formError!,
+                    style: const TextStyle(fontSize: 12, color: ZenioColors.danger),
+                  ),
+                ),
               // Save Changes Button
               SizedBox(
                 height: 52,
                 child: ElevatedButton(
-                  onPressed: _saveChanges,
+                  onPressed: _isSaving ? null : _saveChanges,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF10B981),
+                    backgroundColor: ZenioColors.primary,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(18),

@@ -1,6 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:zenio/features/debts/domain/models/debt_model.dart';
-import 'package:zenio/features/debts/domain/repositories/implementations/debts_repository.dart';
 
 part 'debts_state.freezed.dart';
 
@@ -16,8 +15,8 @@ abstract class DebtsState with _$DebtsState {
 
   factory DebtsState.initial() => const DebtsState(
         totalBalance: 0.0,
-        debts: defaultDebtsList,
+        debts: [],
         selectedFilter: 'All',
-        isLoading: false,
+        isLoading: true,
       );
 }

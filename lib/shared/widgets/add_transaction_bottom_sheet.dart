@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import 'package:zenio/features/home/controller/home/home_notifier.dart';
+import 'package:zenio/features/home/domain/models/transaction/transaction_kind.dart';
 import 'package:zenio/features/home/domain/models/transaction/transaction_model.dart';
 import 'package:zenio/features/transactions/controller/categories/categories_notifier.dart';
-import 'package:zenio/features/transactions/controller/transactions/transactions_notifier.dart';
-import 'package:zenio/features/transactions/domain/models/transaction_detail_model.dart';
 import 'package:zenio/features/transactions/presentation/widgets/manage_categories_bottom_sheet.dart';
 import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
 import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
 import 'package:zenio/features/wallet/presentation/widgets/add_wallet_bottom_sheet.dart';
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/providers/default_wallet_provider/default_wallet_provider.dart';
+import 'package:zenio/shared/theme/zenio_tokens.dart';
 import 'package:zenio/shared/utils/app_fonts.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/utils/formatters.dart';
@@ -52,6 +53,8 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
   String? _destinationWallet;
   String? _selectedCategory;
   double _swapTurns = 0;
+  bool _isSaving = false;
+  String? _saveError;
 
   @override
   void initState() {
@@ -144,7 +147,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
               width: 32,
               height: 4,
               decoration: BoxDecoration(
-                color: const Color(0xFFD1D1D6),
+                color: ZenioColors.border,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -190,7 +193,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w400,
-                  color: Color(0xFF8E8E93),
+                  color: ZenioColors.textSecondary,
                   height: 1.4,
                 ),
               ),
@@ -206,7 +209,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                   AddWalletBottomSheet.show(context);
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF10B981),
+                  backgroundColor: ZenioColors.primary,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
@@ -287,7 +290,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                 width: 32,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFD1D1D6),
+                  color: ZenioColors.border,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -310,12 +313,12 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                   _buildTabItem(
                     type: TransactionType.expense,
                     label: 'Expense',
-                    activeColor: const Color(0xFFDD3D34),
+                    activeColor: ZenioColors.danger,
                   ),
                   _buildTabItem(
                     type: TransactionType.income,
                     label: 'Income',
-                    activeColor: const Color(0xFF10B981),
+                    activeColor: ZenioColors.primary,
                   ),
                   if (wallets.length >= 2)
                     _buildTabItem(
@@ -334,11 +337,11 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
               decoration: BoxDecoration(
                 color: isExceedingBalance
                     ? const Color(0xFFFFF5F5)
-                    : const Color(0xFFF2F2F2),
+                    : ZenioColors.fieldFill,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
                   color: isExceedingBalance
-                      ? const Color(0xFFDD3D34)
+                      ? ZenioColors.danger
                       : Colors.transparent,
                   width: 1.5,
                 ),
@@ -351,8 +354,8 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                       color: isExceedingBalance
-                          ? const Color(0xFFDD3D34)
-                          : const Color(0xFF111111),
+                          ? ZenioColors.danger
+                          : ZenioColors.textPrimary,
                     ),
                   ),
                   Expanded(
@@ -372,15 +375,15 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                         color: isExceedingBalance
-                            ? const Color(0xFFDD3D34)
-                            : const Color(0xFF111111),
+                            ? ZenioColors.danger
+                            : ZenioColors.textPrimary,
                       ),
                       decoration: InputDecoration(
                         hintText: '0',
                         hintStyle: AppFonts.numeric(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          color: const Color(0xFF9E9EA5),
+                          color: ZenioColors.textPlaceholder,
                         ),
                         isDense: true,
                         filled: false,
@@ -417,7 +420,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                     children: [
                       const Icon(
                         Icons.error_outline_rounded,
-                        color: Color(0xFFDD3D34),
+                        color: ZenioColors.danger,
                         size: 18,
                       ),
                       const SizedBox(width: 8),
@@ -427,7 +430,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFFDD3D34),
+                            color: ZenioColors.danger,
                             height: 1.3,
                           ),
                         ),
@@ -482,7 +485,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                 padding:
                     const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF2F2F2),
+                  color: ZenioColors.fieldFill,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -490,7 +493,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                     const Icon(
                       Icons.calendar_today_rounded,
                       size: 20,
-                      color: Color(0xFF8E8E93),
+                      color: ZenioColors.textSecondary,
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -508,7 +511,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
-                        color: Color(0xFF8E8E93),
+                        color: ZenioColors.textSecondary,
                       ),
                     ),
                   ],
@@ -524,7 +527,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                 width: 20,
                 height: 20,
                 colorFilter: const ColorFilter.mode(
-                  Color(0xFF8E8E93),
+                  ZenioColors.textSecondary,
                   BlendMode.srcIn,
                 ),
               ),
@@ -544,13 +547,13 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                   label: w,
                   subtitle: '$currencySymbol ${_formatAmount(bal)}',
                   subtitleColor: hasEnough
-                      ? const Color(0xFF8E8E93)
-                      : const Color(0xFFDD3D34),
+                      ? ZenioColors.textSecondary
+                      : ZenioColors.danger,
                   icon: Assets.icons.wallet.svg(
                     width: 18,
                     height: 18,
                     colorFilter: const ColorFilter.mode(
-                      Color(0xFF8E8E93),
+                      ZenioColors.textSecondary,
                       BlendMode.srcIn,
                     ),
                   ),
@@ -576,7 +579,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                       width: 20,
                       height: 20,
                       colorFilter: const ColorFilter.mode(
-                        Color(0xFF8E8E93),
+                        ZenioColors.textSecondary,
                         BlendMode.srcIn,
                       ),
                     ),
@@ -598,7 +601,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                           width: 18,
                           height: 18,
                           colorFilter: const ColorFilter.mode(
-                            Color(0xFF8E8E93),
+                            ZenioColors.textSecondary,
                             BlendMode.srcIn,
                           ),
                         ),
@@ -622,7 +625,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                         width: 50,
                         height: 50,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF2F2F2),
+                          color: ZenioColors.fieldFill,
                           shape: BoxShape.circle,
                           border: Border.all(
                             color: Colors.white,
@@ -632,7 +635,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                         child: Center(
                           child: AnimatedRotation(
                             turns: _swapTurns,
-                            duration: const Duration(milliseconds: 300),
+                            duration: ZenioMotion.standard,
                             curve: Curves.easeInOut,
                             child: Assets.icons.swap.svg(
                               width: 22,
@@ -654,7 +657,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
               Container(
                 clipBehavior: Clip.antiAlias,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF2F2F2),
+                  color: ZenioColors.fieldFill,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Column(
@@ -670,7 +673,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
-                              color: Color(0xFF8E8E93),
+                              color: ZenioColors.textSecondary,
                             ),
                           ),
                           GestureDetector(
@@ -695,7 +698,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                                   Icon(
                                     Icons.tune_rounded,
                                     size: 14,
-                                    color: Color(0xFF10B981),
+                                    color: ZenioColors.primary,
                                   ),
                                   SizedBox(width: 4),
                                   Text(
@@ -703,7 +706,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.bold,
-                                      color: Color(0xFF10B981),
+                                      color: ZenioColors.primary,
                                     ),
                                   ),
                                 ],
@@ -733,14 +736,14 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                                 },
                                 behavior: HitTestBehavior.opaque,
                                 child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 200),
+                                  duration: ZenioMotion.fast,
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 14,
                                     vertical: 8,
                                   ),
                                   decoration: BoxDecoration(
                                     color: isSelected
-                                        ? const Color(0xFF10B981)
+                                        ? ZenioColors.primary
                                         : Colors.white,
                                     borderRadius: BorderRadius.circular(20),
                                   ),
@@ -763,7 +766,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                                               : FontWeight.w500,
                                           color: isSelected
                                               ? Colors.white
-                                              : const Color(0xFF111111),
+                                              : ZenioColors.textPrimary,
                                         ),
                                       ),
                                     ],
@@ -783,7 +786,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
               decoration: BoxDecoration(
-                color: const Color(0xFFF2F2F2),
+                color: ZenioColors.fieldFill,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: TextField(
@@ -793,14 +796,14 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                 style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w400,
-                  color: Color(0xFF111111),
+                  color: ZenioColors.textPrimary,
                 ),
                 decoration: const InputDecoration(
                   hintText: 'Add a note...',
                   hintStyle: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w400,
-                    color: Color(0xFF9E9EA5),
+                    color: ZenioColors.textPlaceholder,
                   ),
                   isDense: true,
                   filled: false,
@@ -817,16 +820,27 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
             ),
             const SizedBox(height: 6),
 
+            if (_saveError != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                child: Text(
+                  _saveError!,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: ZenioColors.danger,
+                  ),
+                ),
+              ),
             // Save Transaction Button
             SizedBox(
               height: 60,
               child: ElevatedButton(
-                onPressed: canSave
-                    ? () {
+                onPressed: canSave && !_isSaving
+                    ? () async {
                         final amount = AppNumberFormat.parseAmount(_amountController.text);
                         final note = _noteController.text.trim();
                         final title = _selectedType == TransactionType.transfer
-                            ? 'Transfer to $selectedDestination'
+                            ? '$transferTitlePrefix$selectedDestination'
                             : (_selectedCategory ??
                                 (categories.isNotEmpty
                                     ? categories.first.name
@@ -837,22 +851,10 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                         final timeString = DateFormat('HH : mm').format(DateTime.now());
                         final timestamp = '${DateFormat('yy-MM-dd').format(_selectedDate)}   $timeString';
                         final bankName = _selectedType == TransactionType.transfer
-                            ? '$selectedSource -> $selectedDestination'
+                            ? '$selectedSource$transferWalletSeparator$selectedDestination'
                             : selectedSource;
 
                         final id = DateTime.now().millisecondsSinceEpoch.toString();
-
-                        final txDetail = TransactionDetailModel(
-                          id: id,
-                          title: title,
-                          date: formattedDate,
-                          amount: amount,
-                          isIncome: isIncome,
-                          currency: currencyCode,
-                          note: note.isNotEmpty ? note : null,
-                          bankName: bankName,
-                          timestamp: timestamp,
-                        );
 
                         final txHome = TransactionModel(
                           id: id,
@@ -864,39 +866,37 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                           note: note.isNotEmpty ? note : null,
                           bankName: bankName,
                           timestamp: timestamp,
+                          kind: switch (_selectedType) {
+                            TransactionType.expense => TransactionKind.expense.name,
+                            TransactionType.income => TransactionKind.income.name,
+                            TransactionType.transfer => TransactionKind.transfer.name,
+                          },
                         );
 
-                        ref.read(transactionsNotifierProvider.notifier).addTransaction(txDetail);
-                        ref.read(homeNotifierProvider.notifier).addTransaction(txHome);
-
-                        final walletNotifier = ref.read(walletNotifierProvider.notifier);
-                        if (_selectedType == TransactionType.expense) {
-                          walletNotifier.adjustWalletBalance(
-                            walletName: selectedSource,
-                            amount: amount,
-                            isIncome: false,
-                          );
-                        } else if (_selectedType == TransactionType.income) {
-                          walletNotifier.adjustWalletBalance(
-                            walletName: selectedSource,
-                            amount: amount,
-                            isIncome: true,
-                          );
-                        } else if (_selectedType == TransactionType.transfer) {
-                          walletNotifier.transferBetweenWallets(
-                            fromWallet: selectedSource,
-                            toWallet: selectedDestination,
-                            amount: amount,
-                          );
+                        // Wallet balances follow from the saved transaction.
+                        setState(() => _isSaving = true);
+                        try {
+                          await ref.read(homeNotifierProvider.notifier).addTransaction(txHome);
+                        } catch (_) {
+                          if (!mounted) return;
+                          // Keep what was typed; show why above the button.
+                          setState(() {
+                            _isSaving = false;
+                            _saveError =
+                                "Couldn't save the transaction. Please try again.";
+                          });
+                          return;
                         }
 
+                        await HapticFeedback.lightImpact();
+                        if (!mounted) return;
                         Navigator.of(context).pop();
                       }
                     : null,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF10B981),
+                  backgroundColor: ZenioColors.primary,
                   disabledBackgroundColor: const Color(0xFFE5E5EA),
-                  disabledForegroundColor: const Color(0xFF8E8E93),
+                  disabledForegroundColor: ZenioColors.textSecondary,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
@@ -909,7 +909,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: canSave ? Colors.white : const Color(0xFF8E8E93),
+                    color: canSave ? Colors.white : ZenioColors.textSecondary,
                   ),
                 ),
               ),
@@ -939,7 +939,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
         behavior: HitTestBehavior.opaque,
         child: Container(
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFFF2F2F2) : Colors.transparent,
+            color: isSelected ? ZenioColors.fieldFill : Colors.transparent,
             borderRadius: BorderRadius.circular(30),
           ),
           child: Center(

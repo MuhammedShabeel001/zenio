@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zenio/features/analytics/domain/models/category_spend/category_spend_model.dart';
 import 'package:zenio/features/subscriptions/controller/categories/subscription_categories_notifier.dart';
 import 'package:zenio/features/transactions/controller/categories/categories_notifier.dart';
-import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/shared.dart';
 
 class TopSpentCard extends ConsumerWidget {
@@ -130,7 +129,7 @@ class TopSpentCard extends ConsumerWidget {
     if (lower.contains('travel')) return const Color(0xFFFF7A00);
     if (lower.contains('entertainment')) return const Color(0xFF8B5CF6);
     if (lower.contains('loan') || lower.contains('debt')) {
-      return const Color(0xFF10B981);
+      return ZenioColors.primary;
     }
     if (lower.contains('food')) return const Color(0xFFEF4444);
     if (lower.contains('shop')) return const Color(0xFF3B82F6);
@@ -160,7 +159,7 @@ class TopSpentCard extends ConsumerWidget {
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
+        duration: ZenioMotion.standard,
         curve: Curves.fastOutSlowIn,
         margin: const EdgeInsets.only(bottom: 5),
         padding: const EdgeInsets.fromLTRB(5, 5, 20, 5),
@@ -198,7 +197,7 @@ class TopSpentCard extends ConsumerWidget {
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF111111),
+                          color: ZenioColors.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 3),
@@ -207,7 +206,7 @@ class TopSpentCard extends ConsumerWidget {
                         style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w400,
-                          color: Color(0xFF9E9EA5),
+                          color: ZenioColors.textPlaceholder,
                         ),
                       ),
                     ],
@@ -222,7 +221,7 @@ class TopSpentCard extends ConsumerWidget {
                       style: AppFonts.numeric(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: const Color(0xFF111111),
+                        color: ZenioColors.textPrimary,
                       ),
                     ),
                     const SizedBox(width: 4),
@@ -231,7 +230,7 @@ class TopSpentCard extends ConsumerWidget {
                       style: const TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF8E8E93),
+                        color: ZenioColors.textSecondary,
                       ),
                     ),
                   ],
@@ -241,7 +240,7 @@ class TopSpentCard extends ConsumerWidget {
 
             // Tap-to-Expand Animated Progress Bar Section
             AnimatedCrossFade(
-              duration: const Duration(milliseconds: 300),
+              duration: ZenioMotion.standard,
               firstCurve: Curves.fastOutSlowIn,
               secondCurve: Curves.fastOutSlowIn,
               sizeCurve: Curves.fastOutSlowIn,
@@ -265,7 +264,7 @@ class TopSpentCard extends ConsumerWidget {
                     alignment: Alignment.centerLeft,
                     child: TweenAnimationBuilder<double>(
                       tween: Tween<double>(begin: 0, end: expanded ? ratio : 0),
-                      duration: const Duration(milliseconds: 400),
+                      duration: ZenioMotion.slow,
                       curve: Curves.easeOutCubic,
                       builder: (context, animatedRatio, child) {
                         return FractionallySizedBox(

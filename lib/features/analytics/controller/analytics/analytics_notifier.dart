@@ -1,13 +1,14 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:intl/intl.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:zenio/features/home/domain/models/transaction/transaction_kind.dart';
+import 'package:zenio/shared/utils/period_filter.dart';
 import 'package:zenio/features/analytics/domain/models/category_spend/category_spend_model.dart';
 import 'package:zenio/features/home/controller/home/home_notifier.dart';
 import 'package:zenio/features/home/domain/models/transaction/transaction_model.dart';
 import 'package:zenio/features/subscriptions/controller/categories/subscription_categories_notifier.dart';
 import 'package:zenio/features/transactions/controller/categories/categories_notifier.dart';
 import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
-import 'package:zenio/shared/utils/datetime.dart';
 
 part 'analytics_notifier.freezed.dart';
 part 'analytics_notifier.g.dart';
@@ -35,80 +36,7 @@ class AnalyticsNotifier extends _$AnalyticsNotifier {
       }).toList();
     }
 
-    if (period.toLowerCase() == 'daily') {
-      final now = DateTime.now();
-      DateTime targetDate;
-      if (timeframe.toLowerCase() == 'today') {
-        targetDate = now;
-      } else if (timeframe.toLowerCase() == 'yesterday') {
-        targetDate = now.subtract(const Duration(days: 1));
-      } else {
-        return transactions;
-      }
-
-      return transactions.where((tx) {
-        final txDate = DateTimeUtils.parseTransactionDate(tx.date);
-        if (txDate == null) return false;
-        return txDate.year == targetDate.year &&
-            txDate.month == targetDate.month &&
-            txDate.day == targetDate.day;
-      }).toList();
-    } else if (period.toLowerCase() == 'weekly') {
-      final now = DateTime.now();
-      final int currentDay = now.weekday;
-      final DateTime startOfWeek = now.subtract(Duration(days: currentDay - 1));
-      final DateTime startOfPastWeek = startOfWeek.subtract(const Duration(days: 7));
-      final DateTime endOfPastWeek = startOfWeek.subtract(const Duration(days: 1));
-
-      return transactions.where((tx) {
-        final txDate = DateTimeUtils.parseTransactionDate(tx.date);
-        if (txDate == null) return false;
-        if (timeframe.toLowerCase() == 'this week') {
-          return txDate.isAfter(startOfWeek.subtract(const Duration(days: 1)));
-        } else if (timeframe.toLowerCase() == 'last week') {
-          return txDate.isAfter(startOfPastWeek.subtract(const Duration(days: 1))) &&
-              txDate.isBefore(endOfPastWeek.add(const Duration(days: 1)));
-        }
-        return true;
-      }).toList();
-    } else if (period.toLowerCase() == 'monthly') {
-      final int monthIndex = [
-        'January', 'February', 'March', 'April', 'May', 'June',
-        'July', 'August', 'September', 'October', 'November', 'December'
-      ].indexWhere((m) => m.toLowerCase() == timeframe.toLowerCase());
-
-      if (monthIndex == -1) return transactions;
-
-      final targetMonth = monthIndex + 1;
-      return transactions.where((tx) {
-        final txDate = DateTimeUtils.parseTransactionDate(tx.date);
-        if (txDate == null) return false;
-        return txDate.month == targetMonth && txDate.year == DateTime.now().year;
-      }).toList();
-    } else if (period.toLowerCase() == 'custom') {
-      if (timeframe.contains(' - ')) {
-        final parts = timeframe.split(' - ');
-        if (parts.length == 2) {
-          try {
-            final now = DateTime.now();
-            var start = DateFormat('dd MMM').parse(parts[0]);
-            var end = DateFormat('dd MMM').parse(parts[1]);
-            start = DateTime(now.year, start.month, start.day);
-            end = DateTime(now.year, end.month, end.day, 23, 59, 59);
-
-            return transactions.where((tx) {
-              final txDate = DateTimeUtils.parseTransactionDate(tx.date);
-              if (txDate == null) return false;
-              return txDate.isAfter(start.subtract(const Duration(days: 1))) &&
-                  txDate.isBefore(end.add(const Duration(days: 1)));
-            }).toList();
-          } catch (_) {
-            return transactions;
-          }
-        }
-      }
-    }
-    return transactions;
+    return filterByPeriod(transactions, (tx) => tx.date, period, timeframe);
   }
 
   (double, List<CategorySpendModel>) _computeAnalytics(List<TransactionModel> txs) {
@@ -116,7 +44,7 @@ class AnalyticsNotifier extends _$AnalyticsNotifier {
     final Map<String, List<TransactionModel>> categorized = {};
 
     for (final tx in txs) {
-      if (tx.isIncome || tx.title.startsWith('Transfer to')) continue;
+      if (tx.resolvedKind != TransactionKind.expense) continue;
       
       totalExpense += tx.amount;
       final category = tx.title;
@@ -211,7 +139,7 @@ class AnalyticsNotifier extends _$AnalyticsNotifier {
         spendsCount: categoryTxs.length,
         colorHex: colorHex,
         iconName: emoji,
-      ));
+      ),);
       idCounter++;
     }
 
@@ -223,6 +151,10 @@ class AnalyticsNotifier extends _$AnalyticsNotifier {
   @override
   AnalyticsState build() {
     ref.listen(homeNotifierProvider, (previous, next) {
+      if (next.status == HomeStatus.error) {
+        state = state.copyWith(status: AnalyticsStatus.error);
+        return;
+      }
       if (next.status == HomeStatus.success) {
         final filteredList = _filterTransactions(
           next.transactions,
@@ -279,7 +211,11 @@ class AnalyticsNotifier extends _$AnalyticsNotifier {
     final (balance, spends) = _computeAnalytics(filteredList);
 
     return AnalyticsState(
-      status: homeState.status == HomeStatus.loading ? AnalyticsStatus.loading : AnalyticsStatus.success,
+      status: switch (homeState.status) {
+        HomeStatus.initial || HomeStatus.loading => AnalyticsStatus.loading,
+        HomeStatus.error => AnalyticsStatus.error,
+        HomeStatus.success => AnalyticsStatus.success,
+      },
       totalBalance: balance,
       categorySpends: spends,
       selectedPeriod: initialPeriod,
@@ -319,7 +255,7 @@ class AnalyticsNotifier extends _$AnalyticsNotifier {
         defaultTimeframe = currentMonth;
         break;
       case 'custom':
-        defaultTimeframe = 'Select Range';
+        defaultTimeframe = allTimeTimeframe;
         break;
     }
     

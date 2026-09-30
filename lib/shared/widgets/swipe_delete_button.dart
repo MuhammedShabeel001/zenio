@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:zenio/shared/theme/zenio_tokens.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 
 /// A circular action button for swipe-to-delete cards.
@@ -20,39 +21,45 @@ class SwipeDeleteButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return Semantics(
+      button: true,
+      label: isConfirming ? 'Confirm delete' : 'Delete',
+      excludeSemantics: true,
       onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 220),
-        curve: Curves.easeInOutCubic,
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: isConfirming ? const Color(0xFFDD3D34) : Colors.white,
-          shape: BoxShape.circle,
-        ),
-        child: Center(
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 200),
-            transitionBuilder: (child, animation) {
-              return ScaleTransition(
-                scale: animation,
-                child: child,
-              );
-            },
-            child: isConfirming
-                ? const Icon(
-                    Icons.check_rounded,
-                    key: ValueKey('swipe_delete_confirm_tick'),
-                    color: Colors.white,
-                    size: 28,
-                  )
-                : Assets.icons.delete.svg(
-                    key: const ValueKey('swipe_delete_trash_icon'),
-                    width: 24,
-                    height: 24,
-                  ),
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: ZenioMotion.fast,
+          curve: Curves.easeInOutCubic,
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            color: isConfirming ? ZenioColors.danger : Colors.white,
+            shape: BoxShape.circle,
+          ),
+          child: Center(
+            child: AnimatedSwitcher(
+              duration: ZenioMotion.fast,
+              transitionBuilder: (child, animation) {
+                return ScaleTransition(
+                  scale: animation,
+                  child: child,
+                );
+              },
+              child: isConfirming
+                  ? const Icon(
+                      Icons.check_rounded,
+                      key: ValueKey('swipe_delete_confirm_tick'),
+                      color: Colors.white,
+                      size: 28,
+                    )
+                  : Assets.icons.delete.svg(
+                      key: const ValueKey('swipe_delete_trash_icon'),
+                      width: 24,
+                      height: 24,
+                    ),
+            ),
           ),
         ),
       ),

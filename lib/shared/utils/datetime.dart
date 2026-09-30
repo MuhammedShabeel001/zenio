@@ -27,45 +27,58 @@ class DateTimeUtils {
   static final pdfFullFormat = DateFormat('EEE, MMM dd, yyyy • hh:mm:ss a');
 
   /// Robust date parser for transactions supporting multiple common formats:
-  /// - dd-MM-yyyy (e.g. 17-09-2026)
+  /// - dd-MM-yyyy (e.g. 17-09-2026), the format Zenio stores
   /// - EEEE, MMMM d, yyyy (e.g. Thursday, September 17, 2026)
   /// - MMMM d, yyyy (e.g. September 17, 2026)
   /// - yyyy-MM-dd (e.g. 2026-09-17)
   /// - dd/MM/yyyy (e.g. 17/09/2026)
   /// - ISO-8601 (DateTime.tryParse)
+  ///
+  /// Called for every transaction on every filter and sort, so the common
+  /// stored format is read without building formatters or throwing, and
+  /// results are cached.
   static DateTime? parseTransactionDate(String? dateStr) {
-    if (dateStr == null || dateStr.trim().isEmpty) return null;
+    if (dateStr == null) return null;
     final clean = dateStr.trim();
+    if (clean.isEmpty) return null;
 
-    // 1. Try ISO-8601 (yyyy-MM-dd)
+    final cached = _parsedDates[clean];
+    if (cached != null || _parsedDates.containsKey(clean)) return cached;
+
+    final parsed = _parseTransactionDate(clean);
+    if (_parsedDates.length > 5000) _parsedDates.clear();
+    _parsedDates[clean] = parsed;
+    return parsed;
+  }
+
+  static final Map<String, DateTime?> _parsedDates = {};
+  static final RegExp _storedDate = RegExp(r'^(\d{2})-(\d{2})-(\d{4})$');
+  static final DateFormat _longDate = DateFormat('EEEE, MMMM d, yyyy');
+  static final DateFormat _monthDayYear = DateFormat('MMMM d, yyyy');
+  static final DateFormat _slashDate = DateFormat('dd/MM/yyyy');
+  static final DateFormat _dashDate = DateFormat('dd-MM-yyyy');
+
+  static DateTime? _parseTransactionDate(String clean) {
+    // 1. dd-MM-yyyy, the stored format (fast path, no exceptions).
+    final match = _storedDate.firstMatch(clean);
+    if (match != null) {
+      final day = int.parse(match.group(1)!);
+      final month = int.parse(match.group(2)!);
+      final year = int.parse(match.group(3)!);
+      final date = DateTime(year, month, day);
+      if (date.month == month && date.day == day) return date;
+    }
+
+    // 2. ISO-8601 (yyyy-MM-dd)
     final iso = DateTime.tryParse(clean);
     if (iso != null) return iso;
 
-    // 2. Try dd-MM-yyyy
-    try {
-      return DateFormat('dd-MM-yyyy').parseStrict(clean);
-    } catch (_) {}
-
-    // 3. Try EEEE, MMMM d, yyyy
-    try {
-      return DateFormat('EEEE, MMMM d, yyyy').parse(clean);
-    } catch (_) {}
-
-    // 4. Try MMMM d, yyyy
-    try {
-      return DateFormat('MMMM d, yyyy').parse(clean);
-    } catch (_) {}
-
-    // 5. Try dd/MM/yyyy
-    try {
-      return DateFormat('dd/MM/yyyy').parse(clean);
-    } catch (_) {}
-
-    // 6. Relaxed dd-MM-yyyy fallback
-    try {
-      return DateFormat('dd-MM-yyyy').parse(clean);
-    } catch (_) {}
-
+    // 3. The other formats older versions stored.
+    for (final format in [_longDate, _monthDayYear, _slashDate, _dashDate]) {
+      try {
+        return format.parse(clean);
+      } catch (_) {}
+    }
     return null;
   }
 }
@@ -95,7 +108,7 @@ extension RelativeDateExtension on String {
       } else if (dateToCheck == yesterday) {
         return 'Yesterday';
       } else {
-        return this; // Return original if not today or yesterday
+        return DateFormat('d MMM yyyy').format(date);
       }
     } catch (e) {
       return this; // Fallback to original string if parsing fails

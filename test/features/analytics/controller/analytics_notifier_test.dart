@@ -143,7 +143,8 @@ void main() {
       // HDFC only: 150 (Food & Drink) + 350 (Shopping) = 500
       expect(state.totalBalance, 500.0);
       expect(state.categorySpends.length, 2);
-      expect(state.categorySpends.map((s) => s.name), containsAll(['Food & Drink', 'Shopping']));
+      expect(state.categorySpends.map((s) => s.name),
+          containsAll(['Food & Drink', 'Shopping']),);
 
       // Select Chase Bank
       notifier.updateWallet('Chase Bank');
@@ -186,7 +187,9 @@ void main() {
       expect(filtered.length, 2);
     });
 
-    test('correctly parses dates in long format like EEEE, MMMM d, yyyy (client bug scenario)', () {
+    test(
+        'correctly parses dates in long format like EEEE, MMMM d, yyyy (client bug scenario)',
+        () {
       final now = DateTime.now();
       final longFormattedDate = DateFormat('EEEE, MMMM d, yyyy').format(now);
       final standardDate = DateFormat('dd-MM-yyyy').format(now);
@@ -237,8 +240,13 @@ void main() {
 
       // Both transactions should be included now
       expect(state.totalBalance, 270.0);
-      expect(state.categorySpends.any((c) => c.name == 'Grocery' && c.amount == 267.0), isTrue);
-      expect(state.categorySpends.any((c) => c.name == 'Other' && c.amount == 3.0), isTrue);
+      expect(
+          state.categorySpends
+              .any((c) => c.name == 'Grocery' && c.amount == 267.0),
+          isTrue,);
+      expect(
+          state.categorySpends.any((c) => c.name == 'Other' && c.amount == 3.0),
+          isTrue,);
     });
   });
 }

@@ -1,14 +1,15 @@
 import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
 import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
+import 'package:zenio/shared/theme/zenio_tokens.dart';
 import 'package:zenio/shared/utils/app_fonts.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/utils/formatters.dart';
 import 'package:zenio/shared/widgets/zenio_dropdown.dart';
+
 
 class AddWalletBottomSheet extends ConsumerStatefulWidget {
   const AddWalletBottomSheet({
@@ -161,7 +162,7 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
             width: 18,
             height: 18,
             colorFilter: const ColorFilter.mode(
-              Color(0xFF8E8E93),
+              ZenioColors.textSecondary,
               BlendMode.srcIn,
             ),
           ),
@@ -179,7 +180,7 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
               width: 18,
               height: 18,
               colorFilter: const ColorFilter.mode(
-                Color(0xFF8E8E93),
+                ZenioColors.textSecondary,
                 BlendMode.srcIn,
               ),
             ),
@@ -192,22 +193,32 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
       const ZenioDropdownItem<String>(
         value: '__CUSTOM__',
         label: 'Custom...',
-        labelColor: Color(0xFF10B981),
-        icon: Icon(Icons.add_rounded, size: 18, color: Color(0xFF10B981)),
+        labelColor: ZenioColors.primary,
+        icon: Icon(Icons.add_rounded, size: 18, color: ZenioColors.primary),
       ),
     );
 
     return items;
   }
 
-  void _onCreateWallet() {
+  bool _isSaving = false;
+  String? _nameError;
+
+  Future<void> _onCreateWallet() async {
+    if (_isSaving) return;
     var name = _nameController.text.trim();
     if (name.isEmpty) {
       if (widget.isFirstWallet) {
         name = 'Main Wallet';
       } else {
+        setState(() => _nameError = 'Enter a wallet name');
         return;
       }
+    }
+    final notifier = ref.read(walletNotifierProvider.notifier);
+    if (notifier.isNameTaken(name, exceptId: widget.editingCard?.id)) {
+      setState(() => _nameError = 'You already have a wallet with this name');
+      return;
     }
 
     final balance = AppNumberFormat.parseAmount(_balanceController.text);
@@ -251,12 +262,27 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
       isFrozen: isEditing && widget.editingCard!.isFrozen,
     );
 
-    if (isEditing && widget.editingIndex != null) {
-      ref.read(walletNotifierProvider.notifier).editCard(widget.editingIndex!, newCard);
-    } else {
-      ref.read(walletNotifierProvider.notifier).addCard(newCard, balance);
+    setState(() {
+      _isSaving = true;
+      _nameError = null;
+    });
+    try {
+      if (isEditing && widget.editingIndex != null) {
+        await notifier.editCard(widget.editingIndex!, newCard);
+      } else {
+        await notifier.addCard(newCard, balance);
+      }
+    } catch (_) {
+      if (!mounted) return;
+      // Shown in the sheet: a snackbar would appear behind it.
+      setState(() {
+        _isSaving = false;
+        _nameError = "Couldn't save the wallet. Please try again.";
+      });
+      return;
     }
 
+    if (!mounted) return;
     Navigator.of(context).pop(true);
   }
 
@@ -283,7 +309,7 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
                 width: 32,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFD1D1D6),
+                  color: ZenioColors.border,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -296,7 +322,7 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
                 style: AppFonts.text(
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
-                  color: const Color(0xFF111111),
+                  color: ZenioColors.textPrimary,
                 ),
               ),
               const SizedBox(height: 4),
@@ -305,7 +331,7 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
                 style: AppFonts.text(
                   fontSize: 13,
                   fontWeight: FontWeight.w400,
-                  color: const Color(0xFF8E8E93),
+                  color: ZenioColors.textSecondary,
                 ),
               ),
               const SizedBox(height: 18),
@@ -317,7 +343,7 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
               decoration: BoxDecoration(
-                color: const Color(0xFFF2F2F2),
+                color: ZenioColors.fieldFill,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Row(
@@ -329,7 +355,7 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
                       fontWeight: FontWeight.bold,
                       color: widget.editingCard != null
                           ? Colors.black54
-                          : const Color(0xFF111111),
+                          : ZenioColors.textPrimary,
                     ),
                   ),
                   Expanded(
@@ -349,14 +375,14 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
                         fontWeight: FontWeight.bold,
                         color: widget.editingCard != null
                             ? Colors.black54
-                            : const Color(0xFF111111),
+                            : ZenioColors.textPrimary,
                       ),
                       decoration: InputDecoration(
                         hintText: '0.00',
                         hintStyle: AppFonts.numeric(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          color: const Color(0xFF9E9EA5),
+                          color: ZenioColors.textPlaceholder,
                         ),
                         isDense: true,
                         filled: false,
@@ -380,7 +406,7 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
               decoration: BoxDecoration(
-                color: const Color(0xFFF2F2F2),
+                color: ZenioColors.fieldFill,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Row(
@@ -389,7 +415,7 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
                     width: 20,
                     height: 20,
                     colorFilter: const ColorFilter.mode(
-                      Color(0xFF8E8E93),
+                      ZenioColors.textSecondary,
                       BlendMode.srcIn,
                     ),
                   ),
@@ -397,16 +423,22 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
                   Expanded(
                     child: TextField(
                       controller: _nameController,
+                      textCapitalization: TextCapitalization.words,
+                      onChanged: (_) {
+                        if (_nameError != null) {
+                          setState(() => _nameError = null);
+                        }
+                      },
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
-                        color: Color(0xFF111111),
+                        color: ZenioColors.textPrimary,
                       ),
                       decoration: const InputDecoration(
                         hintText: 'Wallet name',
                         hintStyle: TextStyle(
                           fontSize: 14,
-                          color: Color(0xFF9E9EA5),
+                          color: ZenioColors.textPlaceholder,
                         ),
                         isDense: true,
                         filled: false,
@@ -424,6 +456,17 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
                 ],
               ),
             ),
+            if (_nameError != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 6, 20, 0),
+                child: Text(
+                  _nameError!,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: ZenioColors.danger,
+                  ),
+                ),
+              ),
             const SizedBox(height: 6),
 
             // Field 2: Wallet Type Dropdown
@@ -433,7 +476,7 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
                 width: 20,
                 height: 20,
                 colorFilter: const ColorFilter.mode(
-                  Color(0xFF8E8E93),
+                  ZenioColors.textSecondary,
                   BlendMode.srcIn,
                 ),
               ),
@@ -452,7 +495,7 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF2F2F2),
+                  color: ZenioColors.fieldFill,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -464,13 +507,13 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
                         autofocus: true,
                         style: const TextStyle(
                           fontSize: 14,
-                          color: Color(0xFF111111),
+                          color: ZenioColors.textPrimary,
                           fontWeight: FontWeight.w500,
                         ),
                         decoration: const InputDecoration(
                           hintText: 'Enter custom type (e.g. Crypto)',
                           hintStyle: TextStyle(
-                            color: Color(0xFF9E9EA5),
+                            color: ZenioColors.textPlaceholder,
                             fontSize: 14,
                           ),
                           isDense: true,
@@ -492,7 +535,7 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
                         height: 38,
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF10B981),
+                          color: ZenioColors.primary,
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: const Center(
@@ -517,7 +560,7 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
             Container(
               clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
-                color: const Color(0xFFF2F2F2),
+                color: ZenioColors.fieldFill,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Column(
@@ -530,7 +573,7 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
-                        color: Color(0xFF8E8E93),
+                        color: ZenioColors.textSecondary,
                       ),
                     ),
                   ),
@@ -559,7 +602,7 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
                               borderRadius: BorderRadius.circular(10),
                               border: isSelected
                                   ? Border.all(
-                                      color: const Color(0xFF10B981),
+                                      color: ZenioColors.primary,
                                       width: 2.5,
                                     )
                                   : Border.all(
@@ -584,9 +627,9 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
               height: 55,
               margin: const EdgeInsets.only(top: 20),
               child: ElevatedButton(
-                onPressed: _onCreateWallet,
+                onPressed: _isSaving ? null : _onCreateWallet,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF10B981),
+                  backgroundColor: ZenioColors.primary,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),

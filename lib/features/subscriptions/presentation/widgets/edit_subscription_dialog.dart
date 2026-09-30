@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import 'package:zenio/features/subscriptions/controller/categories/subscription_categories_notifier.dart';
 import 'package:zenio/features/subscriptions/controller/subscriptions/subscriptions_notifier.dart';
 import 'package:zenio/features/subscriptions/domain/models/subscription_model.dart';
 import 'package:zenio/features/transactions/domain/models/category_item_model.dart';
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
+import 'package:zenio/shared/theme/zenio_tokens.dart';
 import 'package:zenio/shared/utils/app_fonts.dart';
 import 'package:zenio/shared/utils/formatters.dart';
 
@@ -94,12 +94,24 @@ class _EditSubscriptionDialogState
     }
   }
 
-  void _saveChanges() {
+  /// Why the subscription could not be saved, shown above the button.
+  String? _formError;
+  bool _isSaving = false;
+
+  Future<void> _saveChanges() async {
+    if (_isSaving) return;
     final title = _titleController.text.trim();
-    if (title.isEmpty) return;
+    if (title.isEmpty) {
+      setState(() => _formError = 'Enter the subscription name');
+      return;
+    }
 
     final amount = AppNumberFormat.parseAmount(_amountController.text);
-    if (amount <= 0) return;
+    if (amount <= 0) {
+      setState(() => _formError = 'Enter an amount above 0');
+      return;
+    }
+    if (_formError != null) setState(() => _formError = null);
 
     final categories = ref.read(subscriptionCategoriesNotifierProvider);
     final selectedCat = categories.firstWhere(
@@ -120,8 +132,22 @@ class _EditSubscriptionDialogState
       iconName: selectedCat.emoji,
     );
 
-    ref.read(subscriptionsNotifierProvider.notifier).updateSubscription(updatedSub);
-    Navigator.of(context).pop();
+    final navigator = Navigator.of(context);
+    setState(() => _isSaving = true);
+    try {
+      await ref
+          .read(subscriptionsNotifierProvider.notifier)
+          .updateSubscription(updatedSub);
+    } catch (_) {
+      if (!mounted) return;
+      // Shown in the form: a snackbar would appear behind it.
+      setState(() => _isSaving = false);
+      setState(() => _formError = "Couldn't save your changes. Please try again.");
+      return;
+    }
+    // The form may have been closed (or the Vault locked) meanwhile.
+    if (!mounted) return;
+    navigator.pop();
   }
 
   @override
@@ -155,17 +181,26 @@ class _EditSubscriptionDialogState
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF111111),
+                      color: ZenioColors.textPrimary,
                     ),
                   ),
-                  GestureDetector(
+                  Semantics(
+                    button: true,
+                    label: 'Close',
+                    excludeSemantics: true,
                     onTap: () => Navigator.of(context).pop(),
-                    behavior: HitTestBehavior.opaque,
-                    child: Container(
+                    child: GestureDetector(
+                      onTap: () => Navigator.of(context).pop(),
+                      behavior: HitTestBehavior.opaque,
+                      // A 44dp touch area around the 32dp circle.
+                      child: SizedBox.square(
+                        dimension: 44,
+                        child: Center(
+                          child: Container(
                       width: 32,
                       height: 32,
                       decoration: const BoxDecoration(
-                        color: Color(0xFFF2F2F2),
+                        color: ZenioColors.fieldFill,
                         shape: BoxShape.circle,
                       ),
                       child: const Center(
@@ -173,6 +208,9 @@ class _EditSubscriptionDialogState
                           Icons.close_rounded,
                           size: 18,
                           color: Color(0xFF555555),
+                        ),
+                      ),
+                    ),
                         ),
                       ),
                     ),
@@ -205,7 +243,7 @@ class _EditSubscriptionDialogState
                         child: Container(
                           decoration: BoxDecoration(
                             color: isSelected
-                                ? const Color(0xFFF2F2F2)
+                                ? ZenioColors.fieldFill
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(26),
                           ),
@@ -218,7 +256,7 @@ class _EditSubscriptionDialogState
                                     ? FontWeight.bold
                                     : FontWeight.w400,
                                 color: isSelected
-                                    ? const Color(0xFF111111)
+                                    ? ZenioColors.textPrimary
                                     : const Color(0xFF808080),
                               ),
                             ),
@@ -235,7 +273,7 @@ class _EditSubscriptionDialogState
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 15),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF2F2F2),
+                  color: ZenioColors.fieldFill,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -245,7 +283,7 @@ class _EditSubscriptionDialogState
                       style: AppFonts.numeric(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
-                        color: const Color(0xFF111111),
+                        color: ZenioColors.textPrimary,
                       ),
                     ),
                     Expanded(
@@ -259,14 +297,14 @@ class _EditSubscriptionDialogState
                         style: AppFonts.numeric(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          color: const Color(0xFF111111),
+                          color: ZenioColors.textPrimary,
                         ),
                         decoration: InputDecoration(
                           hintText: '0',
                           hintStyle: AppFonts.numeric(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            color: const Color(0xFF9E9EA5),
+                            color: ZenioColors.textPlaceholder,
                           ),
                           isDense: true,
                           filled: false,
@@ -290,7 +328,7 @@ class _EditSubscriptionDialogState
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 15),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF2F2F2),
+                  color: ZenioColors.fieldFill,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: TextField(
@@ -298,13 +336,13 @@ class _EditSubscriptionDialogState
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
-                    color: Color(0xFF111111),
+                    color: ZenioColors.textPrimary,
                   ),
                   decoration: const InputDecoration(
                     hintText: 'Subscription Title',
                     hintStyle: TextStyle(
                       fontSize: 15,
-                      color: Color(0xFF9E9EA5),
+                      color: ZenioColors.textPlaceholder,
                     ),
                     isDense: true,
                     filled: false,
@@ -324,7 +362,7 @@ class _EditSubscriptionDialogState
               // Category Selector Chips
               Container(
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF2F2F2),
+                  color: ZenioColors.fieldFill,
                   borderRadius: BorderRadius.circular(18),
                 ),
                 padding: const EdgeInsets.symmetric(vertical: 10),
@@ -346,14 +384,14 @@ class _EditSubscriptionDialogState
                           },
                           behavior: HitTestBehavior.opaque,
                           child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
+                            duration: ZenioMotion.fast,
                             padding: const EdgeInsets.symmetric(
                               horizontal: 12,
                               vertical: 7,
                             ),
                             decoration: BoxDecoration(
                               color: isSelected
-                                  ? const Color(0xFF10B981)
+                                  ? ZenioColors.primary
                                   : Colors.white,
                               borderRadius: BorderRadius.circular(16),
                             ),
@@ -373,7 +411,7 @@ class _EditSubscriptionDialogState
                                         : FontWeight.w500,
                                     color: isSelected
                                         ? Colors.white
-                                        : const Color(0xFF111111),
+                                        : ZenioColors.textPrimary,
                                   ),
                                 ),
                               ],
@@ -394,7 +432,7 @@ class _EditSubscriptionDialogState
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF2F2F2),
+                    color: ZenioColors.fieldFill,
                     borderRadius: BorderRadius.circular(18),
                   ),
                   child: Row(
@@ -402,7 +440,7 @@ class _EditSubscriptionDialogState
                       const Icon(
                         Icons.calendar_today_rounded,
                         size: 18,
-                        color: Color(0xFF8E8E93),
+                        color: ZenioColors.textSecondary,
                       ),
                       const SizedBox(width: 10),
                       Expanded(
@@ -419,7 +457,7 @@ class _EditSubscriptionDialogState
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
-                          color: Color(0xFF8E8E93),
+                          color: ZenioColors.textSecondary,
                         ),
                       ),
                     ],
@@ -428,13 +466,21 @@ class _EditSubscriptionDialogState
               ),
               const SizedBox(height: 16),
 
+              if (_formError != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    _formError!,
+                    style: const TextStyle(fontSize: 12, color: ZenioColors.danger),
+                  ),
+                ),
               // Save Changes Button
               SizedBox(
                 height: 52,
                 child: ElevatedButton(
-                  onPressed: _saveChanges,
+                  onPressed: _isSaving ? null : _saveChanges,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF10B981),
+                    backgroundColor: ZenioColors.primary,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(18),

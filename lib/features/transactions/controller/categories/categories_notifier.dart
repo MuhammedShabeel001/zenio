@@ -9,10 +9,12 @@ part 'categories_notifier.g.dart';
 class CategoriesNotifier extends _$CategoriesNotifier {
   static const String _storageKey = 'zenio_transaction_categories_v1';
   SqlitePrefs? _prefs;
+  Future<void>? _initialLoad;
+  bool _loaded = false;
 
   @override
   List<CategoryItemModel> build() {
-    _initPrefsAndLoad();
+    _initialLoad = _initPrefsAndLoad();
     return CategoryItemModel.defaultCategories;
   }
 
@@ -20,35 +22,43 @@ class CategoriesNotifier extends _$CategoriesNotifier {
     try {
       final prefs = await ref.watch(sqlitePrefsProvider.future);
       _prefs = prefs;
-      final rawList = prefs.getStringList(_storageKey);
-      if (rawList != null && rawList.isNotEmpty) {
-        final loaded = rawList.map((item) {
-          final map = jsonDecode(item) as Map<String, dynamic>;
-          return CategoryItemModel.fromJson(map);
-        }).toList();
-        state = loaded;
-      } else {
-        // Save initial default categories
+      if (!prefs.containsKey(_storageKey)) {
+        _loaded = true;
+        // First run: store the default categories.
         await _saveCategories(CategoryItemModel.defaultCategories);
+        return;
       }
+      final loaded =
+          await prefs.readJsonList(_storageKey, CategoryItemModel.fromJson);
+      if (loaded.isNotEmpty) {
+        state = loaded;
+      }
+      _loaded = true;
     } catch (_) {
       // Keep default categories in memory if db loading fails
     }
   }
 
   Future<void> _saveCategories(List<CategoryItemModel> categories) async {
-    if (_prefs == null) {
-      try {
-        _prefs = await ref.read(sqlitePrefsProvider.future);
-      } catch (_) {
-        return;
-      }
+    final prefs = _prefs;
+    if (prefs == null) {
+      throw StateError('Local storage is not ready yet.');
     }
     final rawList = categories.map((c) => jsonEncode(c.toJson())).toList();
-    await _prefs?.setStringList(_storageKey, rawList);
+    await prefs.setStringList(_storageKey, rawList);
+  }
+
+  /// Waits for the stored categories before any change, so the in-memory
+  /// defaults can never overwrite the user's own categories.
+  Future<void> _ready() async {
+    await _initialLoad;
+    if (!_loaded) {
+      throw StateError('Categories could not be loaded.');
+    }
   }
 
   Future<void> resetCategories() async {
+    await _ready();
     state = CategoryItemModel.defaultCategories;
     await _saveCategories(state);
   }
@@ -57,6 +67,7 @@ class CategoriesNotifier extends _$CategoriesNotifier {
     required String name,
     required String emoji,
   }) async {
+    await _ready();
     final newCategory = CategoryItemModel(
       id: 'cat_${DateTime.now().millisecondsSinceEpoch}',
       name: name.trim(),
@@ -74,6 +85,7 @@ class CategoriesNotifier extends _$CategoriesNotifier {
     required String name,
     required String emoji,
   }) async {
+    await _ready();
     final updated = state.map((c) {
       if (c.id == id) {
         return c.copyWith(
@@ -89,12 +101,14 @@ class CategoriesNotifier extends _$CategoriesNotifier {
   }
 
   Future<void> deleteCategory(String id) async {
+    await _ready();
     final updated = state.where((c) => c.id != id).toList();
     state = updated;
     await _saveCategories(updated);
   }
 
   Future<void> resetToDefaults() async {
+    await _ready();
     state = CategoryItemModel.defaultCategories;
     await _saveCategories(CategoryItemModel.defaultCategories);
   }

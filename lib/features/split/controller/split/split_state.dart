@@ -21,7 +21,7 @@ abstract class SplitState with _$SplitState {
         peopleCount: 4,
         returnersCount: 2,
         mode: SplitMode.equal,
-        isLoading: false,
+        isLoading: true,
       );
 
   // Equal Split calculation

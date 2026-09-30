@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hancod_theme/hancod_theme.dart';
@@ -15,16 +16,14 @@ class App extends ConsumerWidget {
       onAndroid: () => UpgraderAppcastStore(appcastURL: appcastURL),
       oniOS: () => UpgraderAppcastStore(appcastURL: appcastURL),
     ),
-    debugLogging: true,
+    debugLogging: kDebugMode,
   );
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final appRouter = ref.watch(appRouterProvider);
-    // This is to load initial country settings, sharedPrefs
-    ref
-      ..watch(ipConfigProvider)
-      ..watch(sqlitePrefsProvider);
+    // Opens local storage as early as possible; the splash waits for it.
+    ref.watch(sqlitePrefsProvider);
     return MaterialApp.router(
       routerConfig: appRouter.router,
       debugShowCheckedModeBanner: false,
@@ -35,9 +34,11 @@ class App extends ConsumerWidget {
       locale: ref.watch(localeNotifierProvider),
       scrollBehavior: const CustomScrollBehavior(),
       builder: (context, child) {
-        return UpgradeAlert(
-          navigatorKey: appRouter.router.routerDelegate.navigatorKey,
-          child: child,
+        return PrivacyShield(
+          child: UpgradeAlert(
+            navigatorKey: appRouter.router.routerDelegate.navigatorKey,
+            child: child,
+          ),
         );
       },
     );

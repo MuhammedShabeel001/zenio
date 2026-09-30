@@ -9,65 +9,39 @@ import 'package:zenio/shared/providers/providers.dart';
 
 part 'subscriptions_repository.g.dart';
 
-const List<SubscriptionModel> defaultSubscriptionsList = [];
-
 class SubscriptionsRepository implements ISubscriptionsRepository {
   SubscriptionsRepository(this._prefs);
 
-  final SqlitePrefs? _prefs;
+  final SqlitePrefs _prefs;
 
   static const String _balanceKey = 'subscriptions_page_balance_v3';
   static const String _subscriptionsKey = 'subscriptions_list_key_v3';
 
   @override
   Future<double> getSubscriptionsBalance() async {
-    final prefs = _prefs;
-    if (prefs == null) return 0.0;
-    final balance = prefs.getDouble(_balanceKey);
-    if (balance != null) {
-      return balance;
-    }
-    const defaultBalance = 0.0;
-    await prefs.setDouble(_balanceKey, defaultBalance);
-    return defaultBalance;
+    return _prefs.getDouble(_balanceKey) ?? 0;
   }
 
   @override
-  Future<List<SubscriptionModel>> getSubscriptions() async {
-    final prefs = _prefs;
-    if (prefs == null) return defaultSubscriptionsList;
-
-    final rawJsonList = prefs.getStringList(_subscriptionsKey);
-    if (rawJsonList != null && rawJsonList.isNotEmpty) {
-      try {
-        return rawJsonList.map((item) {
-          final map = jsonDecode(item) as Map<String, dynamic>;
-          return SubscriptionModel.fromJson(map);
-        }).toList();
-      } catch (_) {
-        // Fallback to defaults
-      }
-    }
-
-    await saveSubscriptions(defaultSubscriptionsList);
-    return defaultSubscriptionsList;
+  Future<List<SubscriptionModel>> getSubscriptions() {
+    return _prefs.readJsonList(_subscriptionsKey, SubscriptionModel.fromJson);
   }
 
   @override
   Future<void> saveSubscriptions(
     List<SubscriptionModel> subscriptions,
   ) async {
-    final prefs = _prefs;
-    if (prefs == null) return;
     final jsonList =
         subscriptions.map((item) => jsonEncode(item.toJson())).toList();
-    await prefs.setStringList(_subscriptionsKey, jsonList);
+    await _prefs.setStringList(_subscriptionsKey, jsonList);
   }
 }
 
 @Riverpod(keepAlive: true)
 ISubscriptionsRepository subscriptionsRepositoryRepo(Ref ref) {
-  final prefsAsync = ref.watch(sqlitePrefsProvider);
-  final prefs = prefsAsync.valueOrNull;
+  final prefs = ref.watch(sqlitePrefsProvider).valueOrNull;
+  if (prefs == null) {
+    throw StateError('Local storage is not ready yet.');
+  }
   return SubscriptionsRepository(prefs);
 }

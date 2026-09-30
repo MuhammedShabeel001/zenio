@@ -1,4 +1,6 @@
 import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zenio/features/feedback/domain/models/feedback_model.dart';
@@ -28,13 +30,13 @@ class FeedbackRepository implements IFeedbackRepository {
   @override
   Future<void> submitFeedback(FeedbackModel feedback) async {
     if (_webhookUrl.trim().isEmpty) {
-      throw Exception(
-        'Feedback webhook URL is not configured. Please provide your Google Apps Script Web App URL.',
-      );
+      _debugLog('Feedback webhook URL is not configured.');
+      throw const FeedbackSubmitException(FeedbackSubmitException.unavailable);
     }
 
+    final Response<dynamic> response;
     try {
-      final response = await _dio.post<dynamic>(
+      response = await _dio.post<dynamic>(
         _webhookUrl.trim(),
         data: jsonEncode(feedback.toJson()),
         options: Options(
@@ -44,42 +46,50 @@ class FeedbackRepository implements IFeedbackRepository {
           validateStatus: (status) => status != null && status < 400,
         ),
       );
-
-      if (response.statusCode != 200 && response.statusCode != 302) {
-        throw Exception(
-          'Failed to submit feedback (status: ${response.statusCode})',
-        );
-      }
-
-      final responseBody = response.data?.toString() ?? '';
-      if (responseBody.contains('accounts.google.com') ||
-          responseBody.contains('ServiceLogin') ||
-          responseBody.contains('Page not found') ||
-          responseBody.contains('unable to open the file')) {
-        throw Exception(
-          'Google Apps Script permission error: Please set "Who has access" to "Anyone" in the Web App deployment settings.',
-        );
-      }
     } on DioException catch (e) {
-      if (e.type == DioExceptionType.connectionError ||
-          e.error.toString().contains('Failed host lookup') ||
-          e.error.toString().contains('SocketException') ||
-          (e.message?.contains('Failed host lookup') ?? false)) {
-        throw Exception(
-          'Unable to reach the server. Please check your internet connection and try again.',
-        );
-      } else if (e.type == DioExceptionType.connectionTimeout ||
-          e.type == DioExceptionType.receiveTimeout ||
-          e.type == DioExceptionType.sendTimeout) {
-        throw Exception(
-          'Connection timed out. Please check your network and try again.',
-        );
-      }
-      throw Exception(
-        e.response?.data?.toString() ?? e.message ?? 'Network error occurred while submitting feedback.',
-      );
-    } catch (e) {
-      rethrow;
+      _debugLog('Feedback request failed: ${e.type} ${e.message}');
+      throw FeedbackSubmitException(switch (e.type) {
+        DioExceptionType.connectionError => FeedbackSubmitException.offline,
+        DioExceptionType.connectionTimeout ||
+        DioExceptionType.sendTimeout ||
+        DioExceptionType.receiveTimeout =>
+          FeedbackSubmitException.timedOut,
+        _ => FeedbackSubmitException.unavailable,
+      },);
+    }
+
+    final body = response.data?.toString() ?? '';
+    // Google Apps Script answers 200 with a sign-in or error page when the
+    // web app is misconfigured; that is a server problem, not the user's.
+    if ((response.statusCode != 200 && response.statusCode != 302) ||
+        body.contains('accounts.google.com') ||
+        body.contains('ServiceLogin') ||
+        body.contains('Page not found') ||
+        body.contains('unable to open the file')) {
+      _debugLog('Feedback endpoint rejected the request '
+          '(status ${response.statusCode}).');
+      throw const FeedbackSubmitException(FeedbackSubmitException.unavailable);
     }
   }
+
+  static void _debugLog(String message) {
+    if (kDebugMode) debugPrint(message);
+  }
+}
+
+/// A feedback submission failure, with a message that can be shown as is.
+class FeedbackSubmitException implements Exception {
+  const FeedbackSubmitException(this.message);
+
+  static const String offline =
+      "You're offline. Check your connection and try again.";
+  static const String timedOut =
+      'The connection timed out. Please try again.';
+  static const String unavailable =
+      "Feedback can't be sent right now. Please try again later.";
+
+  final String message;
+
+  @override
+  String toString() => message;
 }

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:zenio/features/vault/domain/models/vault_note_model.dart';
+import 'package:zenio/shared/services/secure_platform.dart';
+import 'package:zenio/shared/theme/zenio_tokens.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
+import 'package:zenio/shared/widgets/item_actions.dart';
 import 'package:zenio/shared/widgets/swipe_delete_button.dart';
 import 'package:zenio/shared/widgets/zenio_snack_bar.dart';
 
@@ -32,7 +35,6 @@ class _VaultNoteItemState extends State<VaultNoteItem>
   late AnimationController _animationController;
   late Animation<double> _animation;
   double _dragOffset = 0;
-  bool _isConfirmingDelete = false;
   static const double _maxDragDistance = 146;
 
   @override
@@ -40,7 +42,7 @@ class _VaultNoteItemState extends State<VaultNoteItem>
     super.initState();
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 250),
+      duration: ZenioMotion.standard,
     );
 
     _dragOffset = widget.isOpen ? -_maxDragDistance : 0;
@@ -63,7 +65,6 @@ class _VaultNoteItemState extends State<VaultNoteItem>
     super.didUpdateWidget(oldWidget);
     if (oldWidget.isOpen != widget.isOpen) {
       if (!widget.isOpen && _dragOffset != 0) {
-        _isConfirmingDelete = false;
         _animateTo(0);
       } else if (widget.isOpen && _dragOffset != -_maxDragDistance) {
         _animateTo(-_maxDragDistance);
@@ -78,9 +79,6 @@ class _VaultNoteItemState extends State<VaultNoteItem>
   }
 
   void _animateTo(double targetOffset) {
-    if (targetOffset == 0 && _isConfirmingDelete) {
-      _isConfirmingDelete = false;
-    }
     _animation = Tween<double>(
       begin: _dragOffset,
       end: targetOffset,
@@ -115,31 +113,33 @@ class _VaultNoteItemState extends State<VaultNoteItem>
   }
 
   void _close() {
-    if (_isConfirmingDelete) {
-      setState(() {
-        _isConfirmingDelete = false;
-      });
-    }
     if (_dragOffset != 0) {
       _animateTo(0);
       widget.onClose?.call();
     }
   }
 
-  void _copyToClipboard(BuildContext context, String text) {
-    Clipboard.setData(ClipboardData(text: text));
+  /// Notes can hold passwords and PINs, so they use the secure clipboard.
+  Future<void> _copyToClipboard(BuildContext context, String text) async {
+    await SecurePlatform.copySensitive(text);
+    await HapticFeedback.selectionClick();
+    if (!context.mounted) return;
     ZenioSnackBar.show(
       context,
-      message: 'Note copied to clipboard',
+      message: 'Note copied',
       type: ZenioSnackBarType.success,
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return ItemActions(
+      onEdit: widget.onEdit,
+      onDelete: widget.onDelete,
+      child: Container(
       margin: const EdgeInsets.only(bottom: 16),
-      height: 120,
+      // Grows with the text size so larger text is not clipped.
+      height: MediaQuery.textScalerOf(context).scale(120),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
@@ -147,47 +147,52 @@ class _VaultNoteItemState extends State<VaultNoteItem>
           Positioned(
             top: 0,
             right: 0,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Delete Button (First tap: red trash icon; tap again to confirm: red circle with white checkmark)
-                SwipeDeleteButton(
-                  isConfirming: _isConfirmingDelete,
-                  onTap: () {
-                    if (!_isConfirmingDelete) {
-                      setState(() {
-                        _isConfirmingDelete = true;
-                      });
-                    } else {
+            child: ExcludeSemantics(
+              // Hidden under the card until it is swiped open; the card's own
+              // actions offer Edit and Delete meanwhile.
+              excluding: _dragOffset == 0,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Delete Button (First tap: red trash icon; tap again to confirm: red circle with white checkmark)
+                  SwipeDeleteButton(
+                    isConfirming: false,
+                    onTap: () {
+                      // The screen asks for confirmation before deleting.
                       _close();
                       widget.onDelete?.call();
-                    }
-                  },
-                ),
-                const SizedBox(width: 3),
-
-                // Edit Button (White Circle + Pencil Edit Icon)
-                GestureDetector(
-                  onTap: () {
-                    _close();
-                    widget.onEdit?.call();
-                  },
-                  child: Container(
-                    width: 70,
-                    height: 70,
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Assets.icons.edit.svg(
-                        width: 24,
-                        height: 24,
+                    },
+                  ),
+                  const SizedBox(width: 3),
+  
+                  // Edit Button (White Circle + Pencil Edit Icon)
+                  Semantics(
+                    button: true,
+                    label: 'Edit',
+                    excludeSemantics: true,
+                    child: GestureDetector(
+                      onTap: () {
+                        _close();
+                        widget.onEdit?.call();
+                      },
+                      child: Container(
+                        width: 70,
+                        height: 70,
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Assets.icons.edit.svg(
+                            width: 24,
+                            height: 24,
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
 
@@ -233,7 +238,7 @@ class _VaultNoteItemState extends State<VaultNoteItem>
                           child: const Icon(
                             Icons.copy_rounded,
                             size: 18,
-                            color: Color(0xFF111111),
+                            color: ZenioColors.textPrimary,
                           ),
                         ),
                       ],
@@ -268,6 +273,7 @@ class _VaultNoteItemState extends State<VaultNoteItem>
           ),
         ],
       ),
+    ),
     );
   }
 }

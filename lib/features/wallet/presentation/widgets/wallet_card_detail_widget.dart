@@ -51,7 +51,7 @@ class WalletCardDetailWidget extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w400,
-                    color: Color(0xFF9E9EA5),
+                    color: ZenioColors.textPlaceholder,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -60,7 +60,7 @@ class WalletCardDetailWidget extends StatelessWidget {
                   style: AppFonts.numeric(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
-                    color: const Color(0xFF111111),
+                    color: ZenioColors.textPrimary,
                     letterSpacing: 0.5,
                   ),
                 ),
@@ -79,7 +79,7 @@ class WalletCardDetailWidget extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w400,
-                            color: Color(0xFF9E9EA5),
+                            color: ZenioColors.textPlaceholder,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -88,7 +88,7 @@ class WalletCardDetailWidget extends StatelessWidget {
                           style: AppFonts.numeric(
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
-                            color: const Color(0xFF111111),
+                            color: ZenioColors.textPrimary,
                           ),
                         ),
                       ],
@@ -102,7 +102,7 @@ class WalletCardDetailWidget extends StatelessWidget {
                           width: 28,
                           height: 28,
                           colorFilter: const ColorFilter.mode(
-                            Color(0xFFD1D1D6),
+                            ZenioColors.border,
                             BlendMode.srcIn,
                           ),
                         ),

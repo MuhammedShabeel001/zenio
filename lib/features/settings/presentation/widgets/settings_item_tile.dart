@@ -70,7 +70,7 @@ class SettingsItemTile extends StatelessWidget {
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: isDestructive
-                          ? const Color(0xFFDD3D34)
+                          ? ZenioColors.danger
                           : const Color(0xFF000000),
                     ),
                   ),
@@ -80,7 +80,7 @@ class SettingsItemTile extends StatelessWidget {
                 if (isSwitch)
                   CupertinoSwitch(
                     value: switchValue,
-                    activeTrackColor: const Color(0xFF10B981),
+                    activeTrackColor: ZenioColors.primary,
                     onChanged: onSwitchChanged,
                   )
                 else if (badgeText != null)
@@ -98,7 +98,7 @@ class SettingsItemTile extends StatelessWidget {
                       style: AppFonts.numeric(
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
-                        color: const Color(0xFF8E8E93),
+                        color: ZenioColors.textSecondary,
                       ),
                     ),
                   )

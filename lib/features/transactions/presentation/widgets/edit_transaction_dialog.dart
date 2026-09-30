@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:zenio/features/home/controller/home/home_notifier.dart';
+import 'package:zenio/features/home/domain/models/transaction/transaction_kind.dart';
 import 'package:zenio/features/home/domain/models/transaction/transaction_model.dart';
 import 'package:zenio/features/transactions/controller/categories/categories_notifier.dart';
 import 'package:zenio/features/transactions/domain/models/transaction_detail_model.dart';
@@ -10,13 +11,14 @@ import 'package:zenio/features/transactions/presentation/widgets/manage_categori
 import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
 import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
 import 'package:zenio/features/wallet/presentation/widgets/add_wallet_bottom_sheet.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
+import 'package:zenio/shared/theme/zenio_tokens.dart';
 import 'package:zenio/shared/utils/app_fonts.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/utils/datetime.dart';
 import 'package:zenio/shared/utils/formatters.dart';
 import 'package:zenio/shared/widgets/zenio_dropdown.dart';
+import 'package:zenio/shared/widgets/zenio_snack_bar.dart';
 
 class EditTransactionDialog extends ConsumerStatefulWidget {
   const EditTransactionDialog({
@@ -42,11 +44,23 @@ class EditTransactionDialog extends ConsumerStatefulWidget {
         note: transaction.note,
         bankName: transaction.bankName,
         timestamp: transaction.timestamp,
+        kind: transaction.kind,
       );
     } else if (transaction is TransactionModel) {
       txModel = transaction;
     } else {
       throw ArgumentError('Invalid transaction type passed to EditTransactionDialog');
+    }
+
+    if (txModel.resolvedKind == TransactionKind.adjustment) {
+      // An adjustment only exists to set a balance; changing it here would
+      // be confusing. Deleting it and adjusting again is explicit.
+      ZenioSnackBar.show(
+        context,
+        message: 'Balance adjustments can’t be edited. Delete it and use '
+            'Adjust on the wallet instead.',
+      );
+      return Future<void>.value();
     }
 
     return showDialog<void>(
@@ -69,6 +83,18 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
   String? _sourceWallet;
   String? _destinationWallet;
   String? _selectedCategory;
+  bool _isSaving = false;
+  String? _saveError;
+
+  /// Keeps the time of [previous] ("yy-MM-dd   HH : mm") but moves it to
+  /// [date], so the list order follows an edited date.
+  static String _timestampFor(DateTime date, String? previous) {
+    final datePart = DateFormat('yy-MM-dd').format(date);
+    final timePart = previous != null && previous.contains('   ')
+        ? previous.substring(previous.indexOf('   ') + 3)
+        : DateFormat('HH : mm').format(DateTime.now());
+    return '$datePart   $timePart';
+  }
 
   @override
   void initState() {
@@ -77,13 +103,14 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
 
     final title = tx.title;
     _isIncome = tx.isIncome;
-    _isTransfer = title.startsWith('Transfer to');
+    _isTransfer = tx.resolvedKind == TransactionKind.transfer;
 
+    final transferEnds = parseTransferWallets(tx.bankName);
     if (_isTransfer) {
-      final parts = title.split('Transfer to ');
-      if (parts.length > 1) {
-        _destinationWallet = parts[1].trim();
-      }
+      _destinationWallet = transferEnds?.to ??
+          (title.startsWith(transferTitlePrefix)
+              ? title.substring(transferTitlePrefix.length).trim()
+              : null);
     } else {
       _selectedCategory = title;
     }
@@ -94,7 +121,7 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
     );
 
     _noteController = TextEditingController(text: tx.note ?? '');
-    _sourceWallet = tx.bankName ?? 'Cash';
+    _sourceWallet = transferEnds?.from ?? tx.bankName ?? 'Cash';
 
     // Parse date safely
     _selectedDate = DateTimeUtils.parseTransactionDate(tx.date) ?? DateTime.now();
@@ -194,7 +221,7 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w400,
-                  color: Color(0xFF8E8E93),
+                  color: ZenioColors.textSecondary,
                   height: 1.4,
                 ),
               ),
@@ -208,7 +235,7 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                     AddWalletBottomSheet.show(context);
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF10B981),
+                    backgroundColor: ZenioColors.primary,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
@@ -230,11 +257,18 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
       );
     }
 
+    // A wallet that was renamed or deleted stays selected (and listed)
+    // rather than the transaction silently moving to another wallet.
     final wallets = walletState.cards
         .map((c) => c.bankName.trim())
         .where((name) => name.isNotEmpty)
         .toSet()
         .toList();
+    for (final name in [_sourceWallet, _destinationWallet]) {
+      if (name != null && name.trim().isNotEmpty && !wallets.contains(name)) {
+        wallets.add(name);
+      }
+    }
 
     final selectedSource = (wallets.contains(_sourceWallet))
         ? _sourceWallet!
@@ -251,17 +285,29 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
       (c) => c?.bankName.trim().toLowerCase() == selectedSource.trim().toLowerCase(),
       orElse: () => null,
     );
-    final availableBalance = selectedSourceCard?.balance ?? 0.0;
+    // The wallet balance already includes this transaction, so what it took
+    // from the same wallet is available again while editing it.
+    final original = widget.transaction;
+    final originalEnds = parseTransferWallets(original.bankName);
+    final originalSource = originalEnds?.from ?? original.bankName;
+    final tookFromSameWallet = !original.isIncome &&
+        originalSource != null &&
+        originalSource.trim().toLowerCase() ==
+            selectedSource.trim().toLowerCase();
+    final availableBalance = (selectedSourceCard?.balance ?? 0.0) +
+        (tookFromSameWallet ? original.amount : 0);
     final isSourceFrozen = selectedSourceCard?.isFrozen ?? false;
 
     // Live amount validation
     final enteredAmount = AppNumberFormat.parseAmount(_amountController.text);
     final isDebit = !_isIncome; // Expense and transfer are debit
-    final isExceedingBalance = isDebit && enteredAmount > availableBalance;
+    // Only wallets that still exist have a balance to check against.
+    final isExceedingBalance = selectedSourceCard != null &&
+        isDebit &&
+        enteredAmount > availableBalance;
     final isInvalidAmount = enteredAmount <= 0;
     final canSave = !isExceedingBalance && !isInvalidAmount;
     final currencySymbol = ref.watch(currencySymbolProvider);
-    final currencyCode = ref.watch(currencyCodeProvider);
 
     final dialogTitle = _isTransfer
         ? 'Edit Transfer'
@@ -269,7 +315,7 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
 
     final badgeColor = _isTransfer
         ? const Color(0xFF8949D5)
-        : (_isIncome ? const Color(0xFF10B981) : const Color(0xFFDD3D34));
+        : (_isIncome ? ZenioColors.primary : ZenioColors.danger);
 
     final badgeText = _isTransfer ? 'Transfer' : (_isIncome ? 'Income' : 'Expense');
 
@@ -300,7 +346,7 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF111111),
+                          color: ZenioColors.textPrimary,
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -324,14 +370,23 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                       ),
                     ],
                   ),
-                  GestureDetector(
+                  Semantics(
+                    button: true,
+                    label: 'Close',
+                    excludeSemantics: true,
                     onTap: () => Navigator.of(context).pop(),
-                    behavior: HitTestBehavior.opaque,
-                    child: Container(
+                    child: GestureDetector(
+                      onTap: () => Navigator.of(context).pop(),
+                      behavior: HitTestBehavior.opaque,
+                      // A 44dp touch area around the 32dp circle.
+                      child: SizedBox.square(
+                        dimension: 44,
+                        child: Center(
+                          child: Container(
                       width: 32,
                       height: 32,
                       decoration: const BoxDecoration(
-                        color: Color(0xFFF2F2F2),
+                        color: ZenioColors.fieldFill,
                         shape: BoxShape.circle,
                       ),
                       child: const Center(
@@ -339,6 +394,9 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                           Icons.close_rounded,
                           size: 18,
                           color: Color(0xFF555555),
+                        ),
+                      ),
+                    ),
                         ),
                       ),
                     ),
@@ -351,10 +409,10 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 15),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF2F2F2),
+                  color: ZenioColors.fieldFill,
                   borderRadius: BorderRadius.circular(20),
                   border: isExceedingBalance
-                      ? Border.all(color: const Color(0xFFDD3D34), width: 1.5)
+                      ? Border.all(color: ZenioColors.danger, width: 1.5)
                       : null,
                 ),
                 child: Row(
@@ -365,8 +423,8 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                         color: isExceedingBalance
-                            ? const Color(0xFFDD3D34)
-                            : const Color(0xFF111111),
+                            ? ZenioColors.danger
+                            : ZenioColors.textPrimary,
                       ),
                     ),
                     Expanded(
@@ -384,15 +442,15 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
                           color: isExceedingBalance
-                              ? const Color(0xFFDD3D34)
-                              : const Color(0xFF111111),
+                              ? ZenioColors.danger
+                              : ZenioColors.textPrimary,
                         ),
                         decoration: InputDecoration(
                           hintText: '0',
                           hintStyle: AppFonts.numeric(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            color: const Color(0xFF9E9EA5),
+                            color: ZenioColors.textPlaceholder,
                           ),
                           isDense: true,
                           filled: false,
@@ -427,7 +485,7 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                       children: [
                         const Icon(
                           Icons.error_outline_rounded,
-                          color: Color(0xFFDD3D34),
+                          color: ZenioColors.danger,
                           size: 18,
                         ),
                         const SizedBox(width: 8),
@@ -437,7 +495,7 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                             style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFFDD3D34),
+                              color: ZenioColors.danger,
                               height: 1.3,
                             ),
                           ),
@@ -491,7 +549,7 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                   width: 20,
                   height: 20,
                   colorFilter: const ColorFilter.mode(
-                    Color(0xFF8E8E93),
+                    ZenioColors.textSecondary,
                     BlendMode.srcIn,
                   ),
                 ),
@@ -511,13 +569,13 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                     label: w,
                     subtitle: '$currencySymbol ${_formatAmount(bal)}',
                     subtitleColor: !hasEnough
-                        ? const Color(0xFFDD3D34)
-                        : const Color(0xFF8E8E93),
+                        ? ZenioColors.danger
+                        : ZenioColors.textSecondary,
                     icon: Assets.icons.wallet.svg(
                       width: 18,
                       height: 18,
                       colorFilter: const ColorFilter.mode(
-                        Color(0xFF8E8E93),
+                        ZenioColors.textSecondary,
                         BlendMode.srcIn,
                       ),
                     ),
@@ -539,7 +597,7 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                     width: 20,
                     height: 20,
                     colorFilter: const ColorFilter.mode(
-                      Color(0xFF8E8E93),
+                      ZenioColors.textSecondary,
                       BlendMode.srcIn,
                     ),
                   ),
@@ -561,7 +619,7 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                         width: 18,
                         height: 18,
                         colorFilter: const ColorFilter.mode(
-                          Color(0xFF8E8E93),
+                          ZenioColors.textSecondary,
                           BlendMode.srcIn,
                         ),
                       ),
@@ -578,7 +636,7 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                 Container(
                   clipBehavior: Clip.antiAlias,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF2F2F2),
+                    color: ZenioColors.fieldFill,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Column(
@@ -594,7 +652,7 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
-                                color: Color(0xFF8E8E93),
+                                color: ZenioColors.textSecondary,
                               ),
                             ),
                             GestureDetector(
@@ -619,7 +677,7 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                                     Icon(
                                       Icons.tune_rounded,
                                       size: 14,
-                                      color: Color(0xFF10B981),
+                                      color: ZenioColors.primary,
                                     ),
                                     SizedBox(width: 4),
                                     Text(
@@ -627,7 +685,7 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                                       style: TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.bold,
-                                        color: Color(0xFF10B981),
+                                        color: ZenioColors.primary,
                                       ),
                                     ),
                                   ],
@@ -656,14 +714,14 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                                 },
                                 behavior: HitTestBehavior.opaque,
                                 child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 200),
+                                  duration: ZenioMotion.fast,
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 14,
                                     vertical: 8,
                                   ),
                                   decoration: BoxDecoration(
                                     color: isSelected
-                                        ? const Color(0xFF10B981)
+                                        ? ZenioColors.primary
                                         : Colors.white,
                                     borderRadius: BorderRadius.circular(20),
                                   ),
@@ -686,7 +744,7 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                                               : FontWeight.w500,
                                           color: isSelected
                                               ? Colors.white
-                                              : const Color(0xFF111111),
+                                              : ZenioColors.textPrimary,
                                         ),
                                       ),
                                     ],
@@ -707,7 +765,7 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 15),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF2F2F2),
+                  color: ZenioColors.fieldFill,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: TextField(
@@ -717,13 +775,13 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w400,
-                    color: Color(0xFF111111),
+                    color: ZenioColors.textPrimary,
                   ),
                   decoration: const InputDecoration(
                     hintText: 'Add a note...',
                     hintStyle: TextStyle(
                       fontSize: 14,
-                      color: Color(0xFF9E9EA5),
+                      color: ZenioColors.textPlaceholder,
                     ),
                     isDense: true,
                     filled: false,
@@ -747,7 +805,7 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 15),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF2F2F2),
+                    color: ZenioColors.fieldFill,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
@@ -755,7 +813,7 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                       const Icon(
                         Icons.calendar_today_rounded,
                         size: 20,
-                        color: Color(0xFF8E8E93),
+                        color: ZenioColors.textSecondary,
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -773,7 +831,7 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
-                          color: Color(0xFF8E8E93),
+                          color: ZenioColors.textSecondary,
                         ),
                       ),
                     ],
@@ -782,12 +840,23 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
               ),
               const SizedBox(height: 16),
 
+              if (_saveError != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    _saveError!,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: ZenioColors.danger,
+                    ),
+                  ),
+                ),
               // Save Changes Button
               SizedBox(
                 height: 54,
                 child: ElevatedButton(
-                  onPressed: canSave
-                      ? () {
+                  onPressed: canSave && !_isSaving
+                      ? () async {
                           final amount =
                               AppNumberFormat.parseAmount(_amountController.text);
                           if (amount <= 0) return;
@@ -795,39 +864,63 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                           final note = _noteController.text.trim();
 
                           final String title;
-                          final bankName = selectedSource;
+                          final String bankName;
+                          final TransactionKind kind;
 
                           if (_isTransfer) {
-                            title = 'Transfer to $selectedDestination';
+                            title = '$transferTitlePrefix$selectedDestination';
+                            bankName =
+                                '$selectedSource$transferWalletSeparator$selectedDestination';
+                            kind = TransactionKind.transfer;
                           } else {
                             title = _selectedCategory ??
                                 (categories.isNotEmpty
                                     ? categories.first.name
                                     : 'General');
+                            bankName = selectedSource;
+                            kind = _isIncome
+                                ? TransactionKind.income
+                                : TransactionKind.expense;
                           }
 
                           final savedDate = DateFormat('dd-MM-yyyy').format(_selectedDate);
-                          final updatedTx = TransactionModel(
-                            id: widget.transaction.id,
+                          final updatedTx = widget.transaction.copyWith(
                             title: title,
                             date: savedDate,
                             amount: amount,
                             isIncome: _isIncome,
-                            currency: currencyCode,
                             note: note.isNotEmpty ? note : null,
                             bankName: bankName,
-                            timestamp: widget.transaction.timestamp,
+                            timestamp: _timestampFor(
+                              _selectedDate,
+                              widget.transaction.timestamp,
+                            ),
+                            kind: kind.name,
                           );
 
-                          ref
-                              .read(homeNotifierProvider.notifier)
-                              .updateTransaction(updatedTx);
+                          setState(() => _isSaving = true);
+                          try {
+                            await ref
+                                .read(homeNotifierProvider.notifier)
+                                .updateTransaction(updatedTx);
+                          } catch (_) {
+                            if (!mounted) return;
+                            // Shown in the dialog: a snackbar would sit
+                            // behind its barrier.
+                            setState(() {
+                              _isSaving = false;
+                              _saveError =
+                                  "Couldn't save your changes. Please try again.";
+                            });
+                            return;
+                          }
+                          if (!mounted) return;
                           Navigator.of(context).pop();
                         }
                       : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: canSave
-                        ? const Color(0xFF10B981)
+                        ? ZenioColors.primary
                         : const Color(0xFFE0E0E0),
                     elevation: 0,
                     shape: RoundedRectangleBorder(
@@ -843,7 +936,7 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: canSave ? Colors.white : const Color(0xFF9E9EA5),
+                      color: canSave ? Colors.white : ZenioColors.textPlaceholder,
                     ),
                   ),
                 ),

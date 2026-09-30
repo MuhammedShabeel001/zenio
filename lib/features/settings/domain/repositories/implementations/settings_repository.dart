@@ -51,7 +51,7 @@ class SettingsRepository implements ISettingsRepository {
         final saved = SettingsModel(
           primaryCurrency: sp.getString(_keyPrimaryCurrency) ?? 'INR',
           defaultWallet: sp.getString(_keyDefaultWallet) ?? '',
-          isBiometricEnabled: sp.getBool(_keyIsBiometricEnabled) ?? true,
+          isBiometricEnabled: sp.getBool(_keyIsBiometricEnabled) ?? false,
           supportEmail: sp.getString(_keySupportEmail) ?? 'support@zenio.app',
           appVersion: dynamicVersion,
         );
@@ -60,33 +60,28 @@ class SettingsRepository implements ISettingsRepository {
       }
     } catch (_) {}
 
-    // 2. Fallback to SqlitePrefs if SharedPreferences had no cached data
-    final rawJson = _prefs.getString(_settingsKey);
-    if (rawJson != null && rawJson.isNotEmpty) {
+    // 2. Fall back to SqlitePrefs if SharedPreferences had no usable copy.
+    final saved =
+        await _prefs.readJsonObject(_settingsKey, SettingsModel.fromJson);
+    if (saved != null) {
+      // Sync to SharedPreferences for future reads
       try {
-        final map = jsonDecode(rawJson) as Map<String, dynamic>;
-        final saved = SettingsModel.fromJson(map);
-        final result = saved.copyWith(appVersion: dynamicVersion);
-        // Sync to SharedPreferences for future reads
-        try {
-          final sp = await SharedPreferences.getInstance();
-          await sp.setString(_settingsKey, rawJson);
-        } catch (_) {}
-        return result;
-      } catch (_) {
-        // Fallback to default
-      }
+        final sp = await SharedPreferences.getInstance();
+        await sp.setString(_settingsKey, jsonEncode(saved.toJson()));
+      } catch (_) {}
+      return saved.copyWith(appVersion: dynamicVersion);
     }
 
-    final defaultSettings = SettingsModel(
+    // Nothing stored yet: use defaults without writing them, so a failed
+    // read can never be turned into an overwrite. Vault Lock starts off and
+    // is only turned on by the user.
+    return SettingsModel(
       primaryCurrency: 'INR',
       defaultWallet: '',
-      isBiometricEnabled: true,
+      isBiometricEnabled: false,
       supportEmail: 'support@zenio.app',
       appVersion: dynamicVersion,
     );
-    await saveSettings(defaultSettings);
-    return defaultSettings;
   }
 
   @override
@@ -126,10 +121,9 @@ class SettingsRepository implements ISettingsRepository {
 
 @Riverpod(keepAlive: true)
 ISettingsRepository settingsRepositoryRepo(Ref ref) {
-  final prefsAsync = ref.watch(sqlitePrefsProvider);
-  final prefs = prefsAsync.valueOrNull;
+  final prefs = ref.watch(sqlitePrefsProvider).valueOrNull;
   if (prefs == null) {
-    throw Exception('SqlitePrefs not initialized yet');
+    throw StateError('Local storage is not ready yet.');
   }
   final dbService = ref.watch(localDatabaseServiceProvider);
   return SettingsRepository(prefs, dbService);

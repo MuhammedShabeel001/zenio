@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import 'package:zenio/features/debts/controller/debts/debts_notifier.dart';
 import 'package:zenio/features/debts/domain/models/debt_model.dart';
 import 'package:zenio/features/debts/presentation/widgets/add_debt_bottom_sheet.dart';
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
+import 'package:zenio/shared/theme/zenio_tokens.dart';
 import 'package:zenio/shared/utils/app_fonts.dart';
 import 'package:zenio/shared/utils/formatters.dart';
 
@@ -103,12 +103,25 @@ class _EditDebtDialogState extends ConsumerState<EditDebtDialog> {
     }
   }
 
-  void _saveChanges() {
+  bool _isSaving = false;
+
+  /// Why the changes could not be saved, shown above the button.
+  String? _formError;
+
+  Future<void> _saveChanges() async {
+    if (_isSaving) return;
     final amount = AppNumberFormat.parseAmount(_amountController.text);
     final personName = _personNameController.text.trim();
     final note = _noteController.text.trim();
 
-    if (personName.isEmpty || amount <= 0) return;
+    if (amount <= 0 || personName.isEmpty) {
+      setState(() {
+        _formError = amount <= 0
+            ? 'Enter an amount above 0'
+            : 'Enter who this debt is with';
+      });
+      return;
+    }
 
     final formattedDate = DateFormat('dd MMMM yyyy').format(_selectedDate);
     final isOwed = _selectedType == DebtType.iOwe;
@@ -122,8 +135,24 @@ class _EditDebtDialogState extends ConsumerState<EditDebtDialog> {
       note: note.isNotEmpty ? note : null,
     );
 
-    ref.read(debtsNotifierProvider.notifier).updateDebt(updatedDebt);
-    Navigator.of(context).pop();
+    final navigator = Navigator.of(context);
+    setState(() {
+      _isSaving = true;
+      _formError = null;
+    });
+    try {
+      await ref.read(debtsNotifierProvider.notifier).updateDebt(updatedDebt);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isSaving = false;
+        _formError = "Couldn't save your changes. Please try again.";
+      });
+      return;
+    }
+    // The form may have been closed (or the Vault locked) meanwhile.
+    if (!mounted) return;
+    navigator.pop();
   }
 
   @override
@@ -169,17 +198,26 @@ class _EditDebtDialogState extends ConsumerState<EditDebtDialog> {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF111111),
+                      color: ZenioColors.textPrimary,
                     ),
                   ),
-                  GestureDetector(
+                  Semantics(
+                    button: true,
+                    label: 'Close',
+                    excludeSemantics: true,
                     onTap: () => Navigator.of(context).pop(),
-                    behavior: HitTestBehavior.opaque,
-                    child: Container(
+                    child: GestureDetector(
+                      onTap: () => Navigator.of(context).pop(),
+                      behavior: HitTestBehavior.opaque,
+                      // A 44dp touch area around the 32dp circle.
+                      child: SizedBox.square(
+                        dimension: 44,
+                        child: Center(
+                          child: Container(
                       width: 32,
                       height: 32,
                       decoration: const BoxDecoration(
-                        color: Color(0xFFF2F2F2),
+                        color: ZenioColors.fieldFill,
                         shape: BoxShape.circle,
                       ),
                       child: const Center(
@@ -190,12 +228,15 @@ class _EditDebtDialogState extends ConsumerState<EditDebtDialog> {
                         ),
                       ),
                     ),
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
 
-              // Mode Switcher (I Owe / I Own)
+              // Mode Switcher (I Owe / Owed to me)
               Container(
                 height: 52,
                 padding: const EdgeInsets.all(3),
@@ -209,12 +250,12 @@ class _EditDebtDialogState extends ConsumerState<EditDebtDialog> {
                     _buildTabItem(
                       type: DebtType.iOwe,
                       label: 'I Owe',
-                      activeColor: const Color(0xFFDD3D34),
+                      activeColor: ZenioColors.danger,
                     ),
                     _buildTabItem(
                       type: DebtType.owedToMe,
-                      label: 'I Own',
-                      activeColor: const Color(0xFF10B981),
+                      label: 'Owed to me',
+                      activeColor: ZenioColors.primary,
                     ),
                   ],
                 ),
@@ -225,7 +266,7 @@ class _EditDebtDialogState extends ConsumerState<EditDebtDialog> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 15),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF2F2F2),
+                  color: ZenioColors.fieldFill,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -235,7 +276,7 @@ class _EditDebtDialogState extends ConsumerState<EditDebtDialog> {
                       style: AppFonts.numeric(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
-                        color: const Color(0xFF111111),
+                        color: ZenioColors.textPrimary,
                       ),
                     ),
                     Expanded(
@@ -252,14 +293,14 @@ class _EditDebtDialogState extends ConsumerState<EditDebtDialog> {
                         style: AppFonts.numeric(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          color: const Color(0xFF111111),
+                          color: ZenioColors.textPrimary,
                         ),
                         decoration: InputDecoration(
                           hintText: '0',
                           hintStyle: AppFonts.numeric(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            color: const Color(0xFF9E9EA5),
+                            color: ZenioColors.textPlaceholder,
                           ),
                           isDense: true,
                           filled: false,
@@ -282,7 +323,7 @@ class _EditDebtDialogState extends ConsumerState<EditDebtDialog> {
               // Person Name Input Field with Suggestions
               Container(
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF2F2F2),
+                  color: ZenioColors.fieldFill,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Column(
@@ -301,13 +342,13 @@ class _EditDebtDialogState extends ConsumerState<EditDebtDialog> {
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w500,
-                          color: Color(0xFF111111),
+                          color: ZenioColors.textPrimary,
                         ),
                         decoration: const InputDecoration(
                           hintText: 'Person Name',
                           hintStyle: TextStyle(
                             fontSize: 15,
-                            color: Color(0xFF9E9EA5),
+                            color: ZenioColors.textPlaceholder,
                           ),
                           isDense: true,
                           filled: false,
@@ -366,7 +407,7 @@ class _EditDebtDialogState extends ConsumerState<EditDebtDialog> {
                                         const Icon(
                                           Icons.person_outline_rounded,
                                           size: 14,
-                                          color: Color(0xFF10B981),
+                                          color: ZenioColors.primary,
                                         ),
                                         const SizedBox(width: 5),
                                         Text(
@@ -374,7 +415,7 @@ class _EditDebtDialogState extends ConsumerState<EditDebtDialog> {
                                           style: const TextStyle(
                                             fontSize: 12,
                                             fontWeight: FontWeight.w600,
-                                            color: Color(0xFF111111),
+                                            color: ZenioColors.textPrimary,
                                           ),
                                         ),
                                       ],
@@ -396,7 +437,7 @@ class _EditDebtDialogState extends ConsumerState<EditDebtDialog> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 15),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF2F2F2),
+                  color: ZenioColors.fieldFill,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: TextField(
@@ -406,13 +447,13 @@ class _EditDebtDialogState extends ConsumerState<EditDebtDialog> {
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w400,
-                    color: Color(0xFF111111),
+                    color: ZenioColors.textPrimary,
                   ),
                   decoration: const InputDecoration(
                     hintText: 'Add a note...',
                     hintStyle: TextStyle(
                       fontSize: 14,
-                      color: Color(0xFF9E9EA5),
+                      color: ZenioColors.textPlaceholder,
                     ),
                     isDense: true,
                     filled: false,
@@ -436,7 +477,7 @@ class _EditDebtDialogState extends ConsumerState<EditDebtDialog> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF2F2F2),
+                    color: ZenioColors.fieldFill,
                     borderRadius: BorderRadius.circular(18),
                   ),
                   child: Row(
@@ -444,7 +485,7 @@ class _EditDebtDialogState extends ConsumerState<EditDebtDialog> {
                       const Icon(
                         Icons.calendar_today_rounded,
                         size: 18,
-                        color: Color(0xFF8E8E93),
+                        color: ZenioColors.textSecondary,
                       ),
                       const SizedBox(width: 10),
                       Expanded(
@@ -461,7 +502,7 @@ class _EditDebtDialogState extends ConsumerState<EditDebtDialog> {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
-                          color: Color(0xFF8E8E93),
+                          color: ZenioColors.textSecondary,
                         ),
                       ),
                     ],
@@ -469,14 +510,25 @@ class _EditDebtDialogState extends ConsumerState<EditDebtDialog> {
                 ),
               ),
               const SizedBox(height: 16),
+              if (_formError != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    _formError!,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: ZenioColors.danger,
+                    ),
+                  ),
+                ),
 
               // Save Changes Button
               SizedBox(
                 height: 52,
                 child: ElevatedButton(
-                  onPressed: _saveChanges,
+                  onPressed: _isSaving ? null : _saveChanges,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF10B981),
+                    backgroundColor: ZenioColors.primary,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(18),
@@ -516,7 +568,7 @@ class _EditDebtDialogState extends ConsumerState<EditDebtDialog> {
         behavior: HitTestBehavior.opaque,
         child: Container(
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFFF2F2F2) : Colors.transparent,
+            color: isSelected ? ZenioColors.fieldFill : Colors.transparent,
             borderRadius: BorderRadius.circular(26),
           ),
           child: Center(

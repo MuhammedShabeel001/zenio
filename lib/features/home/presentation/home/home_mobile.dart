@@ -1,23 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:zenio/features/debts/debts.dart';
 import 'package:zenio/features/home/controller/home/home_notifier.dart';
-import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
+import 'package:zenio/features/home/presentation/widgets/delete_transaction_with_undo.dart';
 import 'package:zenio/features/home/presentation/widgets/quick_action_item.dart';
 import 'package:zenio/features/home/presentation/widgets/transaction_card.dart';
 import 'package:zenio/features/settings/controller/settings/settings_notifier.dart';
 import 'package:zenio/features/split/split.dart';
 import 'package:zenio/features/subscriptions/subscriptions.dart';
+import 'package:zenio/features/transactions/presentation/widgets/edit_transaction_dialog.dart';
 import 'package:zenio/features/transactions/transactions.dart';
 import 'package:zenio/features/vault/vault.dart';
+import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
-import 'package:zenio/shared/services/services.dart';
+import 'package:zenio/shared/theme/zenio_tokens.dart';
 import 'package:zenio/shared/utils/app_fonts.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/utils/formatters.dart';
-import 'package:zenio/shared/widgets/widgets.dart';
-import 'package:zenio/features/transactions/presentation/widgets/edit_transaction_dialog.dart';
+import 'package:zenio/shared/widgets/add_transaction_bottom_sheet.dart';
+import 'package:zenio/shared/widgets/custom_navigation_bar.dart';
+import 'package:zenio/shared/widgets/list_state_message.dart';
 
 class HomeScreenMobile extends ConsumerStatefulWidget {
   const HomeScreenMobile({
@@ -32,7 +34,6 @@ class HomeScreenMobile extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
-  int _selectedNavIndex = 0;
   String? _openTransactionId;
 
   String _formatWholePart(double amount) =>
@@ -48,8 +49,10 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
     final summary = state.summary;
     final transactions = state.transactions;
 
-    final walletState = ref.watch(walletNotifierProvider);
-    final totalBalance = walletState.cardBalance;
+    // Only the total matters here; watching the whole wallet state would
+    // rebuild Home (kept alive in the tab shell) on every card swipe.
+    final totalBalance =
+        ref.watch(walletNotifierProvider.select((s) => s.cardBalance));
     final income = summary?.income ?? 0.0;
     final incomeChange = summary?.incomeChangePercentage ?? 0.0;
     final expense = summary?.expense ?? 0.0;
@@ -61,15 +64,15 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
         ? '+ ${AppNumberFormat.formatAmount(incomeChange, alwaysShowDecimals: true)} %'
         : '- ${AppNumberFormat.formatAmount(incomeChange.abs(), alwaysShowDecimals: true)} %';
     final incomeChangeColor = incomeChange >= 0
-        ? const Color(0xFF10B981)
-        : const Color(0xFFDD3D34);
+        ? ZenioColors.primary
+        : ZenioColors.danger;
 
     final formattedExpenseChange = expenseChange >= 0
         ? '+ ${AppNumberFormat.formatAmount(expenseChange, alwaysShowDecimals: true)} %'
         : '- ${AppNumberFormat.formatAmount(expenseChange.abs(), alwaysShowDecimals: true)} %';
     final expenseChangeColor = expenseChange >= 0
-        ? const Color(0xFFDD3D34)
-        : const Color(0xFF10B981);
+        ? ZenioColors.danger
+        : ZenioColors.primary;
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -88,51 +91,58 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          RichText(
-                            text: TextSpan(
-                              children: [
-                                TextSpan(
-                                  text: '$currencySymbol ',
-                                  style: AppFonts.numeric(
-                                    fontSize: 32,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                    letterSpacing: -0.5,
-                                  ),
+                      Flexible(
+                        // Large amounts and text sizes shrink to fit instead of overflowing.
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              RichText(
+                                text: TextSpan(
+                                  children: [
+                                    TextSpan(
+                                      text: '$currencySymbol ',
+                                      style: AppFonts.numeric(
+                                        fontSize: 32,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                        letterSpacing: -0.5,
+                                      ),
+                                    ),
+                                    TextSpan(
+                                      text: _formatWholePart(totalBalance),
+                                      style: AppFonts.numeric(
+                                        fontSize: 32,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                        letterSpacing: -0.5,
+                                      ),
+                                    ),
+                                    TextSpan(
+                                      text: _formatDecimalPart(totalBalance),
+                                      style: AppFonts.numeric(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.bold,
+                                        color: const Color(0xFF808080),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                TextSpan(
-                                  text: _formatWholePart(totalBalance),
-                                  style: AppFonts.numeric(
-                                    fontSize: 32,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                    letterSpacing: -0.5,
-                                  ),
+                              ),
+                              const SizedBox(height: 4),
+                              const Text(
+                                'Total balance',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w400,
+                                  color: Color(0xFF808080),
                                 ),
-                                TextSpan(
-                                  text: _formatDecimalPart(totalBalance),
-                                  style: AppFonts.numeric(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                    color: const Color(0xFF808080),
-                                  ),
-                                ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 4),
-                          const Text(
-                            'Total balance',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w400,
-                              color: Color(0xFF808080),
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                       // Currency Badge Pill
                       Theme(
@@ -207,7 +217,7 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                                           'Indian Rupee',
                                           style: TextStyle(
                                             fontSize: 11,
-                                            color: Color(0xFF8E8E93),
+                                            color: ZenioColors.textSecondary,
                                           ),
                                         ),
                                       ],
@@ -216,7 +226,7 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                                   if (currency.toUpperCase() == 'INR')
                                     const Icon(
                                       Icons.check_circle_rounded,
-                                      color: Color(0xFF10B981),
+                                      color: ZenioColors.primary,
                                       size: 18,
                                     ),
                                 ],
@@ -249,7 +259,7 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                                         style: TextStyle(
                                           fontSize: 15,
                                           fontWeight: FontWeight.bold,
-                                          color: Color(0xFF10B981),
+                                          color: ZenioColors.primary,
                                         ),
                                       ),
                                     ),
@@ -274,7 +284,7 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                                           'US Dollar',
                                           style: TextStyle(
                                             fontSize: 11,
-                                            color: Color(0xFF8E8E93),
+                                            color: ZenioColors.textSecondary,
                                           ),
                                         ),
                                       ],
@@ -283,7 +293,7 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                                   if (currency.toUpperCase() == 'DLR')
                                     const Icon(
                                       Icons.check_circle_rounded,
-                                      color: Color(0xFF10B981),
+                                      color: ZenioColors.primary,
                                       size: 18,
                                     ),
                                 ],
@@ -327,7 +337,7 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                                 const Icon(
                                   Icons.keyboard_arrow_down_rounded,
                                   size: 16,
-                                  color: Color(0xFF8E8E93),
+                                  color: ZenioColors.textSecondary,
                                 ),
                               ],
                             ),
@@ -378,7 +388,7 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                               ),
                               const SizedBox(height: 16),
                               Text(
-                                '$currencySymbol ${NumberFormat('#,##0.00').format(income)}',
+                                '$currencySymbol ${AppNumberFormat.formatAmount(income, alwaysShowDecimals: true)}',
                                 style: AppFonts.numeric(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
@@ -436,7 +446,7 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                               ),
                               const SizedBox(height: 16),
                               Text(
-                                '$currencySymbol ${NumberFormat('#,##0.00').format(expense)}',
+                                '$currencySymbol ${AppNumberFormat.formatAmount(expense, alwaysShowDecimals: true)}',
                                 style: AppFonts.numeric(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
@@ -467,7 +477,7 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
               child: Container(
                 width: double.infinity,
                 decoration: const BoxDecoration(
-                  color: Color(0xFFF7F7F7),
+                  color: ZenioColors.sheet,
                   borderRadius: BorderRadius.vertical(
                     top: Radius.circular(30),
                   ),
@@ -557,46 +567,7 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                                           width: 28,
                                           height: 28,
                                         ),
-                                        onTap: () async {
-                                          final isBiometricEnabled = ref
-                                              .read(settingsNotifierProvider)
-                                              .settings
-                                              .isBiometricEnabled;
-                                          if (isBiometricEnabled) {
-                                            final biometricService =
-                                                ref.read(biometricServiceProvider);
-                                            final hasBiometrics =
-                                                await biometricService
-                                                    .hasEnrolledBiometrics();
-                                            if (!hasBiometrics) {
-                                              if (!context.mounted) return;
-                                              await BiometricSetupDialog.show(
-                                                context,
-                                                message:
-                                                    'Biometric Lock is active, but no biometrics (Fingerprint or Face ID) are configured on this device. Please set them up in device settings.',
-                                              );
-                                              return;
-                                            }
-
-                                            final authenticated =
-                                                await biometricService
-                                                    .authenticate(
-                                              localizedReason:
-                                                  'Scan fingerprint or Face ID to unlock Vault',
-                                            );
-                                            if (!authenticated) {
-                                              return;
-                                            }
-                                          }
-
-                                          if (!context.mounted) return;
-                                          await Navigator.of(context).push(
-                                            MaterialPageRoute<void>(
-                                              builder: (context) =>
-                                                  const VaultScreenMobile(),
-                                            ),
-                                          );
-                                        },
+                                        onTap: () => openVault(context, ref),
                                       ),
                                     ),
                                   ],
@@ -613,12 +584,12 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                                       style: TextStyle(
                                         fontSize: 20,
                                         fontWeight: FontWeight.bold,
-                                        color: Color(0xFF111111),
+                                        color: ZenioColors.textPrimary,
                                         letterSpacing: -0.3,
                                       ),
                                     ),
-                                    GestureDetector(
-                                      onTap: () {
+                                    TextButton(
+                                      onPressed: () {
                                         Navigator.of(context).push(
                                           MaterialPageRoute<void>(
                                             builder: (context) =>
@@ -626,13 +597,31 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                                           ),
                                         );
                                       },
-                                      child: Assets.icons.viewMore.svg(
-                                        width: 24,
-                                        height: 24,
-                                        // colorFilter: const ColorFilter.mode(
-                                        //   Color(0xFF10B981),
-                                        //   BlendMode.srcIn,
-                                        // ),
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: const Color(0xFF047857),
+                                        minimumSize: const Size(48, 48),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Text(
+                                            'See all',
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          ExcludeSemantics(
+                                            child: Assets.icons.viewMore.svg(
+                                              width: 20,
+                                              height: 20,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ],
@@ -653,21 +642,31 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                           Expanded(
                             child: ListView(
                               padding:
-                                  const EdgeInsets.fromLTRB(10, 15, 10, 80),
+                                  EdgeInsets.fromLTRB(
+                                    10,
+                                    15,
+                                    10,
+                                    CustomNavigationBar.reservedHeight(context),
+                                  ),
                               children: [
                                 if (transactions.isEmpty)
-                                  const Padding(
-                                    padding: EdgeInsets.symmetric(vertical: 24),
-                                    child: Center(
-                                      child: Text(
-                                        'No transactions yet',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          color: Color(0xFF8E8E93),
-                                        ),
+                                  switch (state.status) {
+                                    HomeStatus.initial ||
+                                    HomeStatus.loading =>
+                                      const ListStateMessage.loading(),
+                                    HomeStatus.error => ListStateMessage.error(
+                                        onRetry: notifier.loadMoneyTrackerData,
                                       ),
-                                    ),
-                                  )
+                                    HomeStatus.success => ListStateMessage(
+                                        title: 'No transactions yet',
+                                        message:
+                                            'Your spending and income will show up here once you add them.',
+                                        icon: Icons.receipt_long_outlined,
+                                        actionLabel: 'Add transaction',
+                                        onAction: () =>
+                                            AddTransactionBottomSheet.show(context),
+                                      ),
+                                  }
                                 else
                                   ...transactions.take(10).map(
                                     (tx) => TransactionCard(
@@ -688,12 +687,11 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                                           });
                                         }
                                       },
-                                      onDelete: () {
-                                        notifier.deleteTransaction(tx.id);
-                                        ref
-                                            .read(transactionsNotifierProvider.notifier)
-                                            .deleteTransaction(tx.id);
-                                      },
+                                      onDelete: () => deleteTransactionWithUndo(
+                                        context,
+                                        ref,
+                                        tx.id,
+                                      ),
                                       onEdit: () {
                                         EditTransactionDialog.show(
                                           context,
@@ -708,24 +706,6 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                         ],
                       ),
 
-                      // Floating Bottom Navigation Bar
-                      Positioned(
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        child: CustomNavigationBar(
-                          selectedIndex: _selectedNavIndex,
-                          onTabSelected: (index) {
-                            setState(() {
-                              _selectedNavIndex = index;
-                            });
-                            widget.onTabSelected?.call(index);
-                          },
-                          onAddTap: () {
-                            AddTransactionBottomSheet.show(context);
-                          },
-                        ),
-                      ),
                     ],
                   ),
                 ),

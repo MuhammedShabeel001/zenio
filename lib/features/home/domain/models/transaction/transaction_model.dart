@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:zenio/features/home/domain/models/transaction/transaction_kind.dart';
 
 part 'transaction_model.freezed.dart';
 part 'transaction_model.g.dart';
@@ -15,6 +16,10 @@ sealed class TransactionModel with _$TransactionModel {
     @JsonKey(name: 'note') String? note,
     @JsonKey(name: 'bank_name') String? bankName,
     @JsonKey(name: 'timestamp') String? timestamp,
+
+    /// A [TransactionKind] name. Null for rows saved before kinds were
+    /// stored; see [resolveTransactionKind].
+    @JsonKey(name: 'kind') String? kind,
   }) = _TransactionModel;
 
   factory TransactionModel.fromJson(Map<String, dynamic> json) =>

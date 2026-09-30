@@ -1,7 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:intl/intl.dart';
 import 'package:zenio/features/transactions/domain/models/transaction_detail_model.dart';
-import 'package:zenio/features/transactions/domain/repositories/implementations/transactions_repository.dart';
 
 part 'transactions_state.freezed.dart';
 
@@ -18,8 +17,8 @@ abstract class TransactionsState with _$TransactionsState {
 
   factory TransactionsState.initial() {
     return TransactionsState(
-      totalBalance: 2678.01,
-      transactions: defaultTransactionsList,
+      totalBalance: 0,
+      transactions: const [],
       selectedPeriod: 'Monthly',
       selectedTimeframe: DateFormat('MMMM').format(DateTime.now()),
       isLoading: false,

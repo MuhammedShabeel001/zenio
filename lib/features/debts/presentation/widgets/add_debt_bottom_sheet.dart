@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import 'package:zenio/features/debts/controller/debts/debts_notifier.dart';
 import 'package:zenio/features/debts/domain/models/debt_model.dart';
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
+import 'package:zenio/shared/theme/zenio_tokens.dart';
 import 'package:zenio/shared/utils/app_fonts.dart';
 import 'package:zenio/shared/utils/formatters.dart';
 
@@ -39,6 +39,10 @@ class _AddDebtBottomSheetState extends ConsumerState<AddDebtBottomSheet> {
   late FocusNode _personNameFocusNode;
 
   DateTime _selectedDate = DateTime.now();
+  bool _isSaving = false;
+
+  /// Why the debt could not be saved, shown above the button.
+  String? _formError;
 
   @override
   void initState() {
@@ -122,7 +126,7 @@ class _AddDebtBottomSheetState extends ConsumerState<AddDebtBottomSheet> {
                 width: 32,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFD1D1D6),
+                  color: ZenioColors.border,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -145,12 +149,12 @@ class _AddDebtBottomSheetState extends ConsumerState<AddDebtBottomSheet> {
                   _buildTabItem(
                     type: DebtType.iOwe,
                     label: 'I Owe',
-                    activeColor: const Color(0xFFDD3D34),
+                    activeColor: ZenioColors.danger,
                   ),
                   _buildTabItem(
                     type: DebtType.owedToMe,
-                    label: 'I Own',
-                    activeColor: const Color(0xFF10B981),
+                    label: 'Owed to me',
+                    activeColor: ZenioColors.primary,
                   ),
                 ],
               ),
@@ -161,7 +165,7 @@ class _AddDebtBottomSheetState extends ConsumerState<AddDebtBottomSheet> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
               decoration: BoxDecoration(
-                color: const Color(0xFFF2F2F2),
+                color: ZenioColors.fieldFill,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Row(
@@ -171,7 +175,7 @@ class _AddDebtBottomSheetState extends ConsumerState<AddDebtBottomSheet> {
                     style: AppFonts.numeric(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
-                      color: const Color(0xFF111111),
+                      color: ZenioColors.textPrimary,
                     ),
                   ),
                   Expanded(
@@ -188,14 +192,14 @@ class _AddDebtBottomSheetState extends ConsumerState<AddDebtBottomSheet> {
                       style: AppFonts.numeric(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
-                        color: const Color(0xFF111111),
+                        color: ZenioColors.textPrimary,
                       ),
                       decoration: InputDecoration(
                         hintText: '0',
                         hintStyle: AppFonts.numeric(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          color: const Color(0xFF9E9EA5),
+                          color: ZenioColors.textPlaceholder,
                         ),
                         isDense: true,
                         filled: false,
@@ -218,7 +222,7 @@ class _AddDebtBottomSheetState extends ConsumerState<AddDebtBottomSheet> {
             // Person Name Input Field with Suggestions
             Container(
               decoration: BoxDecoration(
-                color: const Color(0xFFF2F2F2),
+                color: ZenioColors.fieldFill,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Column(
@@ -237,14 +241,14 @@ class _AddDebtBottomSheetState extends ConsumerState<AddDebtBottomSheet> {
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
-                        color: Color(0xFF111111),
+                        color: ZenioColors.textPrimary,
                       ),
                       decoration: const InputDecoration(
                         hintText: 'Person Name',
                         hintStyle: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w500,
-                          color: Color(0xFF9E9EA5),
+                          color: ZenioColors.textPlaceholder,
                         ),
                         isDense: true,
                         filled: false,
@@ -303,7 +307,7 @@ class _AddDebtBottomSheetState extends ConsumerState<AddDebtBottomSheet> {
                                       const Icon(
                                         Icons.person_outline_rounded,
                                         size: 14,
-                                        color: Color(0xFF10B981),
+                                        color: ZenioColors.primary,
                                       ),
                                       const SizedBox(width: 6),
                                       Text(
@@ -311,7 +315,7 @@ class _AddDebtBottomSheetState extends ConsumerState<AddDebtBottomSheet> {
                                         style: const TextStyle(
                                           fontSize: 13,
                                           fontWeight: FontWeight.w600,
-                                          color: Color(0xFF111111),
+                                          color: ZenioColors.textPrimary,
                                         ),
                                       ),
                                     ],
@@ -333,7 +337,7 @@ class _AddDebtBottomSheetState extends ConsumerState<AddDebtBottomSheet> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
               decoration: BoxDecoration(
-                color: const Color(0xFFF2F2F2),
+                color: ZenioColors.fieldFill,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: TextField(
@@ -344,14 +348,14 @@ class _AddDebtBottomSheetState extends ConsumerState<AddDebtBottomSheet> {
                 style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w400,
-                  color: Color(0xFF111111),
+                  color: ZenioColors.textPrimary,
                 ),
                 decoration: const InputDecoration(
                   hintText: 'Add a note...',
                   hintStyle: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w400,
-                    color: Color(0xFF9E9EA5),
+                    color: ZenioColors.textPlaceholder,
                   ),
                   isDense: true,
                   filled: false,
@@ -376,7 +380,7 @@ class _AddDebtBottomSheetState extends ConsumerState<AddDebtBottomSheet> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF2F2F2),
+                  color: ZenioColors.fieldFill,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -384,7 +388,7 @@ class _AddDebtBottomSheetState extends ConsumerState<AddDebtBottomSheet> {
                     const Icon(
                       Icons.calendar_today_rounded,
                       size: 20,
-                      color: Color(0xFF8E8E93),
+                      color: ZenioColors.textSecondary,
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -402,7 +406,7 @@ class _AddDebtBottomSheetState extends ConsumerState<AddDebtBottomSheet> {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
-                        color: Color(0xFF8E8E93),
+                        color: ZenioColors.textSecondary,
                       ),
                     ),
                   ],
@@ -410,17 +414,37 @@ class _AddDebtBottomSheetState extends ConsumerState<AddDebtBottomSheet> {
               ),
             ),
             const SizedBox(height: 6),
+            if (_formError != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                child: Text(
+                  _formError!,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: ZenioColors.danger,
+                  ),
+                ),
+              ),
 
             // Save Debt Button
             SizedBox(
               height: 60,
               child: ElevatedButton(
-                onPressed: () {
+                onPressed: _isSaving
+                    ? null
+                    : () async {
                   final amount = AppNumberFormat.parseAmount(_amountController.text);
                   final personName = _personNameController.text.trim();
                   final note = _noteController.text.trim();
-                  
-                  if (personName.isEmpty || amount <= 0) return;
+
+                  if (amount <= 0 || personName.isEmpty) {
+                    setState(() {
+                      _formError = amount <= 0
+                          ? 'Enter an amount above 0'
+                          : 'Enter who this debt is with';
+                    });
+                    return;
+                  }
 
                   final id = DateTime.now().millisecondsSinceEpoch.toString();
                   final isOwed = _selectedType == DebtType.iOwe;
@@ -436,11 +460,27 @@ class _AddDebtBottomSheetState extends ConsumerState<AddDebtBottomSheet> {
                     note: note.isNotEmpty ? note : null,
                   );
 
-                  ref.read(debtsNotifierProvider.notifier).addDebt(debt);
-                  Navigator.of(context).pop();
+                  final navigator = Navigator.of(context);
+                  setState(() {
+                    _isSaving = true;
+                    _formError = null;
+                  });
+                  try {
+                    await ref.read(debtsNotifierProvider.notifier).addDebt(debt);
+                  } catch (_) {
+                    if (!mounted) return;
+                    setState(() {
+                      _isSaving = false;
+                      _formError = "Couldn't save the debt. Please try again.";
+                    });
+                    return;
+                  }
+                  // The form may have been closed (or the Vault locked) meanwhile.
+                  if (!mounted) return;
+                  navigator.pop();
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF10B981),
+                  backgroundColor: ZenioColors.primary,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
@@ -481,7 +521,7 @@ class _AddDebtBottomSheetState extends ConsumerState<AddDebtBottomSheet> {
         behavior: HitTestBehavior.opaque,
         child: Container(
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFFF2F2F2) : Colors.transparent,
+            color: isSelected ? ZenioColors.fieldFill : Colors.transparent,
             borderRadius: BorderRadius.circular(30),
           ),
           child: Center(

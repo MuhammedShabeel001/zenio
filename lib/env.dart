@@ -19,9 +19,9 @@ class ProductionEnv extends IEnvironment {
   String get FEEDBACK_WEBHOOK_URL =>
       'https://script.google.com/macros/s/AKfycbxVEG53GrrCwgQjDjrv_K2lmaSNhuOG2fUl0JhYF8IlpFAVhYO6oulJjsojUb9Snw/exec';
   @override
-  Duration get CONNECT_TIMEOUT => const Duration(seconds: 5000);
+  Duration get CONNECT_TIMEOUT => const Duration(seconds: 15);
   @override
-  Duration get RECEIVE_TIMEOUT => const Duration(seconds: 3000);
+  Duration get RECEIVE_TIMEOUT => const Duration(seconds: 20);
 }
 
 class StagingEnv extends IEnvironment {
@@ -34,9 +34,9 @@ class StagingEnv extends IEnvironment {
   String get FEEDBACK_WEBHOOK_URL =>
       'https://script.google.com/macros/s/AKfycbxVEG53GrrCwgQjDjrv_K2lmaSNhuOG2fUl0JhYF8IlpFAVhYO6oulJjsojUb9Snw/exec';
   @override
-  Duration get CONNECT_TIMEOUT => const Duration(seconds: 5000);
+  Duration get CONNECT_TIMEOUT => const Duration(seconds: 15);
   @override
-  Duration get RECEIVE_TIMEOUT => const Duration(seconds: 3000);
+  Duration get RECEIVE_TIMEOUT => const Duration(seconds: 20);
 }
 
 class DevelopmentEnv extends IEnvironment {
@@ -49,7 +49,7 @@ class DevelopmentEnv extends IEnvironment {
   String get FEEDBACK_WEBHOOK_URL =>
       'https://script.google.com/macros/s/AKfycbxVEG53GrrCwgQjDjrv_K2lmaSNhuOG2fUl0JhYF8IlpFAVhYO6oulJjsojUb9Snw/exec';
   @override
-  Duration get CONNECT_TIMEOUT => const Duration(seconds: 5000);
+  Duration get CONNECT_TIMEOUT => const Duration(seconds: 15);
   @override
-  Duration get RECEIVE_TIMEOUT => const Duration(seconds: 3000);
+  Duration get RECEIVE_TIMEOUT => const Duration(seconds: 20);
 }

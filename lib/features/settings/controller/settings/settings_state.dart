@@ -14,11 +14,11 @@ abstract class SettingsState with _$SettingsState {
   factory SettingsState.initial() => const SettingsState(
         settings: SettingsModel(
           primaryCurrency: 'INR',
-          defaultWallet: 'SBI (Debit Card)',
-          isBiometricEnabled: true,
+          defaultWallet: '',
+          isBiometricEnabled: false,
           supportEmail: 'support@zenio.app',
           appVersion: '',
         ),
-        isLoading: false,
+        isLoading: true,
       );
 }

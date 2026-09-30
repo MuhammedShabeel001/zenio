@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:zenio/features/home/domain/models/transaction/transaction_kind.dart';
 import 'package:zenio/features/analytics/controller/analytics/analytics_notifier.dart';
 import 'package:zenio/features/analytics/domain/models/category_spend/category_spend_model.dart';
 import 'package:zenio/features/home/controller/home/home_notifier.dart';
@@ -91,7 +92,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
     if (lower.contains('travel')) return const Color(0xFFFF7A00);
     if (lower.contains('entertainment')) return const Color(0xFF8B5CF6);
     if (lower.contains('loan') || lower.contains('debt')) {
-      return const Color(0xFF10B981);
+      return ZenioColors.primary;
     }
     if (lower.contains('food')) return const Color(0xFFEF4444);
     if (lower.contains('shop')) return const Color(0xFF3B82F6);
@@ -130,7 +131,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
 
       // Find matching transactions in this category for this period & wallet (sorted latest first)
       final matchingTxs = filteredTxs.where((tx) {
-        if (tx.isIncome || tx.title.startsWith('Transfer to')) return false;
+        if (tx.resolvedKind != TransactionKind.expense) return false;
         return tx.title.trim().toLowerCase() == cleanCatName;
       }).toList()
         ..sort((a, b) {
@@ -198,9 +199,10 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
         bottom: false,
         child: Column(
           children: [
+            const ScreenTitleBar(title: 'Spending by category'),
             // Dark Top Header Section (Exact match to Subscriptions & Debts)
             Padding(
-              padding: const EdgeInsets.fromLTRB(10, 10, 10, 20),
+              padding: const EdgeInsets.fromLTRB(10, 4, 10, 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -209,36 +211,43 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       // Total Balance
-                      RichText(
-                        text: TextSpan(
-                          children: [
-                            TextSpan(
-                              text: '$currencySymbol ',
-                              style: AppFonts.numeric(
-                                fontSize: 32,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                letterSpacing: -0.5,
-                              ),
+                      Flexible(
+                        // Large amounts and text sizes shrink to fit instead of overflowing.
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: RichText(
+                            text: TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: '$currencySymbol ',
+                                  style: AppFonts.numeric(
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: _formatWholePart(effectiveTotalBalance),
+                                  style: AppFonts.numeric(
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: _formatDecimalPart(effectiveTotalBalance),
+                                  style: AppFonts.numeric(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color(0xFF808080),
+                                  ),
+                                ),
+                              ],
                             ),
-                            TextSpan(
-                              text: _formatWholePart(effectiveTotalBalance),
-                              style: AppFonts.numeric(
-                                fontSize: 32,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                letterSpacing: -0.5,
-                              ),
-                            ),
-                            TextSpan(
-                              text: _formatDecimalPart(effectiveTotalBalance),
-                              style: AppFonts.numeric(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: const Color(0xFF808080),
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
 
@@ -309,7 +318,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
               child: Container(
                 width: double.infinity,
                 decoration: const BoxDecoration(
-                  color: Color(0xFFF7F7F7),
+                  color: ZenioColors.sheet,
                   borderRadius: BorderRadius.vertical(
                     top: Radius.circular(30),
                   ),
@@ -319,17 +328,10 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                     top: Radius.circular(30),
                   ),
                   child: filtered.isEmpty
-                      ? const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 40),
-                          child: Center(
-                            child: Text(
-                              'No categories found',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Color(0xFF8E8E93),
-                              ),
-                            ),
-                          ),
+                      ? const ListStateMessage(
+                          title: 'No spending in this period',
+                          message: 'Try another period or wallet.',
+                          icon: Icons.pie_chart_outline_rounded,
                         )
                       : ListView.builder(
                           padding: const EdgeInsets.fromLTRB(10, 16, 10, 20),
@@ -392,7 +394,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                 style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
-                  color: Color(0xFFD1D1D6),
+                  color: ZenioColors.border,
                 ),
               ),
             )
@@ -402,7 +404,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
-                color: Color(0xFFD1D1D6),
+                color: ZenioColors.border,
               ),
             ),
           const SizedBox(width: 8),
@@ -439,7 +441,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
           child: Text(
             tab.label,
             style: TextStyle(
-              color: isSelected ? Colors.white : const Color(0xFFD1D1D6),
+              color: isSelected ? Colors.white : ZenioColors.border,
               fontSize: 14,
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
             ),
@@ -471,7 +473,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
           child: Text(
             opt.label,
             style: TextStyle(
-              color: isSelected ? Colors.white : const Color(0xFFD1D1D6),
+              color: isSelected ? Colors.white : ZenioColors.border,
               fontSize: 14,
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
             ),
@@ -506,7 +508,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
+        duration: ZenioMotion.standard,
         curve: Curves.fastOutSlowIn,
         margin: const EdgeInsets.only(bottom: 5),
         padding: const EdgeInsets.fromLTRB(5, 5, 20, 5),
@@ -576,7 +578,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                         fontWeight: FontWeight.bold,
                         color: totalSpent > 0
                             ? const Color(0xFF000000)
-                            : const Color(0xFF8E8E93),
+                            : ZenioColors.textSecondary,
                       ),
                     ),
                     const SizedBox(width: 4),
@@ -585,7 +587,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                       style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
-                        color: Color(0xFF8E8E93),
+                        color: ZenioColors.textSecondary,
                       ),
                     ),
                   ],
@@ -595,7 +597,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
 
             // Expanded Detail Drawer (Sleek Animated Bar + Metrics + Transactions)
             AnimatedCrossFade(
-              duration: const Duration(milliseconds: 300),
+              duration: ZenioMotion.standard,
               firstCurve: Curves.fastOutSlowIn,
               secondCurve: Curves.fastOutSlowIn,
               sizeCurve: Curves.fastOutSlowIn,
@@ -621,7 +623,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
-                              color: Color(0xFF8E8E93),
+                              color: ZenioColors.textSecondary,
                             ),
                           ),
                           Text(
@@ -649,7 +651,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                               begin: 0,
                               end: isExpanded ? data.ratio : 0,
                             ),
-                            duration: const Duration(milliseconds: 400),
+                            duration: ZenioMotion.slow,
                             curve: Curves.easeOutCubic,
                             builder: (context, animatedRatio, child) {
                               return FractionallySizedBox(
@@ -678,7 +680,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                               vertical: 10,
                             ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFF7F7F7),
+                              color: ZenioColors.sheet,
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Column(
@@ -688,7 +690,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                                   'Average Spend',
                                   style: TextStyle(
                                     fontSize: 11,
-                                    color: Color(0xFF8E8E93),
+                                    color: ZenioColors.textSecondary,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
@@ -698,7 +700,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                                   style: AppFonts.numeric(
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold,
-                                    color: const Color(0xFF111111),
+                                    color: ZenioColors.textPrimary,
                                   ),
                                 ),
                               ],
@@ -713,7 +715,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                               vertical: 10,
                             ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFF7F7F7),
+                              color: ZenioColors.sheet,
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Column(
@@ -723,7 +725,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                                   'Highest Spend',
                                   style: TextStyle(
                                     fontSize: 11,
-                                    color: Color(0xFF8E8E93),
+                                    color: ZenioColors.textSecondary,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
@@ -733,7 +735,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                                   style: AppFonts.numeric(
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold,
-                                    color: const Color(0xFF111111),
+                                    color: ZenioColors.textPrimary,
                                   ),
                                 ),
                               ],
@@ -753,7 +755,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF111111),
+                            color: ZenioColors.textPrimary,
                           ),
                         ),
                         Text(
@@ -763,7 +765,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                           style: const TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w500,
-                            color: Color(0xFF8E8E93),
+                            color: ZenioColors.textSecondary,
                           ),
                         ),
                       ],
@@ -790,7 +792,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                             'No transactions recorded for this category yet.',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Color(0xFF8E8E93),
+                              color: ZenioColors.textSecondary,
                             ),
                           ),
                         ),
@@ -865,7 +867,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                                                         fontWeight:
                                                             FontWeight.w600,
                                                         color:
-                                                            Color(0xFF111111),
+                                                            ZenioColors.textPrimary,
                                                       ),
                                                     ),
                                                   ),
@@ -881,10 +883,10 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                                                       ),
                                                       decoration: BoxDecoration(
                                                         color: const Color(
-                                                            0xFFEFEFEF),
+                                                            0xFFEFEFEF,),
                                                         borderRadius:
                                                             BorderRadius.circular(
-                                                                6),
+                                                                6,),
                                                       ),
                                                       child: Text(
                                                         tx.bankName!.trim(),
@@ -906,7 +908,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                                                 style: const TextStyle(
                                                   fontSize: 11,
                                                   fontWeight: FontWeight.w400,
-                                                  color: Color(0xFF8E8E93),
+                                                  color: ZenioColors.textSecondary,
                                                 ),
                                               ),
                                             ],
@@ -918,7 +920,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                                           style: AppFonts.numeric(
                                             fontSize: 13,
                                             fontWeight: FontWeight.bold,
-                                            color: const Color(0xFF111111),
+                                            color: ZenioColors.textPrimary,
                                           ),
                                         ),
                                       ],

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:zenio/features/home/domain/models/transaction/transaction_kind.dart';
 import 'package:zenio/shared/services/local_database_service.dart';
 
 final csvImportServiceProvider = Provider<CsvImportService>((ref) {
@@ -16,8 +17,9 @@ class CsvImportService {
   final LocalDatabaseService _dbService;
 
   /// Prompts the user to pick a .csv file and imports its records into SQLite.
-  /// Returns the number of successfully imported transactions, or null if cancelled.
-  Future<int?> pickAndImportCsv() async {
+  /// Returns null if the user cancelled. Rows without a wallet go to
+  /// [defaultWallet].
+  Future<CsvImportResult?> pickAndImportCsv({String? defaultWallet}) async {
     final result = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['csv'],
@@ -34,125 +36,206 @@ class CsvImportService {
     } else if (file.bytes != null) {
       csvContent = utf8.decode(file.bytes!);
     } else {
-      throw Exception('Unable to read selected file');
+      throw const FormatException('Unable to read selected file');
     }
 
-    return importCsvContent(csvContent);
+    return importCsvContent(csvContent, defaultWallet: defaultWallet);
   }
 
-  /// Parses CSV string content and saves the parsed records to the database.
-  Future<int> importCsvContent(String content) async {
+  /// Column names recognised in a header row (lower case).
+  static const Map<String, String> _headerColumns = {
+    'date': 'date',
+    'type': 'type',
+    'category': 'title',
+    'title': 'title',
+    'category/title': 'title',
+    'amount': 'amount',
+    'currency': 'currency',
+    'wallet': 'wallet',
+    'bank': 'wallet',
+    'account': 'wallet',
+    'note': 'note',
+    'notes': 'note',
+    'description': 'note',
+    'id': 'id',
+    'transaction id': 'id',
+  };
+
+  /// Default column order: the order Zenio exports in.
+  static const List<String> _defaultColumns = [
+    'date', 'type', 'title', 'amount', 'currency', 'wallet', 'note', 'id', //
+  ];
+
+  /// Parses CSV text and saves every valid row in one database transaction.
+  /// Rows whose amount or date cannot be read are skipped and counted.
+  Future<CsvImportResult> importCsvContent(
+    String content, {
+    String? defaultWallet,
+    DateTime? now,
+  }) async {
     final rows = parseCsv(content);
-    if (rows.isEmpty) return 0;
+    if (rows.isEmpty) {
+      return const CsvImportResult(imported: 0, skipped: 0, alreadyPresent: 0);
+    }
 
-    var dateIdx = 0;
-    var typeIdx = 1;
-    var titleIdx = 2;
-    var amountIdx = 3;
-    var currencyIdx = 4;
-    var walletIdx = 5;
-    var noteIdx = 6;
-    var idIdx = 7;
-
-    final firstRow = rows.first;
-    var hasHeader = false;
-    for (var i = 0; i < firstRow.length; i++) {
-      final header = firstRow[i].toLowerCase();
-      if (header.contains('date')) {
-        dateIdx = i;
-        hasHeader = true;
-      } else if (header.contains('type')) {
-        typeIdx = i;
-        hasHeader = true;
-      } else if (header.contains('category') || header.contains('title')) {
-        titleIdx = i;
-        hasHeader = true;
-      } else if (header.contains('amount')) {
-        amountIdx = i;
-        hasHeader = true;
-      } else if (header.contains('currency')) {
-        currencyIdx = i;
-        hasHeader = true;
-      } else if (header.contains('wallet') ||
-          header.contains('bank') ||
-          header.contains('account')) {
-        walletIdx = i;
-        hasHeader = true;
-      } else if (header.contains('note') || header.contains('desc')) {
-        noteIdx = i;
-        hasHeader = true;
-      } else if (header.contains('id')) {
-        idIdx = i;
-        hasHeader = true;
+    // A header row is recognised by at least two known column names.
+    final header = rows.first
+        .map((cell) => _headerColumns[cell.trim().toLowerCase()])
+        .toList();
+    final hasHeader = header.whereType<String>().toSet().length >= 2;
+    final columns = <String, int>{};
+    if (hasHeader) {
+      for (var i = 0; i < header.length; i++) {
+        final column = header[i];
+        if (column != null) columns.putIfAbsent(column, () => i);
+      }
+    } else {
+      for (var i = 0; i < _defaultColumns.length; i++) {
+        columns[_defaultColumns[i]] = i;
       }
     }
 
     final dataRows = hasHeader ? rows.sublist(1) : rows;
-    var importedCount = 0;
-    final now = DateTime.now();
-    final defaultTimestamp =
-        '${DateFormat('yy-MM-dd').format(now)}   ${DateFormat('HH : mm').format(now)}';
+    final clock = now ?? DateTime.now();
+
+    // Zenio's own export has a "Transaction ID" column whose ids are kept, so
+    // re-importing an export matches the existing transactions. Ids from
+    // other files are only unique within that file, so they are prefixed
+    // with a fingerprint of the file; rows without an id get one from their
+    // position. Importing the same file twice therefore adds nothing twice.
+    final keepsZenioIds = hasHeader &&
+        rows.first.any((cell) => cell.trim().toLowerCase() == 'transaction id');
+    final fileKey = _fingerprint(content);
+    final existingIds = {
+      for (final row in await _dbService.getTransactionsMap()) row['id'],
+    };
+    final seenIds = <String>{};
+    var alreadyPresent = 0;
+    final timeOfImport = DateFormat('HH : mm').format(clock);
+    final records = <Map<String, dynamic>>[];
+    var skipped = 0;
 
     for (var i = 0; i < dataRows.length; i++) {
       final row = dataRows[i];
-      if (row.isEmpty) continue;
-
-      String getVal(int idx) => idx < row.length ? row[idx].trim() : '';
-
-      final rawAmount = getVal(amountIdx)
-          .replaceAll(',', '')
-          .replaceAll('₹', '')
-          .replaceAll(r'$', '')
-          .trim();
-      final amount = double.tryParse(rawAmount) ?? 0.0;
-      if (amount <= 0 && rawAmount.isEmpty) continue;
-
-      final rawType = getVal(typeIdx).toLowerCase();
-      final isIncome = rawType.contains('income') ? 1 : 0;
-
-      var dateStr = getVal(dateIdx);
-      if (dateStr.isEmpty) {
-        dateStr = DateFormat('dd-MM-yyyy').format(now);
+      String cell(String column) {
+        final index = columns[column];
+        if (index == null || index >= row.length) return '';
+        return _unescapeText(row[index].trim());
       }
 
-      var title = getVal(titleIdx);
+      final amount = _parseAmount(cell('amount'));
+      final date = _parseDate(cell('date'));
+      if (amount == null || amount == 0 || date == null) {
+        skipped++;
+        continue;
+      }
+
+      final type = cell('type').toLowerCase();
+      final kind = switch (type) {
+        'income' => TransactionKind.income,
+        'transfer' => TransactionKind.transfer,
+        'adjustment' => TransactionKind.adjustment,
+        _ => TransactionKind.expense,
+      };
+      // Adjustments keep their direction in the sign of the amount.
+      final isIncome = kind == TransactionKind.income ||
+          (kind == TransactionKind.adjustment && amount > 0);
+
+      var title = cell('title');
       if (title.isEmpty) {
-        title = isIncome == 1 ? 'Income' : 'Expense';
+        title = switch (kind) {
+          TransactionKind.income => 'Income',
+          TransactionKind.adjustment => balanceAdjustmentTitle,
+          _ => 'Expense',
+        };
       }
 
-      var wallet = getVal(walletIdx);
-      if (wallet.isEmpty) {
-        wallet = 'Default Wallet';
+      var wallet = cell('wallet');
+      if (wallet.isEmpty) wallet = defaultWallet ?? 'Default Wallet';
+      if (kind == TransactionKind.transfer &&
+          parseTransferWallets(wallet) == null) {
+        skipped++;
+        continue;
       }
 
-      var currency = getVal(currencyIdx);
-      if (currency.isEmpty) {
-        currency = 'INR';
+      final currency = cell('currency');
+      final note = cell('note');
+      final id = cell('id');
+
+      final recordId = id.isEmpty
+          ? 'csv-$fileKey-row$i'
+          : (keepsZenioIds ? id : 'csv-$fileKey-$id');
+      if (existingIds.contains(recordId) || !seenIds.add(recordId)) {
+        alreadyPresent++;
+        continue;
       }
 
-      final note = getVal(noteIdx);
-
-      var id = getVal(idIdx);
-      if (id.isEmpty) {
-        id = '${now.millisecondsSinceEpoch}_$i';
-      }
-
-      await _dbService.saveTransactionMap({
-        'id': id,
+      records.add({
+        'id': recordId,
         'title': title,
-        'date': dateStr,
-        'amount': amount,
-        'currency': currency,
-        'is_income': isIncome,
+        'date': DateFormat('dd-MM-yyyy').format(date),
+        'amount': amount.abs(),
+        'currency': currency.isEmpty ? 'INR' : currency,
+        'is_income': isIncome ? 1 : 0,
         'note': note.isNotEmpty ? note : null,
         'bank_name': wallet,
-        'timestamp': defaultTimestamp,
+        // Sorted by the transaction's own date, not the day of the import.
+        'timestamp': '${DateFormat('yy-MM-dd').format(date)}   $timeOfImport',
+        'kind': kind.name,
       });
-
-      importedCount++;
     }
 
-    return importedCount;
+    // All rows are written in one database transaction: a failure part-way
+    // through leaves the existing data exactly as it was.
+    await _dbService.saveTransactionMaps(records);
+    return CsvImportResult(
+      imported: records.length,
+      skipped: skipped,
+      alreadyPresent: alreadyPresent,
+    );
+  }
+
+  /// Reads amounts like "1,234.50", "₹ 1,234" or "-12". Returns null when the
+  /// text is not a number.
+  static double? _parseAmount(String text) {
+    final cleaned = text.replaceAll(RegExp(r'[^0-9.\-]'), '');
+    if (cleaned.isEmpty) return null;
+    return double.tryParse(cleaned);
+  }
+
+  /// Dates Zenio can read unambiguously: its own dd-MM-yyyy, ISO yyyy-MM-dd,
+  /// and dd/MM/yyyy. Anything else (for example the US 12/31/2025) is
+  /// rejected rather than read as a different day.
+  static DateTime? _parseDate(String text) {
+    if (text.isEmpty) return null;
+    for (final pattern in ['dd-MM-yyyy', 'yyyy-MM-dd', 'dd/MM/yyyy']) {
+      try {
+        return DateFormat(pattern).parseStrict(text);
+      } catch (_) {}
+    }
+    final iso = DateTime.tryParse(text);
+    return iso == null ? null : DateTime(iso.year, iso.month, iso.day);
+  }
+
+  /// A short, stable fingerprint of [text] (FNV-1a).
+  static String _fingerprint(String text) {
+    var hash = 0x811c9dc5;
+    for (final unit in text.codeUnits) {
+      hash ^= unit;
+      hash = (hash * 0x01000193) & 0xFFFFFFFF;
+    }
+    return hash.toRadixString(16);
+  }
+
+  /// Removes the apostrophe the exporter adds in front of text that could be
+  /// read as a spreadsheet formula.
+  static String _unescapeText(String text) {
+    if (text.length > 1 &&
+        text.startsWith("'") &&
+        const {'=', '+', '-', '@', '\t', '\r'}.contains(text[1])) {
+      return text.substring(1);
+    }
+    return text;
   }
 
   /// RFC 4180 compliant CSV parser that handles multiline quoted cells and escaped quotes.
@@ -199,4 +282,21 @@ class CsvImportService {
 
     return rows;
   }
+}
+
+/// How an import went: rows saved, rows skipped because they could not be
+/// read, and rows that were already there.
+class CsvImportResult {
+  const CsvImportResult({
+    required this.imported,
+    required this.skipped,
+    required this.alreadyPresent,
+  });
+
+  final int imported;
+  final int skipped;
+
+  /// Rows that were already in Zenio (for example from importing the same
+  /// file before) and were left as they are.
+  final int alreadyPresent;
 }

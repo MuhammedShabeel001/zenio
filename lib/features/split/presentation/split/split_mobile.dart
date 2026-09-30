@@ -2,14 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hancod_theme/hancod_theme.dart';
-import 'package:intl/intl.dart';
 import 'package:zenio/features/split/controller/split/split_notifier.dart';
 import 'package:zenio/features/split/controller/split/split_state.dart';
 import 'package:zenio/features/split/domain/models/split_calculation_model.dart';
 import 'package:zenio/features/split/domain/services/split_share_service.dart';
-import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/shared.dart';
-import 'package:zenio/shared/utils/alert.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 
 class SplitScreenMobile extends ConsumerStatefulWidget {
@@ -25,7 +22,18 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
   @override
   void initState() {
     super.initState();
-    _billAmountController = TextEditingController();
+    // The split is kept between visits, so show the amount the results are
+    // based on instead of an empty field.
+    _billAmountController = TextEditingController(
+      text: _amountText(ref.read(splitNotifierProvider).billAmount),
+    );
+  }
+
+  static String _amountText(double amount) {
+    if (amount == 0) return '';
+    return amount == amount.truncateToDouble()
+        ? amount.toInt().toString()
+        : amount.toString();
   }
 
   @override
@@ -36,7 +44,7 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
 
   String _formatCurrencyValue(double amount) {
     final symbol = ref.read(currencySymbolProvider);
-    return '$symbol ${NumberFormat('#,##0.00').format(amount)}';
+    return '$symbol ${AppNumberFormat.formatAmount(amount, alwaysShowDecimals: true)}';
   }
 
   Future<void> _handleShare(BuildContext buttonContext, SplitState state) async {
@@ -74,14 +82,7 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
         final parsed = double.tryParse(_billAmountController.text) ?? 0.0;
         if (parsed != next.billAmount) {
           // Update controller if the state changed externally (e.g. from loading saved data)
-          if (next.billAmount == 0) {
-            _billAmountController.text = '';
-          } else {
-            // Check if it's an integer to remove trailing .0 if needed
-            _billAmountController.text = next.billAmount == next.billAmount.toInt()
-                ? next.billAmount.toInt().toString()
-                : next.billAmount.toString();
-          }
+          _billAmountController.text = _amountText(next.billAmount);
         }
       }
     });
@@ -102,9 +103,10 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
             ),
             child: Column(
           children: [
+            const ScreenTitleBar(title: 'Split a bill'),
             // Dark Header Section (Bill Amount Input)
             Padding(
-              padding: const EdgeInsets.fromLTRB(10, 10, 10, 20),
+              padding: const EdgeInsets.fromLTRB(10, 4, 10, 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -124,7 +126,9 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
                       Expanded(
                         child: TextField(
                           controller: _billAmountController,
-                          autofocus: true,
+                          // Only jump into the keyboard when there is nothing
+                          // to look at yet.
+                          autofocus: state.billAmount == 0,
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
                           inputFormatters: [
                             FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
@@ -190,7 +194,7 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
               child: Container(
                 width: double.infinity,
                 decoration: const BoxDecoration(
-                  color: Color(0xFFF7F7F7),
+                  color: ZenioColors.sheet,
                   borderRadius: BorderRadius.vertical(
                     top: Radius.circular(30),
                   ),
@@ -214,17 +218,17 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
                           ),
                           const SizedBox(height: 30),
 
-                          // Form Card 1: How many people ?
+                          // Form Card 1: How many people?
                           _buildCounterCard(
                             iconWidget: Assets.icons.group.svg(
                               width: 24,
                               height: 24,
                               colorFilter: const ColorFilter.mode(
-                                Color(0xFF111111),
+                                ZenioColors.textPrimary,
                                 BlendMode.srcIn,
                               ),
                             ),
-                            title: 'How many people ?',
+                            title: 'How many people?',
                             count: state.peopleCount,
                             onDecrement: notifier.decrementPeople,
                             onIncrement: notifier.incrementPeople,
@@ -237,7 +241,7 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
                               iconWidget: const Icon(
                                 Icons.replay_rounded,
                                 size: 24,
-                                color: Color(0xFF111111),
+                                color: ZenioColors.textPrimary,
                               ),
                               title: 'Coming back',
                               count: state.returnersCount,
@@ -256,7 +260,7 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
                               const Icon(
                                 Icons.info_outline_rounded,
                                 size: 16,
-                                color: Color(0xFF9E9EA5),
+                                color: ZenioColors.textPlaceholder,
                               ),
                               const SizedBox(width: 8),
                               Flexible(
@@ -268,7 +272,7 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
                                   style: const TextStyle(
                                     fontSize: 8,
                                     fontWeight: FontWeight.w400,
-                                    color: Color(0xFF9E9EA5),
+                                    color: ZenioColors.textPlaceholder,
                                     height: 1.3,
                                   ),
                                 ),
@@ -327,7 +331,7 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
                                           width: 28,
                                           height: 28,
                                           colorFilter: const ColorFilter.mode(
-                                            Color(0xFF10B981),
+                                            ZenioColors.primary,
                                             BlendMode.srcIn,
                                           ),
                                         ),
@@ -405,7 +409,7 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
-                color: Color(0xFFD1D1D6),
+                color: ZenioColors.border,
               ),
             ),
             const SizedBox(width: 8),
@@ -456,8 +460,15 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            GestureDetector(
+            Semantics(
+              button: true,
+              label: 'Decrease $title',
+              child: GestureDetector(
               onTap: onDecrement,
+              behavior: HitTestBehavior.opaque,
+              // A 44dp touch area around the 36dp circle.
+              child: Padding(
+              padding: const EdgeInsets.all(4),
               child: Container(
                 width: 36,
                 height: 36,
@@ -474,6 +485,8 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
                 ),
               ),
             ),
+            ),
+            ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14),
               child: Text(
@@ -485,8 +498,15 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
                 ),
               ),
             ),
-            GestureDetector(
+            Semantics(
+              button: true,
+              label: 'Increase $title',
+              child: GestureDetector(
               onTap: onIncrement,
+              behavior: HitTestBehavior.opaque,
+              // A 44dp touch area around the 36dp circle.
+              child: Padding(
+              padding: const EdgeInsets.all(4),
               child: Container(
                 width: 36,
                 height: 36,
@@ -503,6 +523,8 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
                 ),
               ),
             ),
+            ),
+            ),
           ],
         ),
       ],
@@ -517,11 +539,11 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         const Text(
-          'Each person pay',
+          'Each person pays',
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w400,
-            color: Color(0xFF9E9EA5),
+            color: ZenioColors.textPlaceholder,
           ),
         ),
         const SizedBox(height: 2),
@@ -530,7 +552,7 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
           style: AppFonts.numeric(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: const Color(0xFF111111),
+            color: ZenioColors.textPrimary,
           ),
         ),
       ],
@@ -554,7 +576,7 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w400,
-                  color: Color(0xFF9E9EA5),
+                  color: ZenioColors.textPlaceholder,
                 ),
               ),
               const SizedBox(height: 2),
@@ -563,7 +585,7 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
                 style: AppFonts.numeric(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: const Color(0xFF111111),
+                  color: ZenioColors.textPrimary,
                 ),
               ),
             ],
@@ -589,7 +611,7 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w400,
-                  color: Color(0xFF9E9EA5),
+                  color: ZenioColors.textPlaceholder,
                 ),
               ),
               const SizedBox(height: 2),
@@ -598,7 +620,7 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
                 style: AppFonts.numeric(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: const Color(0xFF111111),
+                  color: ZenioColors.textPrimary,
                 ),
               ),
             ],

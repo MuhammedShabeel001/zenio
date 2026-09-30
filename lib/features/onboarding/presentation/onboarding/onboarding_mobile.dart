@@ -6,6 +6,7 @@ import 'package:hancod_theme/hancod_theme.dart';
 import 'package:zenio/features/onboarding/controller/onboarding_controller.dart';
 import 'package:zenio/features/onboarding/domain/models/onboarding_page_item.dart';
 import 'package:zenio/features/wallet/presentation/widgets/add_wallet_bottom_sheet.dart';
+import 'package:zenio/shared/theme/zenio_tokens.dart';
 import 'package:zenio/shared/utils/app_fonts.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/utils/router.dart';
@@ -229,7 +230,7 @@ class _OnboardingScreenMobileState
                                     style: AppFonts.text(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w400,
-                                      color: const Color(0xFF8E8E93),
+                                      color: ZenioColors.textSecondary,
                                       height: 1.45,
                                     ),
                                   ),
@@ -283,7 +284,7 @@ class _OnboardingScreenMobileState
                           width: isActive ? 40 : 20,
                           decoration: BoxDecoration(
                             color: isActive
-                                ? const Color(0xFF05B67B)
+                                ? ZenioColors.primary
                                 : const Color(0xFFE5E5EA),
                             borderRadius: BorderRadius.circular(5),
                           ),
@@ -318,6 +319,7 @@ class _OnboardingScreenMobileState
                                       'onboarding_prev_button',
                                     ),
                                     width: 60,
+                                    semanticLabel: 'Previous',
                                     onTap: _onPreviousPage,
                                     borderColor: const Color(0xFFE5E5EA),
                                     child: Assets.icons.leftArrow.svg(
@@ -348,7 +350,7 @@ class _OnboardingScreenMobileState
                               style: AppFonts.text(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
-                                color: const Color(0xFF8E8E93),
+                                color: ZenioColors.textSecondary,
                               ),
                             ),
                           ),
@@ -359,8 +361,9 @@ class _OnboardingScreenMobileState
                           _OnboardingButton(
                             key: const ValueKey('onboarding_next_button'),
                             width: 60,
+                            semanticLabel: 'Next',
                             onTap: _onNextPage,
-                            backgroundColor: const Color(0xFF05B67B),
+                            backgroundColor: ZenioColors.primary,
                             child: Assets.icons.rightArrow.svg(
                               width: 24,
                               height: 24,
@@ -376,7 +379,7 @@ class _OnboardingScreenMobileState
                             key: const ValueKey('onboarding_enter_button'),
                             width: 103,
                             onTap: _onEnterZenio,
-                            backgroundColor: const Color(0xFF05B67B),
+                            backgroundColor: ZenioColors.primary,
                             child: RichText(
                               text: TextSpan(
                                 children: [
@@ -422,6 +425,7 @@ class _OnboardingButton extends StatelessWidget {
     this.width,
     this.backgroundColor = Colors.transparent,
     this.borderColor,
+    this.semanticLabel,
   });
 
   static const double _height = 60;
@@ -432,9 +436,15 @@ class _OnboardingButton extends StatelessWidget {
   final Color backgroundColor;
   final Color? borderColor;
 
+  /// Read by screen readers for buttons that only show an icon.
+  final String? semanticLabel;
+
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return Semantics(
+      button: true,
+      label: semanticLabel,
+      child: GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Container(
@@ -448,6 +458,7 @@ class _OnboardingButton extends StatelessWidget {
               : null,
         ),
         child: Center(child: child),
+      ),
       ),
     );
   }

@@ -1,20 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:zenio/features/feedback/presentation/widgets/feedback_bottom_sheet.dart';
 import 'package:zenio/features/home/controller/home/home_notifier.dart';
 import 'package:zenio/features/settings/controller/settings/settings_notifier.dart';
 import 'package:zenio/features/settings/presentation/widgets/settings_item_tile.dart';
 import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
-import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
-import 'package:zenio/shared/providers/default_wallet_provider/default_wallet_provider.dart';
-import 'package:zenio/shared/providers/package_info_provider/package_info_provider.dart';
 import 'package:zenio/shared/services/csv_export_service.dart';
 import 'package:zenio/shared/services/csv_import_service.dart';
-import 'package:zenio/shared/services/services.dart';
 import 'package:zenio/shared/shared.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
-import 'package:zenio/shared/widgets/widgets.dart';
 
 class SettingsScreenMobile extends ConsumerStatefulWidget {
   const SettingsScreenMobile({
@@ -30,6 +25,158 @@ class SettingsScreenMobile extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
+  bool _isChangingVaultLock = false;
+  bool _isTransferringData = false;
+
+  Future<void> _clearAllData() async {
+    setState(() => _isTransferringData = true);
+    try {
+      await ref.read(settingsNotifierProvider.notifier).clearAllData();
+      if (!mounted) return;
+      ZenioSnackBar.show(
+        context,
+        message: 'All app data cleared',
+        type: ZenioSnackBarType.success,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ZenioSnackBar.show(
+        context,
+        message: "Couldn't clear all data. Some items may remain; please "
+            'try again.',
+        type: ZenioSnackBarType.error,
+      );
+    } finally {
+      if (mounted) setState(() => _isTransferringData = false);
+    }
+  }
+
+  /// Shares all transactions as CSV. [tileContext] anchors the share sheet,
+  /// which iPad requires.
+  Future<void> _exportTransactions(BuildContext tileContext) async {
+    if (_isTransferringData) return;
+    final box = tileContext.findRenderObject() as RenderBox?;
+    final origin =
+        box == null ? null : box.localToGlobal(Offset.zero) & box.size;
+    setState(() => _isTransferringData = true);
+    try {
+      final count = await ref
+          .read(csvExportServiceProvider)
+          .exportDataToCsv(sharePositionOrigin: origin);
+      if (!mounted) return;
+      if (count == 0) {
+        ZenioSnackBar.show(
+          context,
+          message: 'No transactions to export yet.',
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+      ZenioSnackBar.show(
+        context,
+        message: "Couldn't create the export. Please try again.",
+        type: ZenioSnackBarType.error,
+      );
+    } finally {
+      if (mounted) setState(() => _isTransferringData = false);
+    }
+  }
+
+  Future<void> _importTransactions() async {
+    if (_isTransferringData) return;
+    setState(() => _isTransferringData = true);
+    try {
+      final result = await ref
+          .read(csvImportServiceProvider)
+          .pickAndImportCsv(defaultWallet: ref.read(defaultWalletProvider));
+      if (result == null) return; // Cancelled.
+      await ref.read(homeNotifierProvider.notifier).loadMoneyTrackerData();
+      if (!mounted) return;
+
+      final imported = result.imported;
+      final skipped = result.skipped;
+      final present = result.alreadyPresent;
+      final skippedNote = [
+        if (present > 0)
+          ' ${AppNumberFormat.formatNumber(present)} '
+              "${present == 1 ? 'was' : 'were'} already in Zenio.",
+        if (skipped > 0)
+          ' Skipped ${AppNumberFormat.formatNumber(skipped)} '
+              "row${skipped == 1 ? '' : 's'} that couldn't be read.",
+      ].join();
+      ZenioSnackBar.show(
+        context,
+        message: imported == 0
+            ? 'No transactions found in this file.$skippedNote'
+            : 'Imported ${AppNumberFormat.formatNumber(imported)} '
+                "transaction${imported == 1 ? '' : 's'}.$skippedNote",
+        type: imported == 0
+            ? ZenioSnackBarType.warning
+            : ZenioSnackBarType.success,
+        duration: const Duration(seconds: 4),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ZenioSnackBar.show(
+        context,
+        message: "Couldn't import that file. Check that it's a CSV "
+            'exported from Zenio or a spreadsheet, and try again.',
+        type: ZenioSnackBarType.error,
+      );
+    } finally {
+      if (mounted) setState(() => _isTransferringData = false);
+    }
+  }
+
+
+  /// Vault Lock asks for the fingerprint, face or device PIN before the Vault
+  /// opens. Changing it needs the same check, except that it can always be
+  /// turned off on a device without a screen lock, where there is nothing to
+  /// check and the Vault could otherwise never be opened.
+  Future<void> _setVaultLock({required bool enable}) async {
+    setState(() => _isChangingVaultLock = true);
+    try {
+      final auth = ref.read(biometricServiceProvider);
+      final deviceSecured = await auth.isDeviceSupported();
+      if (enable && !deviceSecured) {
+        if (!mounted) return;
+        await DeviceLockDialog.show(
+          context,
+          message: 'Vault Lock uses your fingerprint, face or screen lock to '
+              'protect the Vault. Set up a screen lock in your device '
+              'settings first.',
+        );
+        return;
+      }
+      if (deviceSecured) {
+        final confirmed = await auth.authenticate(
+          localizedReason:
+              enable ? 'Turn on Vault Lock' : 'Turn off Vault Lock',
+        );
+        if (!confirmed) return;
+      }
+      await ref
+          .read(settingsNotifierProvider.notifier)
+          .setVaultLock(enabled: enable);
+      await HapticFeedback.lightImpact();
+      if (!mounted) return;
+      ZenioSnackBar.show(
+        context,
+        message: enable ? 'Vault Lock is on' : 'Vault Lock is off',
+        type: enable ? ZenioSnackBarType.success : ZenioSnackBarType.info,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ZenioSnackBar.show(
+        context,
+        message: "Couldn't change Vault Lock. Please try again.",
+        type: ZenioSnackBarType.error,
+      );
+    } finally {
+      if (mounted) setState(() => _isChangingVaultLock = false);
+    }
+  }
+
   final GlobalKey<PopupMenuButtonState<String>> _currencyMenuKey = GlobalKey();
   final GlobalKey<PopupMenuButtonState<String>> _walletMenuKey = GlobalKey();
 
@@ -82,7 +229,12 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                   child: Stack(
                     children: [
                       ListView(
-                        padding: const EdgeInsets.fromLTRB(10, 16, 10, 120),
+                        padding: EdgeInsets.fromLTRB(
+                          10,
+                          16,
+                          10,
+                          CustomNavigationBar.reservedHeight(context) + 15,
+                        ),
                         children: [
                           // SECTION 1: PREFERENCES
                           _buildSectionHeader('Preferences', isFirst: true),
@@ -95,7 +247,7 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                                       style: TextStyle(
                                         fontSize: 22,
                                         fontWeight: FontWeight.bold,
-                                        color: Color(0xFF111111),
+                                        color: ZenioColors.textPrimary,
                                       ),
                                     ),
                                   )
@@ -103,7 +255,7 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                                     width: 24,
                                     height: 24,
                                     colorFilter: const ColorFilter.mode(
-                                      Color(0xFF111111),
+                                      ZenioColors.textPrimary,
                                       BlendMode.srcIn,
                                     ),
                                   ),
@@ -158,7 +310,7 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                                               style: TextStyle(
                                                 fontSize: 15,
                                                 fontWeight: FontWeight.bold,
-                                                color: Color(0xFF111111),
+                                                color: ZenioColors.textPrimary,
                                               ),
                                             ),
                                           ),
@@ -176,14 +328,14 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                                                 style: TextStyle(
                                                   fontSize: 14,
                                                   fontWeight: FontWeight.bold,
-                                                  color: Color(0xFF111111),
+                                                  color: ZenioColors.textPrimary,
                                                 ),
                                               ),
                                               Text(
                                                 'Indian Rupee',
                                                 style: TextStyle(
                                                   fontSize: 11,
-                                                  color: Color(0xFF8E8E93),
+                                                  color: ZenioColors.textSecondary,
                                                 ),
                                               ),
                                             ],
@@ -192,7 +344,7 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                                         if (currencyCode.toUpperCase() == 'INR')
                                           const Icon(
                                             Icons.check_circle_rounded,
-                                            color: Color(0xFF10B981),
+                                            color: ZenioColors.primary,
                                             size: 18,
                                           ),
                                       ],
@@ -225,7 +377,7 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                                               style: TextStyle(
                                                 fontSize: 15,
                                                 fontWeight: FontWeight.bold,
-                                                color: Color(0xFF10B981),
+                                                color: ZenioColors.primary,
                                               ),
                                             ),
                                           ),
@@ -243,14 +395,14 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                                                 style: TextStyle(
                                                   fontSize: 14,
                                                   fontWeight: FontWeight.bold,
-                                                  color: Color(0xFF111111),
+                                                  color: ZenioColors.textPrimary,
                                                 ),
                                               ),
                                               Text(
                                                 'US Dollar',
                                                 style: TextStyle(
                                                   fontSize: 11,
-                                                  color: Color(0xFF8E8E93),
+                                                  color: ZenioColors.textSecondary,
                                                 ),
                                               ),
                                             ],
@@ -259,7 +411,7 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                                         if (currencyCode.toUpperCase() == 'DLR')
                                           const Icon(
                                             Icons.check_circle_rounded,
-                                            color: Color(0xFF10B981),
+                                            color: ZenioColors.primary,
                                             size: 18,
                                           ),
                                       ],
@@ -283,14 +435,14 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                                         style: const TextStyle(
                                           fontSize: 13,
                                           fontWeight: FontWeight.w600,
-                                          color: Color(0xFF8E8E93),
+                                          color: ZenioColors.textSecondary,
                                         ),
                                       ),
                                       const SizedBox(width: 4),
                                       const Icon(
                                         Icons.keyboard_arrow_down_rounded,
                                         size: 16,
-                                        color: Color(0xFF8E8E93),
+                                        color: ZenioColors.textSecondary,
                                       ),
                                     ],
                                   ),
@@ -308,7 +460,7 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                                 width: 24,
                                 height: 24,
                                 colorFilter: const ColorFilter.mode(
-                                  Color(0xFF111111),
+                                  ZenioColors.textPrimary,
                                   BlendMode.srcIn,
                                 ),
                               ),
@@ -391,18 +543,18 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                                                         fontWeight:
                                                             FontWeight.bold,
                                                         color:
-                                                            Color(0xFF111111),
+                                                            ZenioColors.textPrimary,
                                                       ),
                                                       maxLines: 1,
                                                       overflow:
                                                           TextOverflow.ellipsis,
                                                     ),
                                                     Text(
-                                                      '${card.cardType} • $currencySymbol ${NumberFormat('#,##0.00').format(card.balance)}',
+                                                      '${card.cardType} • $currencySymbol ${AppNumberFormat.formatAmount(card.balance, alwaysShowDecimals: true)}',
                                                       style: const TextStyle(
                                                         fontSize: 11,
                                                         color:
-                                                            Color(0xFF8E8E93),
+                                                            ZenioColors.textSecondary,
                                                       ),
                                                       maxLines: 1,
                                                       overflow:
@@ -414,7 +566,7 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                                               if (isSelected)
                                                 const Icon(
                                                   Icons.check_circle_rounded,
-                                                  color: Color(0xFF10B981),
+                                                  color: ZenioColors.primary,
                                                   size: 18,
                                                 ),
                                             ],
@@ -459,7 +611,7 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                                             style: const TextStyle(
                                               fontSize: 13,
                                               fontWeight: FontWeight.w600,
-                                              color: Color(0xFF8E8E93),
+                                              color: ZenioColors.textSecondary,
                                             ),
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
@@ -469,7 +621,7 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                                         const Icon(
                                           Icons.keyboard_arrow_down_rounded,
                                           size: 16,
-                                          color: Color(0xFF8E8E93),
+                                          color: ZenioColors.textSecondary,
                                         ),
                                       ],
                                     ),
@@ -485,157 +637,53 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                           // SECTION 2: SECURITY
                           _buildSectionHeader('Security'),
                           SettingsItemTile(
-                            title: 'Biometric Lock',
+                            title: 'Vault Lock',
                             icon: Assets.icons.biometric.svg(
                               width: 24,
                               height: 24,
                               colorFilter: const ColorFilter.mode(
-                                Color(0xFF111111),
+                                ZenioColors.textPrimary,
                                 BlendMode.srcIn,
                               ),
                             ),
                             iconBgColor: const Color(0xFFE8F8F0),
                             isSwitch: true,
                             switchValue: settings.isBiometricEnabled,
-                            onSwitchChanged: (val) async {
-                              final biometricService =
-                                  ref.read(biometricServiceProvider);
-                              if (val) {
-                                // Attempting to turn ON
-                                final hasBiometrics = await biometricService
-                                    .hasEnrolledBiometrics();
-                                if (!hasBiometrics) {
-                                  if (!context.mounted) return;
-                                  await BiometricSetupDialog.show(
-                                    context,
-                                    message:
-                                        'Biometric authentication (Fingerprint or Face ID) is not configured on this device. Please set it up in your device settings to enable Biometric Lock.',
-                                  );
-                                  return;
-                                }
-
-                                final authenticated = await biometricService
-                                    .authenticate(
-                                  localizedReason:
-                                      'Scan fingerprint or Face ID to enable Biometric Lock',
-                                );
-                                if (!authenticated) {
-                                  return;
-                                }
-
-                                await ref
-                                    .read(settingsNotifierProvider.notifier)
-                                    .toggleBiometric(true);
-                                if (context.mounted) {
-                                  ZenioSnackBar.show(
-                                    context,
-                                    message: 'Biometric lock enabled',
-                                    type: ZenioSnackBarType.success,
-                                  );
-                                }
-                              } else {
-                                // Attempting to turn OFF
-                                final authenticated = await biometricService
-                                    .authenticate(
-                                  localizedReason:
-                                      'Scan fingerprint or Face ID to disable Biometric Lock',
-                                );
-                                if (!authenticated) {
-                                  return;
-                                }
-
-                                await ref
-                                    .read(settingsNotifierProvider.notifier)
-                                    .toggleBiometric(false);
-                                if (context.mounted) {
-                                  ZenioSnackBar.show(
-                                    context,
-                                    message: 'Biometric lock disabled',
-                                  );
-                                }
-                              }
-                            },
+                            onSwitchChanged: _isChangingVaultLock
+                                ? null
+                                : (value) => _setVaultLock(enable: value),
                           ),
                           const SizedBox(height: 12),
 
                           // SECTION 3: DATA MANAGEMENT
                           _buildSectionHeader('Data Management'),
-                          SettingsItemTile(
-                            title: 'Export Data (CSV)',
-                            icon: Assets.icons.export.svg(
-                              width: 24,
-                              height: 24,
-                              colorFilter: const ColorFilter.mode(
-                                Color(0xFF111111),
-                                BlendMode.srcIn,
+                          Builder(
+                            builder: (tileContext) => SettingsItemTile(
+                              title: 'Export Transactions (CSV)',
+                              icon: Assets.icons.export.svg(
+                                width: 24,
+                                height: 24,
+                                colorFilter: const ColorFilter.mode(
+                                  ZenioColors.textPrimary,
+                                  BlendMode.srcIn,
+                                ),
                               ),
+                              iconBgColor: const Color(0xFFF4ECFB),
+                              onTap: () => _exportTransactions(tileContext),
                             ),
-                            iconBgColor: const Color(0xFFF4ECFB),
-                            onTap: () async {
-                              ZenioSnackBar.show(
-                                context,
-                                message: 'Preparing CSV export...',
-                                duration: const Duration(milliseconds: 1500),
-                              );
-                              try {
-                                await ref
-                                    .read(csvExportServiceProvider)
-                                    .exportDataToCsv();
-                              } catch (e) {
-                                if (context.mounted) {
-                                  ZenioSnackBar.show(
-                                    context,
-                                    message: 'Failed to export data: $e',
-                                    type: ZenioSnackBarType.error,
-                                  );
-                                }
-                              }
-                            },
                           ),
                           SettingsItemTile(
-                            title: 'Import Data (CSV)',
+                            title: 'Import Transactions (CSV)',
                             icon: Assets.icons.import.svg(
                               width: 24,
                               height: 24,
                               colorFilter: const ColorFilter.mode(
-                                Color(0xFF111111),
+                                ZenioColors.textPrimary,
                                 BlendMode.srcIn,
                               ),
                             ),
                             iconBgColor: const Color(0xFFE6F3FF),
-                            onTap: () async {
-                              try {
-                                final count = await ref
-                                    .read(csvImportServiceProvider)
-                                    .pickAndImportCsv();
-                                if (count == null) {
-                                  return;
-                                }
-                                await ref
-                                    .read(homeNotifierProvider.notifier)
-                                    .loadMoneyTrackerData();
-                                await ref
-                                    .read(walletNotifierProvider.notifier)
-                                    .loadWalletData();
-
-                                if (context.mounted) {
-                                  ZenioSnackBar.show(
-                                    context,
-                                    message:
-                                        'Successfully imported ${AppNumberFormat.formatNumber(count)} transaction${count == 1 ? '' : 's'}!',
-                                    type: ZenioSnackBarType.success,
-                                  );
-                                }
-                              } catch (e) {
-                                if (context.mounted) {
-                                  ZenioSnackBar.show(
-                                    context,
-                                    message: 'Failed to import data: $e',
-                                    type: ZenioSnackBarType.error,
-                                  );
-                                }
-                              }
-                            },
+                            onTap: _importTransactions,
                           ),
                           SettingsItemTile(
                             title: 'Clear All App Data',
@@ -643,7 +691,7 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                               width: 24,
                               height: 24,
                               colorFilter: const ColorFilter.mode(
-                                Color(0xFFDD3D34),
+                                ZenioColors.danger,
                                 BlendMode.srcIn,
                               ),
                             ),
@@ -666,7 +714,7 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                                     ),
                                   ),
                                   content: const Text(
-                                    'Are you sure you want to clear all app data? This action cannot be undone.',
+                                    'This permanently deletes all transactions, wallets, debts, subscriptions, splits and Vault items on this device. It cannot be undone. Export your transactions first if you want to keep them.',
                                     style: TextStyle(
                                       fontSize: 14,
                                       color: Color(0xFF666666),
@@ -679,7 +727,7 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                                       child: const Text(
                                         'Cancel',
                                         style: TextStyle(
-                                          color: Color(0xFF8E8E93),
+                                          color: ZenioColors.textSecondary,
                                           fontWeight: FontWeight.w600,
                                         ),
                                       ),
@@ -690,7 +738,7 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                                       child: const Text(
                                         'Clear',
                                         style: TextStyle(
-                                          color: Color(0xFFDD3D34),
+                                          color: ZenioColors.danger,
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
@@ -699,15 +747,7 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                                 ),
                               );
                               if ((confirm ?? false) && mounted) {
-                                await ref
-                                    .read(settingsNotifierProvider.notifier)
-                                    .clearAllData();
-                                if (context.mounted) {
-                                  ZenioSnackBar.show(
-                                    context,
-                                    message: 'All app data cleared',
-                                  );
-                                }
+                                await _clearAllData();
                               }
                             },
                           ),
@@ -721,7 +761,7 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                               width: 24,
                               height: 24,
                               colorFilter: const ColorFilter.mode(
-                                Color(0xFF111111),
+                                ZenioColors.textPrimary,
                                 BlendMode.srcIn,
                               ),
                             ),
@@ -730,7 +770,7 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                               width: 20,
                               height: 20,
                               colorFilter: const ColorFilter.mode(
-                                Color(0xFF8E8E93),
+                                ZenioColors.textSecondary,
                                 BlendMode.srcIn,
                               ),
                             ),
@@ -742,7 +782,7 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                           //     width: 24,
                           //     height: 24,
                           //     colorFilter: const ColorFilter.mode(
-                          //       Color(0xFF111111),
+                          //       ZenioColors.textPrimary,
                           //       BlendMode.srcIn,
                           //     ),
                           //   ),
@@ -755,7 +795,7 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                               width: 24,
                               height: 24,
                               colorFilter: const ColorFilter.mode(
-                                Color(0xFF111111),
+                                ZenioColors.textPrimary,
                                 BlendMode.srcIn,
                               ),
                             ),
@@ -768,21 +808,6 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                         ],
                       ),
 
-                      // Floating Navigation Bar (Selected Index = 3)
-                      Positioned(
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        child: CustomNavigationBar(
-                          selectedIndex: 3,
-                          onTabSelected: (index) {
-                            widget.onTabSelected?.call(index);
-                          },
-                          onAddTap: () {
-                            AddTransactionBottomSheet.show(context);
-                          },
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -806,7 +831,7 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
         style: const TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w600,
-          color: Color(0xFF8E8E93),
+          color: ZenioColors.textSecondary,
           letterSpacing: -0.2,
         ),
       ),

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
 import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
 import 'package:zenio/features/wallet/presentation/widgets/add_wallet_bottom_sheet.dart';
 import 'package:zenio/features/wallet/presentation/widgets/wallet_card_detail_widget.dart';
 import 'package:zenio/features/wallet/presentation/widgets/wallet_card_widget.dart';
+import 'package:zenio/features/wallet/presentation/widgets/adjust_balance_bottom_sheet.dart';
 import 'package:zenio/features/wallet/presentation/widgets/wallet_settings_bottom_sheet.dart';
 import 'package:zenio/shared/shared.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
@@ -24,7 +26,6 @@ class WalletScreenMobile extends ConsumerStatefulWidget {
 class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
   PageController? _pageController;
   bool _isCardDetailExpanded = false;
-  int _tappedCardIndex = 0;
   int _lastKnownPage = -1;
 
   @override
@@ -207,7 +208,7 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                           onTap: null,
                           behavior: HitTestBehavior.opaque,
                           child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 380),
+                            duration: ZenioMotion.slow,
                             curve: Curves.fastOutSlowIn,
                             height: _isCardDetailExpanded ? 365 : fullHeight,
                             width: double.infinity,
@@ -215,7 +216,7 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                                 ? const EdgeInsets.only(top: 40, left: 24, right: 24)
                                 : EdgeInsets.zero,
                       decoration: BoxDecoration(
-                        color: _isCardDetailExpanded ? Colors.white : const Color(0xFFF7F7F7),
+                        color: _isCardDetailExpanded ? Colors.white : ZenioColors.sheet,
                         borderRadius: _isCardDetailExpanded
                             ? BorderRadius.circular(30)
                             : const BorderRadius.vertical(top: Radius.circular(30)),
@@ -235,7 +236,7 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                             : const BorderRadius.vertical(top: Radius.circular(30)),
 
                         child: AnimatedOpacity(
-                          duration: const Duration(milliseconds: 380),
+                          duration: ZenioMotion.slow,
                           curve: Curves.fastOutSlowIn,
                           opacity: _isCardDetailExpanded ? 0.0 : 1.0,
                           child: IgnorePointer(
@@ -243,7 +244,14 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                             child: OverflowBox(
                               maxWidth: constraints.maxWidth,
                               child: cards.isEmpty
-                                  ? _buildEmptyWalletView(context)
+                                  ? (state.status == WalletStatus.initial ||
+                                          state.status == WalletStatus.loading
+                                      ? const ListStateMessage.loading()
+                                      : state.status == WalletStatus.error
+                                      ? ListStateMessage.error(
+                                          onRetry: notifier.loadWalletData,
+                                        )
+                                      : _buildEmptyWalletView(context))
                                   : ListView(
                                   key: const ValueKey('carousel'),
                                   physics: const NeverScrollableScrollPhysics(),
@@ -318,7 +326,7 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                                           final actualActiveIndex = cards.isEmpty ? 0 : activeIndex % cards.length;
                                           final isSelected = index == actualActiveIndex;
                                           return AnimatedContainer(
-                                            duration: const Duration(milliseconds: 250),
+                                            duration: ZenioMotion.standard,
                                             margin: const EdgeInsets.symmetric(
                                               horizontal: 2.5,
                                             ),
@@ -327,7 +335,7 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                                             decoration: BoxDecoration(
                                               shape: BoxShape.circle,
                                               color: isSelected
-                                                  ? const Color(0xFF10B981)
+                                                  ? ZenioColors.primary
                                                   : const Color(0xFFE3E3E3),
                                             ),
                                           );
@@ -344,12 +352,10 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                                       child: Row(
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                         children: [
-                                          // Top up button commented out temporarily:
-                                          /*
                                           _buildActionButton(
-                                            label: 'Top up',
+                                            label: 'Adjust',
                                             backgroundColor:
-                                                const Color(0xFF10B981),
+                                                ZenioColors.primary,
                                             iconWidget: Assets.icons.add.svg(
                                               width: 24,
                                               height: 24,
@@ -361,15 +367,14 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                                             onTap: () {
                                               if (cards.isEmpty) return;
                                               final actualIndex = _getActiveCardIndex(cards.length);
-                                              EditWalletBalanceBottomSheet.show(context, actualIndex);
+                                              AdjustBalanceBottomSheet.show(context, actualIndex);
                                             },
                                           ),
                                           const SizedBox(width: 12),
-                                          */
                                           _buildActionButton(
                                             label: 'Freeze',
                                             backgroundColor: isActiveCardFrozen
-                                                ? const Color(0xFF10B981)
+                                                ? ZenioColors.primary
                                                 : const Color(0xFFEAEAEA),
                                             iconWidget: Assets.icons.freeze.svg(
                                               width: 24,
@@ -383,7 +388,10 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                                             ),
                                             onTap: () {
                                               if (cards.isEmpty) return;
-                                              notifier.toggleFreezeCard();
+                                              HapticFeedback.selectionClick();
+                                              notifier.toggleFreezeCard(
+                                                _getActiveCardIndex(cards.length),
+                                              );
                                             },
                                           ),
                                           const SizedBox(width: 12),
@@ -401,12 +409,11 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                                               final actualIndex = pageIndex % cards.length;
                                               setState(() {
                                                 _lastKnownPage = pageIndex;
-                                                _tappedCardIndex = actualIndex;
                                                 _isCardDetailExpanded = true;
                                               });
                                               Navigator.push(
                                                 context,
-                                                PageRouteBuilder(
+                                                PageRouteBuilder<void>(
                                                   opaque: false,
                                                   transitionDuration: const Duration(milliseconds: 380),
                                                   reverseTransitionDuration: const Duration(milliseconds: 380),
@@ -465,21 +472,6 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
             ),
           ),
 
-          // Floating Navigation Bar (Always visible at bottom)
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: CustomNavigationBar(
-              selectedIndex: 1,
-              onTabSelected: (index) {
-                widget.onTabSelected?.call(index);
-              },
-              onAddTap: () {
-                AddTransactionBottomSheet.show(context);
-              },
-            ),
-          ),
         ],
       ),
     );
@@ -501,7 +493,7 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
         return LayoutBuilder(
           builder: (context, constraints) {
             return toHeroContext.widget;
-          }
+          },
         );
       },
       child: WalletCardWidget(
@@ -510,12 +502,11 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
         onTap: () {
           setState(() {
             _lastKnownPage = (_pageController?.hasClients == true) ? _pageController!.page!.round() : index;
-            _tappedCardIndex = actualIndex;
             _isCardDetailExpanded = true;
           });
           Navigator.push(
             context,
-            PageRouteBuilder(
+            PageRouteBuilder<void>(
               opaque: false,
               transitionDuration: const Duration(milliseconds: 380),
               reverseTransitionDuration: const Duration(milliseconds: 380),
@@ -550,34 +541,40 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
     VoidCallback? onTap,
   }) {
     return Expanded(
-      child: GestureDetector(
+      child: Semantics(
+        button: true,
+        label: label,
+        excludeSemantics: true,
         onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              height: 60,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: backgroundColor,
-                borderRadius: BorderRadius.circular(30),
+        child: GestureDetector(
+          onTap: onTap,
+          behavior: HitTestBehavior.opaque,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                height: 60,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: backgroundColor,
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                child: Center(child: iconWidget),
               ),
-              child: Center(child: iconWidget),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF1F1F1F),
+              const SizedBox(height: 10),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF1F1F1F),
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -586,7 +583,12 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
   Widget _buildEmptyWalletView(BuildContext context) {
     return Center(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 110),
+        padding: EdgeInsets.fromLTRB(
+          24,
+          20,
+          24,
+          CustomNavigationBar.reservedHeight(context) + 15,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -678,7 +680,7 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                         child: Icon(
                           Icons.add_rounded,
                           size: 24,
-                          color: Color(0xFF111111),
+                          color: ZenioColors.textPrimary,
                         ),
                       ),
                     ),
@@ -689,7 +691,7 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFFD1D1D6),
+                        color: ZenioColors.border,
                         letterSpacing: 2,
                       ),
                     ),
@@ -704,7 +706,7 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF111111),
+                color: ZenioColors.textPrimary,
                 letterSpacing: -0.3,
               ),
             ),
@@ -717,7 +719,7 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w400,
-                  color: Color(0xFF8E8E93),
+                  color: ZenioColors.textSecondary,
                   height: 1.4,
                 ),
               ),

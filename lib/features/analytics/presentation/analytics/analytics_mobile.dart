@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:calendar_date_picker2/calendar_date_picker2.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
+import 'package:zenio/features/home/controller/home/home_notifier.dart';
+import 'package:zenio/shared/utils/period_filter.dart';
 import 'package:zenio/features/analytics/controller/analytics/analytics_notifier.dart';
 import 'package:zenio/features/analytics/presentation/categories/categories_list_screen.dart';
 import 'package:zenio/features/analytics/presentation/widgets/category_legend_widget.dart';
@@ -9,11 +10,8 @@ import 'package:zenio/features/analytics/presentation/widgets/donut_chart_widget
 import 'package:zenio/features/analytics/presentation/widgets/top_spent_card.dart';
 import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
 import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
-import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/shared.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
-import 'package:zenio/shared/widgets/add_transaction_bottom_sheet.dart';
-import 'package:zenio/shared/widgets/custom_navigation_bar.dart';
 
 class AnalyticsScreenMobile extends ConsumerStatefulWidget {
   const AnalyticsScreenMobile({
@@ -30,7 +28,10 @@ class AnalyticsScreenMobile extends ConsumerStatefulWidget {
 
 class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
   final ScrollController _scrollController = ScrollController();
-  double _scrollOffset = 0;
+
+  /// How far the legend has collapsed (0 to 1) as the list scrolls. Only the
+  /// legend listens to it, so scrolling does not rebuild the whole screen.
+  final ValueNotifier<double> _legendCollapse = ValueNotifier(0);
   String? _expandedCategoryId;
 
   @override
@@ -44,16 +45,12 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
     _scrollController
       ..removeListener(_onScroll)
       ..dispose();
+    _legendCollapse.dispose();
     super.dispose();
   }
 
   void _onScroll() {
-    final offset = _scrollController.offset.clamp(0.0, 70.0);
-    if ((offset - _scrollOffset).abs() > 0.5) {
-      setState(() {
-        _scrollOffset = offset;
-      });
-    }
+    _legendCollapse.value = (_scrollController.offset / 60.0).clamp(0.0, 1.0);
   }
 
   String _formatWholePart(double amount) =>
@@ -69,7 +66,6 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
     final walletCards = walletState.cards;
     final totalBalance = state.totalBalance;
     final categories = state.categorySpends.take(10).toList();
-    final shrinkProgress = (_scrollOffset / 60.0).clamp(0.0, 1.0);
     final currencySymbol = ref.watch(currencySymbolProvider);
 
     return Scaffold(
@@ -146,7 +142,7 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
               child: Container(
                 width: double.infinity,
                 decoration: const BoxDecoration(
-                  color: Color(0xFFF7F7F7),
+                  color: ZenioColors.sheet,
                   borderRadius: BorderRadius.vertical(
                     top: Radius.circular(30),
                   ),
@@ -164,33 +160,44 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
 
                           // Donut Chart Centered (Fixed / Pinned)
                           Center(
-                            child: DonutChartWidget(categories: categories),
-                          ),
-
-                          // Dynamic top spacing for legend
-                          SizedBox(height: 10 * (1.0 - shrinkProgress)),
-
-                          // Category Legend Grid that shrinks while scrolling
-                          ClipRect(
-                            child: Align(
-                              alignment: Alignment.topCenter,
-                              heightFactor: (1.0 - shrinkProgress).clamp(0.0, 1.0),
-                              child: Opacity(
-                                opacity: (1.0 - shrinkProgress).clamp(0.0, 1.0),
-                                child: Transform.scale(
-                                  scale: (1.0 - (shrinkProgress * 0.2)).clamp(0.8, 1.0),
-                                  alignment: Alignment.topCenter,
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                                    child: CategoryLegendWidget(categories: categories),
-                                  ),
-                                ),
-                              ),
+                            child: RepaintBoundary(
+                              child: DonutChartWidget(categories: categories),
                             ),
                           ),
 
-                          // Dynamic bottom spacing for legend
-                          SizedBox(height: 16 * (1.0 - shrinkProgress) + 4),
+                          // Category legend that collapses while the list
+                          // scrolls.
+                          ValueListenableBuilder<double>(
+                            valueListenable: _legendCollapse,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              child: CategoryLegendWidget(categories: categories),
+                            ),
+                            builder: (context, collapse, legend) {
+                              final visible = 1.0 - collapse;
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  SizedBox(height: 10 * visible),
+                                  ClipRect(
+                                    child: Align(
+                                      alignment: Alignment.topCenter,
+                                      heightFactor: visible,
+                                      child: Opacity(
+                                        opacity: visible,
+                                        child: Transform.scale(
+                                          scale: 1.0 - collapse * 0.2,
+                                          alignment: Alignment.topCenter,
+                                          child: legend,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(height: 16 * visible + 4),
+                                ],
+                              );
+                            },
+                          ),
 
                           // Top Spent Section Header (Fixed / Pinned)
                           Padding(
@@ -217,7 +224,7 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
                                         style: TextStyle(
                                           fontSize: 20,
                                           fontWeight: FontWeight.bold,
-                                          color: Color(0xFF111111),
+                                          color: ZenioColors.textPrimary,
                                           letterSpacing: -0.3,
                                         ),
                                       ),
@@ -229,7 +236,7 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
                                             style: TextStyle(
                                               fontSize: 13,
                                               fontWeight: FontWeight.w600,
-                                              color: Color(0xFF2CC56F),
+                                              color: ZenioColors.primary,
                                             ),
                                           ),
                                           const SizedBox(width: 4),
@@ -237,7 +244,7 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
                                             width: 18,
                                             height: 18,
                                             colorFilter: const ColorFilter.mode(
-                                              Color(0xFF2CC56F),
+                                              ZenioColors.primary,
                                               BlendMode.srcIn,
                                             ),
                                           ),
@@ -260,22 +267,42 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
                           // Categories List Only Scrolls!
                           Expanded(
                             child: categories.isEmpty
-                                ? const Center(
-                                    child: Padding(
-                                      padding: EdgeInsets.symmetric(vertical: 24),
-                                      child: Text(
-                                        'No spends recorded',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          color: Color(0xFF8E8E93),
-                                        ),
-                                      ),
+                                ? Center(
+                                    child: SingleChildScrollView(
+                                      child: state.status ==
+                                                  AnalyticsStatus.loading ||
+                                              state.status ==
+                                                  AnalyticsStatus.initial
+                                          ? const ListStateMessage.loading()
+                                          : state.status == AnalyticsStatus.error
+                                          ? ListStateMessage.error(
+                                              onRetry: ref
+                                                  .read(homeNotifierProvider
+                                                      .notifier,)
+                                                  .loadMoneyTrackerData,
+                                            )
+                                          : ListStateMessage(
+                                              title: 'No spending in this period',
+                                              message:
+                                                  'Expenses you add will be grouped by category here.',
+                                              icon: Icons.pie_chart_outline_rounded,
+                                              actionLabel: 'Add transaction',
+                                              onAction: () =>
+                                                  AddTransactionBottomSheet.show(
+                                                context,
+                                              ),
+                                            ),
                                     ),
                                   )
                                 : ListView.builder(
                                     controller: _scrollController,
                                     physics: const BouncingScrollPhysics(),
-                                    padding: const EdgeInsets.fromLTRB(10, 4, 10, 95),
+                                    padding: EdgeInsets.fromLTRB(
+                                      10,
+                                      4,
+                                      10,
+                                      CustomNavigationBar.reservedHeight(context),
+                                    ),
                                     itemCount: categories.length,
                                     itemBuilder: (context, index) {
                                       final spend = categories[index];
@@ -301,21 +328,6 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
                         ],
                       ),
 
-                      // Floating Navigation Bar (Selected Index = 2)
-                      Positioned(
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        child: CustomNavigationBar(
-                          selectedIndex: 2,
-                          onTabSelected: (index) {
-                            widget.onTabSelected?.call(index);
-                          },
-                          onAddTap: () {
-                            AddTransactionBottomSheet.show(context);
-                          },
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -355,7 +367,7 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
                 style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
-                  color: Color(0xFFD1D1D6),
+                  color: ZenioColors.border,
                 ),
               ),
             )
@@ -365,7 +377,7 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
-                color: Color(0xFFD1D1D6),
+                color: ZenioColors.border,
               ),
             ),
           const SizedBox(width: 8),
@@ -395,7 +407,7 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
       leading = const Icon(
         Icons.account_balance_wallet_rounded,
         size: 15,
-        color: Color(0xFF2CC56F),
+        color: ZenioColors.primary,
       );
     } else {
       Color startColor;
@@ -408,8 +420,8 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
         startColor = Color(int.parse('0x$startHex'));
         endColor = Color(int.parse('0x$endHex'));
       } catch (_) {
-        startColor = const Color(0xFF2CC56F);
-        endColor = const Color(0xFF10B981);
+        startColor = ZenioColors.primary;
+        endColor = ZenioColors.primary;
       }
       leading = Container(
         width: 12,
@@ -450,14 +462,14 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
                 const Icon(
                   Icons.account_balance_wallet_rounded,
                   size: 16,
-                  color: Color(0xFF2CC56F),
+                  color: ZenioColors.primary,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     'All Wallets',
                     style: TextStyle(
-                      color: isAllSelected ? Colors.white : const Color(0xFFD1D1D6),
+                      color: isAllSelected ? Colors.white : ZenioColors.border,
                       fontSize: 14,
                       fontWeight:
                           isAllSelected ? FontWeight.bold : FontWeight.w500,
@@ -468,7 +480,7 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
                   const Icon(
                     Icons.check_rounded,
                     size: 18,
-                    color: Color(0xFF2CC56F),
+                    color: ZenioColors.primary,
                   ),
               ],
             ),
@@ -486,8 +498,8 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
                   orElse: () => null,
                 );
 
-            Color sColor = const Color(0xFF2CC56F);
-            Color eColor = const Color(0xFF10B981);
+            Color sColor = ZenioColors.primary;
+            Color eColor = ZenioColors.primary;
             if (card != null) {
               try {
                 var startHex = card.gradientStartHex.replaceAll('#', '').trim();
@@ -526,7 +538,7 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: isSelected ? Colors.white : const Color(0xFFD1D1D6),
+                          color: isSelected ? Colors.white : ZenioColors.border,
                           fontSize: 14,
                           fontWeight:
                               isSelected ? FontWeight.bold : FontWeight.w500,
@@ -537,7 +549,7 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
                       const Icon(
                         Icons.check_rounded,
                         size: 18,
-                        color: Color(0xFF2CC56F),
+                        color: ZenioColors.primary,
                       ),
                   ],
                 ),
@@ -571,19 +583,19 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
       itemBuilder: (context) => [
         const PopupMenuItem(
           value: 'Daily',
-          child: Text('Daily', style: TextStyle(color: Color(0xFFD1D1D6), fontSize: 14, fontWeight: FontWeight.w500)),
+          child: Text('Daily', style: TextStyle(color: ZenioColors.border, fontSize: 14, fontWeight: FontWeight.w500)),
         ),
         const PopupMenuItem(
           value: 'Weekly',
-          child: Text('Weekly', style: TextStyle(color: Color(0xFFD1D1D6), fontSize: 14, fontWeight: FontWeight.w500)),
+          child: Text('Weekly', style: TextStyle(color: ZenioColors.border, fontSize: 14, fontWeight: FontWeight.w500)),
         ),
         const PopupMenuItem(
           value: 'Monthly',
-          child: Text('Monthly', style: TextStyle(color: Color(0xFFD1D1D6), fontSize: 14, fontWeight: FontWeight.w500)),
+          child: Text('Monthly', style: TextStyle(color: ZenioColors.border, fontSize: 14, fontWeight: FontWeight.w500)),
         ),
         const PopupMenuItem(
           value: 'Custom',
-          child: Text('Custom', style: TextStyle(color: Color(0xFFD1D1D6), fontSize: 14, fontWeight: FontWeight.w500)),
+          child: Text('Custom', style: TextStyle(color: ZenioColors.border, fontSize: 14, fontWeight: FontWeight.w500)),
         ),
       ],
       color: const Color(0xFF1A1A1A),
@@ -642,7 +654,7 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
                             yearTextStyle: AppFonts.numeric(color: Colors.white),
                             monthTextStyle: const TextStyle(color: Colors.white),
                             controlsTextStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                            weekdayLabelTextStyle: const TextStyle(color: Color(0xFFD1D1D6)),
+                            weekdayLabelTextStyle: const TextStyle(color: ZenioColors.border),
                             lastDate: DateTime.now(),
                             firstDate: DateTime(2000),
                           ),
@@ -700,9 +712,9 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
             },
           );
           if (picked != null && picked.length == 2 && picked[0] != null && picked[1] != null) {
-            final start = DateFormat('dd MMM').format(picked[0]!);
-            final end = DateFormat('dd MMM').format(picked[1]!);
-            ref.read(analyticsNotifierProvider.notifier).updateTimeframe('$start - $end');
+            ref
+                .read(analyticsNotifierProvider.notifier)
+                .updateTimeframe(customRangeTimeframe(picked[0]!, picked[1]!));
           }
         },
         child: _buildFilterPill(label: timeframe),
@@ -717,7 +729,7 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
     } else if (period.toLowerCase() == 'monthly') {
       options = [
         'January', 'February', 'March', 'April', 'May', 'June',
-        'July', 'August', 'September', 'October', 'November', 'December'
+        'July', 'August', 'September', 'October', 'November', 'December',
       ];
     }
 
@@ -730,8 +742,8 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
       },
       itemBuilder: (context) => options.map((opt) => PopupMenuItem(
         value: opt, 
-        child: Text(opt, style: const TextStyle(color: Color(0xFFD1D1D6), fontSize: 14, fontWeight: FontWeight.w500)),
-      )).toList(),
+        child: Text(opt, style: const TextStyle(color: ZenioColors.border, fontSize: 14, fontWeight: FontWeight.w500)),
+      ),).toList(),
       color: const Color(0xFF1A1A1A),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),

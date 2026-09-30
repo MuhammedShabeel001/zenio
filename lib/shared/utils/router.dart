@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -65,7 +66,7 @@ class AppRouter {
 
   late final GoRouter router = GoRouter(
     navigatorKey: _rootNavigatorKey,
-    debugLogDiagnostics: true,
+    debugLogDiagnostics: kDebugMode,
     initialLocation: '/splash',
     routes: [
       GoRoute(
@@ -128,6 +129,8 @@ class AppRouter {
     return CustomTransitionPage<void>(
       key: state.pageKey,
       child: screen,
+      transitionDuration: ZenioMotion.standard,
+      reverseTransitionDuration: ZenioMotion.standard,
       transitionsBuilder: (
         context,
         animation,
@@ -136,10 +139,7 @@ class AppRouter {
       ) =>
           FadeTransition(
         opacity: animation.drive(
-          Tween<double>(
-            begin: 0,
-            end: 1,
-          ).chain(CurveTween(curve: Curves.easeIn)),
+          CurveTween(curve: ZenioMotion.standardCurve),
         ),
         child: child,
       ),

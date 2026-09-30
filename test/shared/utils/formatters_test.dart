@@ -15,7 +15,8 @@ void main() {
       expect(AppNumberFormat.formatNumber(-12345), '-12,345');
     });
 
-    test('formatAmount formats amounts with decimals and integers properly', () {
+    test('formatAmount formats amounts with decimals and integers properly',
+        () {
       expect(AppNumberFormat.formatAmount(12345.67), '12,345.67');
       expect(AppNumberFormat.formatAmount(12345), '12,345');
       expect(AppNumberFormat.formatAmount(12345.6), '12,345.60');
@@ -23,19 +24,38 @@ void main() {
       expect(AppNumberFormat.formatAmount(-12345.67), '-12,345.67');
 
       // With alwaysShowDecimals: true
-      expect(AppNumberFormat.formatAmount(12345, alwaysShowDecimals: true), '12,345.00');
+      expect(AppNumberFormat.formatAmount(12345, alwaysShowDecimals: true),
+          '12,345.00',);
       expect(AppNumberFormat.formatAmount(0, alwaysShowDecimals: true), '0.00');
-      expect(AppNumberFormat.formatAmount(12345.67, alwaysShowDecimals: true), '12,345.67');
+      expect(AppNumberFormat.formatAmount(12345.67, alwaysShowDecimals: true),
+          '12,345.67',);
     });
 
     test('formatCurrency formats with symbol prefix', () {
-      expect(AppNumberFormat.formatCurrency(12345.67, symbol: '₹'), '₹ 12,345.67');
+      expect(
+          AppNumberFormat.formatCurrency(12345.67, symbol: '₹'), '₹ 12,345.67',);
       expect(AppNumberFormat.formatCurrency(12345, symbol: r'$'), r'$ 12,345');
       expect(
-        AppNumberFormat.formatCurrency(12345, symbol: r'$', alwaysShowDecimals: true),
+        AppNumberFormat.formatCurrency(12345,
+            symbol: r'$', alwaysShowDecimals: true,),
         r'$ 12,345.00',
       );
       expect(AppNumberFormat.formatCurrency(12345.67), '12,345.67');
+    });
+
+    test('whole and decimal parts round together', () {
+      // 0.7 + 0.1 + 0.1 + 0.1 is 0.9999999999999999 in floating point.
+      const almostOne = 0.7 + 0.1 + 0.1 + 0.1;
+      expect(AppNumberFormat.formatWholePart(almostOne), '1');
+      expect(AppNumberFormat.formatDecimalPart(almostOne), '.00');
+
+      // 100.3 - 50.1 - 50.2 is a tiny negative number, i.e. zero.
+      const almostZero = 100.3 - 50.1 - 50.2;
+      expect(AppNumberFormat.formatWholePart(almostZero), '0');
+      expect(AppNumberFormat.formatDecimalPart(almostZero), '.00');
+
+      expect(AppNumberFormat.formatWholePart(-1234.567), '- 1,234');
+      expect(AppNumberFormat.formatDecimalPart(-1234.567), '.57');
     });
 
     test('formatWholePart and formatDecimalPart work together cleanly', () {

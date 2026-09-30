@@ -1,6 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:intl/intl.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:zenio/features/home/domain/models/transaction/transaction_kind.dart';
 import 'package:zenio/features/home/home.dart';
 import 'package:zenio/shared/utils/datetime.dart';
 
@@ -8,30 +8,34 @@ part 'home_notifier.freezed.dart';
 part 'home_notifier.g.dart';
 part 'home_state.dart';
 
-@Riverpod()
+/// Owns the in-memory list of transactions. It is kept alive so that the list
+/// survives tab switches; recreating it mid-session used to hand mutations an
+/// empty, not-yet-loaded list.
+@Riverpod(keepAlive: true)
 class HomeNotifier extends _$HomeNotifier {
-  late TaskRepository taskRepository;
   IMoneyTrackerRepository? _moneyTrackerRepository;
+  Future<void>? _initialLoad;
 
   @override
   HomeState build() {
-    taskRepository = ref.watch(taskRepositoryRepoProvider);
-
     try {
       _moneyTrackerRepository = ref.watch(moneyTrackerRepositoryRepoProvider);
-      Future.microtask(loadMoneyTrackerData);
+      _initialLoad = Future.microtask(loadMoneyTrackerData);
     } catch (_) {
-      // Handles async initialization of SqlitePrefs
+      // Local storage is still opening; this notifier rebuilds once it is.
+      _moneyTrackerRepository = null;
+      _initialLoad = null;
     }
 
     return HomeState.initial();
   }
 
   Future<void> loadMoneyTrackerData() async {
-    if (_moneyTrackerRepository == null) return;
+    final repository = _moneyTrackerRepository;
+    if (repository == null) return;
     state = state.copyWith(status: HomeStatus.loading);
     try {
-      final transactions = await _moneyTrackerRepository!.getTransactions();
+      final transactions = await repository.getTransactions();
       state = state.copyWith(
         status: HomeStatus.success,
         transactions: transactions,
@@ -42,47 +46,87 @@ class HomeNotifier extends _$HomeNotifier {
     }
   }
 
-  Future<void> addTransaction(TransactionModel newTx) async {
-    if (_moneyTrackerRepository == null) return;
-    final updatedTxs = [newTx, ...state.transactions];
-    await _moneyTrackerRepository!.saveTransactions(updatedTxs);
+  /// Waits until the stored transactions are in memory, so that a mutation
+  /// never works from a partial list. Throws if they cannot be loaded.
+  Future<IMoneyTrackerRepository> _readyRepository() async {
+    final repository = _moneyTrackerRepository;
+    if (repository == null) {
+      throw StateError('Local storage is not ready yet.');
+    }
+    await _initialLoad;
+    if (state.status != HomeStatus.success) {
+      await loadMoneyTrackerData();
+      if (state.status != HomeStatus.success) {
+        throw StateError('Transactions could not be loaded.');
+      }
+    }
+    return repository;
+  }
 
+  /// The stored transactions, once loaded. Throws if they cannot be loaded.
+  Future<List<TransactionModel>> loadedTransactions() async {
+    await _readyRepository();
+    return state.transactions;
+  }
+
+  /// Moves every transaction of wallet [oldName] to [newName].
+  Future<void> renameWallet(String oldName, String newName) async {
+    final repository = await _readyRepository();
+    await repository.renameWallet(oldName, newName);
+    await loadMoneyTrackerData();
+  }
+
+  Future<void> addTransaction(TransactionModel newTx) async {
+    final repository = await _readyRepository();
+    await repository.insertTransaction(newTx);
+
+    final updatedTxs = _newestFirst([newTx, ...state.transactions]);
     state = state.copyWith(transactions: updatedTxs);
     await _recalculateSummary(updatedTxs);
   }
 
   Future<void> updateTransaction(TransactionModel updatedTx) async {
-    if (_moneyTrackerRepository == null) return;
-    final updatedTxs = state.transactions
-        .map((tx) => tx.id == updatedTx.id ? updatedTx : tx)
-        .toList();
-    await _moneyTrackerRepository!.saveTransactions(updatedTxs);
+    final repository = await _readyRepository();
+    await repository.updateTransaction(updatedTx);
 
+    final updatedTxs = _newestFirst(
+      state.transactions
+          .map((tx) => tx.id == updatedTx.id ? updatedTx : tx)
+          .toList(),
+    );
     state = state.copyWith(transactions: updatedTxs);
     await _recalculateSummary(updatedTxs);
   }
 
   Future<void> deleteTransaction(String id) async {
-    final target = state.transactions.firstWhere(
-      (tx) => tx.id == id,
-      orElse: () => const TransactionModel(
-        id: '',
-        title: '',
-        date: '',
-        amount: 0,
-        isIncome: false,
-        currency: 'INR',
-      ),
-    );
-    if (target.id.isEmpty) return;
+    final repository = await _readyRepository();
+    await repository.deleteTransaction(id);
 
     final updatedTxs = state.transactions.where((tx) => tx.id != id).toList();
-    if (_moneyTrackerRepository != null) {
-      await _moneyTrackerRepository!.saveTransactions(updatedTxs);
-    }
-
+    if (updatedTxs.length == state.transactions.length) return;
     state = state.copyWith(transactions: updatedTxs);
     await _recalculateSummary(updatedTxs);
+  }
+
+  /// The order the database returns: by timestamp, then date, newest first,
+  /// so a restored or re-dated transaction appears where a reload puts it.
+  static List<TransactionModel> _newestFirst(List<TransactionModel> txs) {
+    int byNewest(String? a, String? b) {
+      if (a == b) return 0;
+      if (a == null) return 1; // SQLite sorts NULL last when descending.
+      if (b == null) return -1;
+      return b.compareTo(a);
+    }
+
+    return txs
+      ..sort(
+        (a, b) {
+          final byTimestamp = byNewest(a.timestamp, b.timestamp);
+          if (byTimestamp != 0) return byTimestamp;
+          final byDate = byNewest(a.date, b.date);
+          return byDate != 0 ? byDate : b.id.compareTo(a.id);
+        },
+      );
   }
 
   Future<void> _recalculateSummary(List<TransactionModel> txs) async {
@@ -97,8 +141,8 @@ class HomeNotifier extends _$HomeNotifier {
     double totalBalance = 0;
 
     for (final tx in txs) {
-      final isTransfer = tx.title.startsWith('Transfer to');
-      if (isTransfer) continue;
+      // Transfers and balance adjustments are neither income nor spending.
+      if (!tx.countsAsIncomeOrExpense) continue;
 
       if (tx.isIncome) {
         totalBalance += tx.amount;
@@ -109,13 +153,15 @@ class HomeNotifier extends _$HomeNotifier {
       final txDate = DateTimeUtils.parseTransactionDate(tx.date);
       if (txDate == null) continue;
 
-      if (txDate.year == currentMonth.year && txDate.month == currentMonth.month) {
+      if (txDate.year == currentMonth.year &&
+          txDate.month == currentMonth.month) {
         if (tx.isIncome) {
           thisMonthIncome += tx.amount;
         } else {
           thisMonthExpense += tx.amount;
         }
-      } else if (txDate.year == previousMonth.year && txDate.month == previousMonth.month) {
+      } else if (txDate.year == previousMonth.year &&
+          txDate.month == previousMonth.month) {
         if (tx.isIncome) {
           lastMonthIncome += tx.amount;
         } else {
@@ -126,14 +172,16 @@ class HomeNotifier extends _$HomeNotifier {
 
     double incomeChange = 0;
     if (lastMonthIncome > 0) {
-      incomeChange = ((thisMonthIncome - lastMonthIncome) / lastMonthIncome) * 100;
+      incomeChange =
+          ((thisMonthIncome - lastMonthIncome) / lastMonthIncome) * 100;
     } else if (thisMonthIncome > 0) {
       incomeChange = 100;
     }
 
     double expenseChange = 0;
     if (lastMonthExpense > 0) {
-      expenseChange = ((thisMonthExpense - lastMonthExpense) / lastMonthExpense) * 100;
+      expenseChange =
+          ((thisMonthExpense - lastMonthExpense) / lastMonthExpense) * 100;
     } else if (thisMonthExpense > 0) {
       expenseChange = 100;
     }
@@ -147,15 +195,12 @@ class HomeNotifier extends _$HomeNotifier {
       selectedCurrency: state.summary?.selectedCurrency ?? 'INR',
     );
 
-    if (_moneyTrackerRepository != null) {
-      await _moneyTrackerRepository!.saveSummary(newSummary);
-    }
-
     state = state.copyWith(summary: newSummary);
-  }
 
-  Future<void> getTasks() async {
-    final tasks = await taskRepository.getTasks();
-    state = state.copyWith(tasks: tasks);
+    // The summary is derived from the transactions, so failing to cache it
+    // must not fail the mutation that triggered it.
+    try {
+      await _moneyTrackerRepository?.saveSummary(newSummary);
+    } catch (_) {}
   }
 }

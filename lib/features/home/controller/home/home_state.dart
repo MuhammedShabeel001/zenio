@@ -11,7 +11,6 @@ enum HomeStatus {
 sealed class HomeState with _$HomeState {
   const factory HomeState({
     @Default(HomeStatus.initial) HomeStatus status,
-    @Default([]) List<Task> tasks,
     FinancialSummaryModel? summary,
     @Default([]) List<TransactionModel> transactions,
   }) = _HomeState;

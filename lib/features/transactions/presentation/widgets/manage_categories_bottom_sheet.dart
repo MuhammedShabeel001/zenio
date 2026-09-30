@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zenio/features/subscriptions/controller/categories/subscription_categories_notifier.dart';
 import 'package:zenio/features/transactions/controller/categories/categories_notifier.dart';
 import 'package:zenio/features/transactions/domain/models/category_item_model.dart';
+import 'package:zenio/shared/theme/zenio_tokens.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 
 class ManageCategoriesBottomSheet extends ConsumerStatefulWidget {
@@ -72,6 +73,7 @@ class _ManageCategoriesBottomSheetState
 
   void _startCreate() {
     setState(() {
+      _nameError = null;
       _isCreatingOrEditing = true;
       _editingCategory = null;
       _nameController.clear();
@@ -82,6 +84,7 @@ class _ManageCategoriesBottomSheetState
 
   void _startEdit(CategoryItemModel category) {
     setState(() {
+      _nameError = null;
       _isCreatingOrEditing = true;
       _editingCategory = category;
       _nameController.text = category.name;
@@ -99,9 +102,26 @@ class _ManageCategoriesBottomSheetState
     });
   }
 
+  String? _nameError;
+
   Future<void> _saveCategory() async {
     final name = _nameController.text.trim();
-    if (name.isEmpty) return;
+    if (name.isEmpty) {
+      setState(() => _nameError = 'Enter a category name');
+      return;
+    }
+    final existing = widget.isSubscription
+        ? ref.read(subscriptionCategoriesNotifierProvider)
+        : ref.read(categoriesNotifierProvider);
+    final isDuplicate = existing.any(
+      (c) =>
+          c.id != _editingCategory?.id &&
+          c.name.trim().toLowerCase() == name.toLowerCase(),
+    );
+    if (isDuplicate) {
+      setState(() => _nameError = 'A category with this name already exists');
+      return;
+    }
 
     final emoji = _customEmojiController.text.trim().isNotEmpty
         ? _customEmojiController.text.trim()
@@ -116,6 +136,7 @@ class _ManageCategoriesBottomSheetState
           name: name,
           emoji: emoji,
         );
+        if (!mounted) return;
         setState(() {
           _isCreatingOrEditing = false;
           _editingCategory = null;
@@ -135,6 +156,7 @@ class _ManageCategoriesBottomSheetState
           name: name,
           emoji: emoji,
         );
+        if (!mounted) return;
         setState(() {
           _isCreatingOrEditing = false;
           _editingCategory = null;
@@ -172,7 +194,7 @@ class _ManageCategoriesBottomSheetState
                 width: 32,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFD1D1D6),
+                  color: ZenioColors.border,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -194,7 +216,7 @@ class _ManageCategoriesBottomSheetState
                     style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF111111),
+                      color: ZenioColors.textPrimary,
                     ),
                   ),
                   if (!_isCreatingOrEditing)
@@ -207,7 +229,7 @@ class _ManageCategoriesBottomSheetState
                           vertical: 8,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF10B981),
+                          color: ZenioColors.primary,
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: const Row(
@@ -242,7 +264,7 @@ class _ManageCategoriesBottomSheetState
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
-                            color: Color(0xFF8E8E93),
+                            color: ZenioColors.textSecondary,
                           ),
                         ),
                       ),
@@ -276,7 +298,7 @@ class _ManageCategoriesBottomSheetState
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w400,
-              color: Color(0xFF8E8E93),
+              color: ZenioColors.textSecondary,
             ),
           ),
         ),
@@ -289,7 +311,7 @@ class _ManageCategoriesBottomSheetState
           margin: const EdgeInsets.only(bottom: 6),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
-            color: const Color(0xFFF2F2F2),
+            color: ZenioColors.fieldFill,
             borderRadius: BorderRadius.circular(20),
           ),
           child: Row(
@@ -321,7 +343,7 @@ class _ManageCategoriesBottomSheetState
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF111111),
+                      color: ZenioColors.textPrimary,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -339,7 +361,7 @@ class _ManageCategoriesBottomSheetState
                     width: 18,
                     height: 18,
                     colorFilter: const ColorFilter.mode(
-                      Color(0xFF8E8E93),
+                      ZenioColors.textSecondary,
                       BlendMode.srcIn,
                     ),
                   ),
@@ -367,7 +389,7 @@ class _ManageCategoriesBottomSheetState
                     width: 18,
                     height: 18,
                     colorFilter: const ColorFilter.mode(
-                      Color(0xFFDD3D34),
+                      ZenioColors.danger,
                       BlendMode.srcIn,
                     ),
                   ),
@@ -392,7 +414,7 @@ class _ManageCategoriesBottomSheetState
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
-            color: const Color(0xFFF2F2F2),
+            color: ZenioColors.fieldFill,
             borderRadius: BorderRadius.circular(20),
           ),
           child: Row(
@@ -418,18 +440,19 @@ class _ManageCategoriesBottomSheetState
               Expanded(
                 child: TextField(
                   controller: _nameController,
-                  onChanged: (_) => setState(() {}),
+                  textCapitalization: TextCapitalization.sentences,
+                  onChanged: (_) => setState(() => _nameError = null),
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF111111),
+                    color: ZenioColors.textPrimary,
                   ),
                   decoration: const InputDecoration(
                     hintText: 'Category Name (e.g. Groceries)',
                     hintStyle: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w400,
-                      color: Color(0xFF9E9EA5),
+                      color: ZenioColors.textPlaceholder,
                     ),
                     isDense: true,
                     filled: false,
@@ -447,13 +470,21 @@ class _ManageCategoriesBottomSheetState
             ],
           ),
         ),
+        if (_nameError != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 6, 20, 0),
+            child: Text(
+              _nameError!,
+              style: const TextStyle(fontSize: 12, color: ZenioColors.danger),
+            ),
+          ),
         const SizedBox(height: 6),
 
         // Emoji Selection Container
         Container(
           padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
           decoration: BoxDecoration(
-            color: const Color(0xFFF2F2F2),
+            color: ZenioColors.fieldFill,
             borderRadius: BorderRadius.circular(20),
           ),
           child: Column(
@@ -467,7 +498,7 @@ class _ManageCategoriesBottomSheetState
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
-                      color: Color(0xFF8E8E93),
+                      color: ZenioColors.textSecondary,
                     ),
                   ),
                   // Custom emoji mini-input pill
@@ -486,7 +517,7 @@ class _ManageCategoriesBottomSheetState
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
-                            color: Color(0xFF8E8E93),
+                            color: ZenioColors.textSecondary,
                           ),
                         ),
                         SizedBox(
@@ -550,10 +581,10 @@ class _ManageCategoriesBottomSheetState
                       },
                       behavior: HitTestBehavior.opaque,
                       child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 150),
+                        duration: ZenioMotion.fast,
                         decoration: BoxDecoration(
                           color: isSelected
-                              ? const Color(0xFF10B981)
+                              ? ZenioColors.primary
                               : Colors.white,
                           borderRadius: BorderRadius.circular(14),
                         ),
@@ -579,7 +610,7 @@ class _ManageCategoriesBottomSheetState
           child: ElevatedButton(
             onPressed: _saveCategory,
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF10B981),
+              backgroundColor: ZenioColors.primary,
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),

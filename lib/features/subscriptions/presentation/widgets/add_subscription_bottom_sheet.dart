@@ -1,16 +1,19 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import 'package:zenio/features/subscriptions/controller/categories/subscription_categories_notifier.dart';
 import 'package:zenio/features/subscriptions/controller/subscriptions/subscriptions_notifier.dart';
 import 'package:zenio/features/subscriptions/domain/models/subscription_model.dart';
 import 'package:zenio/features/transactions/domain/models/category_item_model.dart';
 import 'package:zenio/features/transactions/presentation/widgets/manage_categories_bottom_sheet.dart';
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
+import 'package:zenio/shared/services/notification_service.dart';
+import 'package:zenio/shared/theme/zenio_tokens.dart';
 import 'package:zenio/shared/utils/app_fonts.dart';
 import 'package:zenio/shared/utils/formatters.dart';
+
 
 class AddSubscriptionBottomSheet extends ConsumerStatefulWidget {
   const AddSubscriptionBottomSheet({super.key});
@@ -85,12 +88,24 @@ class _AddSubscriptionBottomSheetState
     }
   }
 
-  void _saveSubscription() {
+  /// Why the subscription could not be saved, shown above the button.
+  String? _formError;
+  bool _isSaving = false;
+
+  Future<void> _saveSubscription() async {
+    if (_isSaving) return;
     final title = _titleController.text.trim();
-    if (title.isEmpty) return;
+    if (title.isEmpty) {
+      setState(() => _formError = 'Enter the subscription name');
+      return;
+    }
 
     final amount = AppNumberFormat.parseAmount(_amountController.text);
-    if (amount <= 0) return;
+    if (amount <= 0) {
+      setState(() => _formError = 'Enter an amount above 0');
+      return;
+    }
+    if (_formError != null) setState(() => _formError = null);
 
     final categories = ref.read(subscriptionCategoriesNotifierProvider);
     final selectedCat = categories.firstWhere(
@@ -113,8 +128,23 @@ class _AddSubscriptionBottomSheetState
       iconName: selectedCat.emoji,
     );
 
-    ref.read(subscriptionsNotifierProvider.notifier).addSubscription(sub);
-    Navigator.of(context).pop();
+    final navigator = Navigator.of(context);
+    setState(() => _isSaving = true);
+    try {
+      await ref.read(subscriptionsNotifierProvider.notifier).addSubscription(sub);
+    } catch (_) {
+      if (!mounted) return;
+      // Shown in the form: a snackbar would appear behind it.
+      setState(() => _isSaving = false);
+      setState(() => _formError = "Couldn't save the subscription. Please try again.");
+      return;
+    }
+    // The form may have been closed (or the Vault locked) meanwhile.
+    if (!mounted) return;
+    navigator.pop();
+    // Ask for notifications now, when the reason is obvious: renewal
+    // reminders for this subscription.
+    unawaited(ref.read(notificationServiceProvider).requestPermissions());
   }
 
   Widget _buildTabItem({
@@ -133,7 +163,7 @@ class _AddSubscriptionBottomSheetState
         behavior: HitTestBehavior.opaque,
         child: Container(
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFFF2F2F2) : Colors.transparent,
+            color: isSelected ? ZenioColors.fieldFill : Colors.transparent,
             borderRadius: BorderRadius.circular(30),
           ),
           child: Center(
@@ -143,7 +173,7 @@ class _AddSubscriptionBottomSheetState
                 fontSize: 14,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                 color: isSelected
-                    ? const Color(0xFF111111)
+                    ? ZenioColors.textPrimary
                     : const Color(0xFF808080),
               ),
             ),
@@ -180,7 +210,7 @@ class _AddSubscriptionBottomSheetState
                 width: 32,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFD1D1D6),
+                  color: ZenioColors.border,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -215,7 +245,7 @@ class _AddSubscriptionBottomSheetState
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
               decoration: BoxDecoration(
-                color: const Color(0xFFF2F2F2),
+                color: ZenioColors.fieldFill,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Row(
@@ -225,7 +255,7 @@ class _AddSubscriptionBottomSheetState
                     style: AppFonts.numeric(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
-                      color: const Color(0xFF111111),
+                      color: ZenioColors.textPrimary,
                     ),
                   ),
                   Expanded(
@@ -242,14 +272,14 @@ class _AddSubscriptionBottomSheetState
                       style: AppFonts.numeric(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
-                        color: const Color(0xFF111111),
+                        color: ZenioColors.textPrimary,
                       ),
                       decoration: InputDecoration(
                         hintText: '0',
                         hintStyle: AppFonts.numeric(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          color: const Color(0xFF9E9EA5),
+                          color: ZenioColors.textPlaceholder,
                         ),
                         isDense: true,
                         filled: false,
@@ -273,7 +303,7 @@ class _AddSubscriptionBottomSheetState
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
               decoration: BoxDecoration(
-                color: const Color(0xFFF2F2F2),
+                color: ZenioColors.fieldFill,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: TextField(
@@ -281,14 +311,14 @@ class _AddSubscriptionBottomSheetState
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
-                  color: Color(0xFF111111),
+                  color: ZenioColors.textPrimary,
                 ),
                 decoration: const InputDecoration(
                   hintText: 'Subscription Title (e.g. Netflix)',
                   hintStyle: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
-                    color: Color(0xFF9E9EA5),
+                    color: ZenioColors.textPlaceholder,
                   ),
                   isDense: true,
                   filled: false,
@@ -309,7 +339,7 @@ class _AddSubscriptionBottomSheetState
             Container(
               clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
-                color: const Color(0xFFF2F2F2),
+                color: ZenioColors.fieldFill,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Column(
@@ -325,7 +355,7 @@ class _AddSubscriptionBottomSheetState
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
-                            color: Color(0xFF8E8E93),
+                            color: ZenioColors.textSecondary,
                           ),
                         ),
                         GestureDetector(
@@ -353,7 +383,7 @@ class _AddSubscriptionBottomSheetState
                                 Icon(
                                   Icons.tune_rounded,
                                   size: 14,
-                                  color: Color(0xFF10B981),
+                                  color: ZenioColors.primary,
                                 ),
                                 SizedBox(width: 4),
                                 Text(
@@ -361,7 +391,7 @@ class _AddSubscriptionBottomSheetState
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
-                                    color: Color(0xFF10B981),
+                                    color: ZenioColors.primary,
                                   ),
                                 ),
                               ],
@@ -391,14 +421,14 @@ class _AddSubscriptionBottomSheetState
                             },
                             behavior: HitTestBehavior.opaque,
                             child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
+                              duration: ZenioMotion.fast,
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 14,
                                 vertical: 8,
                               ),
                               decoration: BoxDecoration(
                                 color: isSelected
-                                    ? const Color(0xFF10B981)
+                                    ? ZenioColors.primary
                                     : Colors.white,
                                 borderRadius: BorderRadius.circular(20),
                               ),
@@ -421,7 +451,7 @@ class _AddSubscriptionBottomSheetState
                                           : FontWeight.w500,
                                       color: isSelected
                                           ? Colors.white
-                                          : const Color(0xFF111111),
+                                          : ZenioColors.textPrimary,
                                     ),
                                   ),
                                 ],
@@ -445,7 +475,7 @@ class _AddSubscriptionBottomSheetState
                 padding:
                     const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF2F2F2),
+                  color: ZenioColors.fieldFill,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -453,7 +483,7 @@ class _AddSubscriptionBottomSheetState
                     const Icon(
                       Icons.calendar_today_rounded,
                       size: 20,
-                      color: Color(0xFF8E8E93),
+                      color: ZenioColors.textSecondary,
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -471,7 +501,7 @@ class _AddSubscriptionBottomSheetState
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
-                        color: Color(0xFF8E8E93),
+                        color: ZenioColors.textSecondary,
                       ),
                     ),
                   ],
@@ -480,13 +510,21 @@ class _AddSubscriptionBottomSheetState
             ),
             const SizedBox(height: 6),
 
+            if (_formError != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(
+                  _formError!,
+                  style: const TextStyle(fontSize: 12, color: ZenioColors.danger),
+                ),
+              ),
             // Save Button
             SizedBox(
               height: 60,
               child: ElevatedButton(
-                onPressed: _saveSubscription,
+                onPressed: _isSaving ? null : _saveSubscription,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF10B981),
+                  backgroundColor: ZenioColors.primary,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zenio/features/feedback/controller/feedback_notifier.dart';
+import 'package:zenio/features/feedback/controller/feedback_state.dart';
+import 'package:zenio/shared/theme/zenio_tokens.dart';
 import 'package:zenio/shared/widgets/zenio_snack_bar.dart';
 
 class FeedbackBottomSheet extends ConsumerStatefulWidget {
@@ -103,15 +105,9 @@ class _FeedbackBottomSheetState extends ConsumerState<FeedbackBottomSheet> {
         message: 'Thank you! Your feedback has been received.',
         type: ZenioSnackBarType.success,
       );
-    } else {
-      final error = ref.read(feedbackNotifierProvider).errorMessage ??
-          'Failed to send feedback. Please try again.';
-      ZenioSnackBar.show(
-        context,
-        message: error,
-        type: ZenioSnackBarType.error,
-      );
     }
+    // On failure the message is shown in the sheet, above the button: a
+    // snackbar would appear behind the sheet.
   }
 
   @override
@@ -140,7 +136,7 @@ class _FeedbackBottomSheetState extends ConsumerState<FeedbackBottomSheet> {
                   width: 32,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFD1D1D6),
+                    color: ZenioColors.border,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -158,23 +154,35 @@ class _FeedbackBottomSheetState extends ConsumerState<FeedbackBottomSheet> {
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF111111),
+                        color: ZenioColors.textPrimary,
                       ),
                     ),
-                    GestureDetector(
+                    Semantics(
+                      button: true,
+                      label: 'Close',
+                      excludeSemantics: true,
                       onTap: () => Navigator.of(context).pop(),
-                      behavior: HitTestBehavior.opaque,
-                      child: Container(
+                      child: GestureDetector(
+                        onTap: () => Navigator.of(context).pop(),
+                        behavior: HitTestBehavior.opaque,
+                        // A 44dp touch area around the 32dp circle.
+                        child: SizedBox.square(
+                          dimension: 44,
+                          child: Center(
+                            child: Container(
                         width: 32,
                         height: 32,
                         decoration: const BoxDecoration(
-                          color: Color(0xFFF2F2F2),
+                          color: ZenioColors.fieldFill,
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
                           Icons.close_rounded,
                           size: 18,
-                          color: Color(0xFF8E8E93),
+                          color: ZenioColors.textSecondary,
+                        ),
+                      ),
+                          ),
                         ),
                       ),
                     ),
@@ -188,7 +196,7 @@ class _FeedbackBottomSheetState extends ConsumerState<FeedbackBottomSheet> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF2F2F2),
+                  color: ZenioColors.fieldFill,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Column(
@@ -206,7 +214,7 @@ class _FeedbackBottomSheetState extends ConsumerState<FeedbackBottomSheet> {
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF111111),
+                            color: ZenioColors.textPrimary,
                           ),
                         ),
                       ],
@@ -218,7 +226,7 @@ class _FeedbackBottomSheetState extends ConsumerState<FeedbackBottomSheet> {
                       style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w400,
-                        color: Color(0xFF8E8E93),
+                        color: ZenioColors.textSecondary,
                       ),
                     ),
                     const SizedBox(height: 14),
@@ -239,7 +247,7 @@ class _FeedbackBottomSheetState extends ConsumerState<FeedbackBottomSheet> {
                             padding: const EdgeInsets.symmetric(horizontal: 6),
                             child: AnimatedScale(
                               scale: isFilled ? 1.15 : 1.0,
-                              duration: const Duration(milliseconds: 180),
+                              duration: ZenioMotion.fast,
                               child: Icon(
                                 isFilled
                                     ? Icons.star_rounded
@@ -262,7 +270,7 @@ class _FeedbackBottomSheetState extends ConsumerState<FeedbackBottomSheet> {
               // 2. Category Selector
               Container(
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF2F2F2),
+                  color: ZenioColors.fieldFill,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Column(
@@ -275,7 +283,7 @@ class _FeedbackBottomSheetState extends ConsumerState<FeedbackBottomSheet> {
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
-                          color: Color(0xFF8E8E93),
+                          color: ZenioColors.textSecondary,
                         ),
                       ),
                     ),
@@ -297,14 +305,14 @@ class _FeedbackBottomSheetState extends ConsumerState<FeedbackBottomSheet> {
                               },
                               behavior: HitTestBehavior.opaque,
                               child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 200),
+                                duration: ZenioMotion.fast,
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 14,
                                   vertical: 8,
                                 ),
                                 decoration: BoxDecoration(
                                   color: isSelected
-                                      ? const Color(0xFF10B981)
+                                      ? ZenioColors.primary
                                       : Colors.white,
                                   borderRadius: BorderRadius.circular(20),
                                 ),
@@ -325,7 +333,7 @@ class _FeedbackBottomSheetState extends ConsumerState<FeedbackBottomSheet> {
                                             : FontWeight.w500,
                                         color: isSelected
                                             ? Colors.white
-                                            : const Color(0xFF111111),
+                                            : ZenioColors.textPrimary,
                                       ),
                                     ),
                                   ],
@@ -346,7 +354,7 @@ class _FeedbackBottomSheetState extends ConsumerState<FeedbackBottomSheet> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF2F2F2),
+                  color: ZenioColors.fieldFill,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: TextFormField(
@@ -357,14 +365,14 @@ class _FeedbackBottomSheetState extends ConsumerState<FeedbackBottomSheet> {
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
-                    color: Color(0xFF111111),
+                    color: ZenioColors.textPrimary,
                   ),
                   decoration: const InputDecoration(
                     hintText: 'Email address (e.g. name@example.com)',
                     hintStyle: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w500,
-                      color: Color(0xFF9E9EA5),
+                      color: ZenioColors.textPlaceholder,
                     ),
                     isDense: true,
                     filled: false,
@@ -379,7 +387,7 @@ class _FeedbackBottomSheetState extends ConsumerState<FeedbackBottomSheet> {
                     errorStyle: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
-                      color: Color(0xFFDD3D34),
+                      color: ZenioColors.danger,
                     ),
                   ),
                   validator: (value) {
@@ -401,7 +409,7 @@ class _FeedbackBottomSheetState extends ConsumerState<FeedbackBottomSheet> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF2F2F2),
+                  color: ZenioColors.fieldFill,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Column(
@@ -424,7 +432,7 @@ class _FeedbackBottomSheetState extends ConsumerState<FeedbackBottomSheet> {
                       style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w500,
-                        color: Color(0xFF111111),
+                        color: ZenioColors.textPrimary,
                         height: 1.4,
                       ),
                       decoration: const InputDecoration(
@@ -433,7 +441,7 @@ class _FeedbackBottomSheetState extends ConsumerState<FeedbackBottomSheet> {
                         hintStyle: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w400,
-                          color: Color(0xFF9E9EA5),
+                          color: ZenioColors.textPlaceholder,
                         ),
                         isDense: true,
                         filled: false,
@@ -448,7 +456,7 @@ class _FeedbackBottomSheetState extends ConsumerState<FeedbackBottomSheet> {
                         errorStyle: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
-                          color: Color(0xFFDD3D34),
+                          color: ZenioColors.danger,
                         ),
                       ),
                       validator: (value) {
@@ -469,7 +477,7 @@ class _FeedbackBottomSheetState extends ConsumerState<FeedbackBottomSheet> {
                         style: const TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w500,
-                          color: Color(0xFF8E8E93),
+                          color: ZenioColors.textSecondary,
                         ),
                       ),
                     ),
@@ -478,15 +486,28 @@ class _FeedbackBottomSheetState extends ConsumerState<FeedbackBottomSheet> {
               ),
               const SizedBox(height: 16),
 
+              if (state.status == FeedbackSubmissionStatus.error &&
+                  state.errorMessage != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Text(
+                    state.errorMessage!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: ZenioColors.danger,
+                    ),
+                  ),
+                ),
               // 5. Submit Button
               SizedBox(
                 height: 56,
                 child: ElevatedButton(
                   onPressed: state.isSubmitting ? null : _submitFeedback,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF10B981),
+                    backgroundColor: ZenioColors.primary,
                     disabledBackgroundColor:
-                        const Color(0xFF10B981).withValues(alpha: 0.6),
+                        ZenioColors.primary.withValues(alpha: 0.6),
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),

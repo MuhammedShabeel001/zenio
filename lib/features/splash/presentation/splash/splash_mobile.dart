@@ -1,23 +1,23 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hancod_theme/hancod_theme.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:zenio/features/onboarding/controller/onboarding_controller.dart';
+import 'package:zenio/features/splash/presentation/splash/splash_startup.dart';
 import 'package:zenio/features/splash/presentation/widgets/animated_zenio_logo.dart';
+import 'package:zenio/shared/theme/zenio_tokens.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
-import 'package:zenio/shared/utils/router.dart';
 
-class SplashScreenMobile extends StatefulWidget {
+class SplashScreenMobile extends ConsumerStatefulWidget {
   const SplashScreenMobile({super.key});
 
   @override
-  State<SplashScreenMobile> createState() => _SplashScreenMobileState();
+  ConsumerState<SplashScreenMobile> createState() => _SplashScreenMobileState();
 }
 
-class _SplashScreenMobileState extends State<SplashScreenMobile>
+class _SplashScreenMobileState extends ConsumerState<SplashScreenMobile>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   late final Animation<Offset> _bottomCardSlide;
@@ -26,6 +26,7 @@ class _SplashScreenMobileState extends State<SplashScreenMobile>
 
   Timer? _navigationTimer;
   bool _hasNavigated = false;
+  bool _startupFailed = false;
 
   @override
   void initState() {
@@ -59,7 +60,11 @@ class _SplashScreenMobileState extends State<SplashScreenMobile>
     _controller.forward();
 
     _navigationTimer =
-        Timer(const Duration(milliseconds: 2600), _navigateToNext);
+        Timer(
+      // Just after the 1.7s logo animation; storage is awaited as well.
+      const Duration(milliseconds: 1800),
+      _navigateToNext,
+    );
   }
 
   Future<void> _navigateToNext() async {
@@ -67,19 +72,26 @@ class _SplashScreenMobileState extends State<SplashScreenMobile>
     _hasNavigated = true;
     _navigationTimer?.cancel();
 
-    var hasSeenOnboarding = false;
+    final String route;
     try {
-      final sp = await SharedPreferences.getInstance();
-      hasSeenOnboarding =
-          sp.getBool(OnboardingController.keyHasSeenOnboarding) ?? false;
-    } catch (_) {}
+      route = await resolveStartupRoute(ref);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _hasNavigated = false;
+        _startupFailed = true;
+      });
+      return;
+    }
 
     if (!mounted) return;
-    if (hasSeenOnboarding) {
-      context.goNamed(AppRouter.home);
-    } else {
-      context.goNamed(AppRouter.onboarding);
-    }
+    context.goNamed(route);
+  }
+
+  void _retryStartup() {
+    retryStartup(ref);
+    setState(() => _startupFailed = false);
+    _navigateToNext();
   }
 
   @override
@@ -155,18 +167,33 @@ class _SplashScreenMobileState extends State<SplashScreenMobile>
                             height: 28,
                           ),
                           const SizedBox(height: 8),
-                          FadeTransition(
-                            opacity: _subtitleFade,
-                            child: Text(
-                              'by auren',
+                          if (_startupFailed) ...[
+                            Text(
+                              "Zenio couldn't open your data.",
+                              textAlign: TextAlign.center,
                               style: GoogleFonts.montserrat(
                                 fontSize: 13,
-                                fontWeight: FontWeight.w400,
-                                color: const Color(0xFF8E8E93),
-                                letterSpacing: 0.6,
+                                fontWeight: FontWeight.w500,
+                                color: ZenioColors.textPrimary,
                               ),
                             ),
-                          ),
+                            TextButton(
+                              onPressed: _retryStartup,
+                              child: const Text('Try again'),
+                            ),
+                          ] else
+                            FadeTransition(
+                              opacity: _subtitleFade,
+                              child: Text(
+                                'by auren',
+                                style: GoogleFonts.montserrat(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w400,
+                                  color: ZenioColors.textSecondary,
+                                  letterSpacing: 0.6,
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                     ),

@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
+import 'package:zenio/shared/widgets/item_actions.dart';
 import 'package:zenio/features/debts/domain/models/debt_model.dart';
-import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/shared.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
-import 'package:zenio/shared/widgets/swipe_delete_button.dart';
 
 class DebtCard extends ConsumerStatefulWidget {
   const DebtCard({
@@ -52,7 +50,7 @@ class _DebtCardState extends ConsumerState<DebtCard>
     super.initState();
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 250),
+      duration: ZenioMotion.standard,
     );
 
     _dragOffset = widget.isOpen ? -_maxDragDistance : 0;
@@ -145,7 +143,12 @@ class _DebtCardState extends ConsumerState<DebtCard>
   @override
   Widget build(BuildContext context) {
     final currencyCode = ref.watch(currencyCodeProvider);
-    return Container(
+    return ItemActions(
+      onEdit: widget.onEdit,
+      onDelete: widget.onDelete,
+      // The swipe button asks twice; long press and screen readers confirm.
+      confirmDeleteTitle: 'Delete this debt?',
+      child: Container(
       margin: const EdgeInsets.only(bottom: 5),
       child: Stack(
         clipBehavior: Clip.none,
@@ -154,47 +157,57 @@ class _DebtCardState extends ConsumerState<DebtCard>
           Positioned(
             top: 0,
             right: 0,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Delete Button (First tap: red trash icon; tap again to confirm: red circle with white checkmark)
-                SwipeDeleteButton(
-                  isConfirming: _isConfirmingDelete,
-                  onTap: () {
-                    if (!_isConfirmingDelete) {
-                      setState(() {
-                        _isConfirmingDelete = true;
-                      });
-                    } else {
-                      _close();
-                      widget.onDelete?.call();
-                    }
-                  },
-                ),
-                const SizedBox(width: 3),
-
-                // Edit Button (White Circle + Pencil Edit Icon)
-                GestureDetector(
-                  onTap: () {
-                    _close();
-                    widget.onEdit?.call();
-                  },
-                  child: Container(
-                    width: 70,
-                    height: 70,
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Assets.icons.edit.svg(
-                        width: 24,
-                        height: 24,
+            child: ExcludeSemantics(
+              // Hidden under the card until it is swiped open; the card's own
+              // actions offer Edit and Delete meanwhile.
+              excluding: _dragOffset == 0,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Delete Button (First tap: red trash icon; tap again to confirm: red circle with white checkmark)
+                  SwipeDeleteButton(
+                    isConfirming: _isConfirmingDelete,
+                    onTap: () {
+                      if (!_isConfirmingDelete) {
+                        setState(() {
+                          _isConfirmingDelete = true;
+                        });
+                      } else {
+                        _close();
+                        widget.onDelete?.call();
+                      }
+                    },
+                  ),
+                  const SizedBox(width: 3),
+  
+                  // Edit Button (White Circle + Pencil Edit Icon)
+                  Semantics(
+                    button: true,
+                    label: 'Edit',
+                    excludeSemantics: true,
+                    child: GestureDetector(
+                      onTap: () {
+                        _close();
+                        widget.onEdit?.call();
+                      },
+                      child: Container(
+                        width: 70,
+                        height: 70,
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Assets.icons.edit.svg(
+                            width: 24,
+                            height: 24,
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
 
@@ -222,7 +235,7 @@ class _DebtCardState extends ConsumerState<DebtCard>
                 }
               },
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
+                duration: ZenioMotion.standard,
                 curve: Curves.fastOutSlowIn,
                 padding: const EdgeInsets.fromLTRB(5, 5, 20, 5),
                 decoration: BoxDecoration(
@@ -240,7 +253,7 @@ class _DebtCardState extends ConsumerState<DebtCard>
                           width: 60,
                           height: 60,
                           decoration: const BoxDecoration(
-                            color: Color(0xFFF2F2F2),
+                            color: ZenioColors.fieldFill,
                             shape: BoxShape.circle,
                           ),
                           child: Center(
@@ -311,7 +324,7 @@ class _DebtCardState extends ConsumerState<DebtCard>
                               style: const TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
-                                color: Color(0xFF8E8E93),
+                                color: ZenioColors.textSecondary,
                               ),
                             ),
                           ],
@@ -321,7 +334,7 @@ class _DebtCardState extends ConsumerState<DebtCard>
 
                     // Expandable Detail Section (Description Header & Note Text)
                     AnimatedCrossFade(
-                      duration: const Duration(milliseconds: 300),
+                      duration: ZenioMotion.standard,
                       firstCurve: Curves.fastOutSlowIn,
                       secondCurve: Curves.fastOutSlowIn,
                       sizeCurve: Curves.fastOutSlowIn,
@@ -343,7 +356,7 @@ class _DebtCardState extends ConsumerState<DebtCard>
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w400,
-                                color: Color(0xFF8E8E93),
+                                color: ZenioColors.textSecondary,
                               ),
                             ),
                             const SizedBox(height: 4),
@@ -354,7 +367,7 @@ class _DebtCardState extends ConsumerState<DebtCard>
                               style: const TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w400,
-                                color: Color(0xFF111111),
+                                color: ZenioColors.textPrimary,
                               ),
                             ),
                           ],
@@ -368,6 +381,7 @@ class _DebtCardState extends ConsumerState<DebtCard>
           ),
         ],
       ),
+    ),
     );
   }
 }

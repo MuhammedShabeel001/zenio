@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import 'package:zenio/features/vault/controller/vault/vault_notifier.dart';
 import 'package:zenio/features/vault/controller/vault/vault_state.dart';
 import 'package:zenio/features/vault/domain/models/vault_card_model.dart';
 import 'package:zenio/features/vault/domain/models/vault_note_model.dart';
+import 'package:zenio/features/vault/domain/repositories/implementations/vault_repository.dart';
+import 'package:zenio/features/vault/domain/vault_card_validation.dart';
+import 'package:zenio/shared/theme/zenio_tokens.dart';
 import 'package:zenio/shared/utils/app_fonts.dart';
+import 'package:zenio/shared/utils/formatters.dart';
 
 class AddVaultItemBottomSheet extends ConsumerStatefulWidget {
   final VaultMode mode;
@@ -90,7 +94,14 @@ class _AddVaultItemBottomSheetState
     }
   }
 
-  void _save() {
+  bool _isSaving = false;
+
+  /// Why the item could not be saved, shown above the button.
+  String? _formError;
+
+  Future<void> _save() async {
+    if (_isSaving) return;
+    late Future<void> Function() save;
     final id = DateTime.now().millisecondsSinceEpoch.toString();
 
     if (_currentMode == VaultMode.cards) {
@@ -99,7 +110,14 @@ class _AddVaultItemBottomSheetState
       final expiry = _expiryController.text.trim();
       final cvv = _cvvController.text.trim();
 
-      if (type.isEmpty || number.isEmpty || expiry.isEmpty || cvv.isEmpty) {
+      final problem = validateVaultCard(
+        type: type,
+        number: number,
+        expiry: expiry,
+        cvv: cvv,
+      );
+      if (problem != null) {
+        setState(() => _formError = problem);
         return;
       }
 
@@ -110,10 +128,13 @@ class _AddVaultItemBottomSheetState
         expiry: expiry,
         cvv: cvv,
       );
-      ref.read(vaultNotifierProvider.notifier).addCard(card);
+      save = () => ref.read(vaultNotifierProvider.notifier).addCard(card);
     } else {
       final content = _noteContentController.text.trim();
-      if (content.isEmpty) return;
+      if (content.isEmpty) {
+        setState(() => _formError = 'Write something to save');
+        return;
+      }
 
       final formattedDate = DateFormat('dd MMMM yyyy').format(_selectedDate);
       final note = VaultNoteModel(
@@ -121,10 +142,29 @@ class _AddVaultItemBottomSheetState
         date: formattedDate,
         content: content,
       );
-      ref.read(vaultNotifierProvider.notifier).addNote(note);
+      save = () => ref.read(vaultNotifierProvider.notifier).addNote(note);
     }
 
-    Navigator.of(context).pop();
+    final navigator = Navigator.of(context);
+    setState(() {
+      _isSaving = true;
+      _formError = null;
+    });
+    try {
+      await save();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isSaving = false;
+        _formError = e is VaultUnavailableException
+            ? e.toString()
+            : "Couldn't save. Please try again.";
+      });
+      return;
+    }
+    // The form may have been closed (or the Vault locked) meanwhile.
+    if (!mounted) return;
+    navigator.pop();
   }
 
   Widget _buildTabItem({
@@ -144,7 +184,7 @@ class _AddVaultItemBottomSheetState
         behavior: HitTestBehavior.opaque,
         child: Container(
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFFF2F2F2) : Colors.transparent,
+            color: isSelected ? ZenioColors.fieldFill : Colors.transparent,
             borderRadius: BorderRadius.circular(30),
           ),
           child: Center(
@@ -170,30 +210,34 @@ class _AddVaultItemBottomSheetState
     int minLines = 1,
     int maxLines = 1,
     bool isNumeric = false,
+    bool obscureText = false,
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
       padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
       decoration: BoxDecoration(
-        color: const Color(0xFFF2F2F2),
+        color: ZenioColors.fieldFill,
         borderRadius: BorderRadius.circular(20),
       ),
       child: TextField(
         controller: controller,
         keyboardType: keyboardType,
         inputFormatters: inputFormatters,
+        obscureText: obscureText,
+        enableSuggestions: !obscureText,
+        autocorrect: !obscureText,
         minLines: minLines,
         maxLines: maxLines,
         style: isNumeric
             ? AppFonts.numeric(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
-                color: const Color(0xFF111111),
+                color: ZenioColors.textPrimary,
               )
             : const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
-                color: Color(0xFF111111),
+                color: ZenioColors.textPrimary,
               ),
         decoration: InputDecoration(
           hintText: hintText,
@@ -201,12 +245,12 @@ class _AddVaultItemBottomSheetState
               ? AppFonts.numeric(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
-                  color: const Color(0xFF9E9EA5),
+                  color: ZenioColors.textPlaceholder,
                 )
               : const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
-                  color: Color(0xFF9E9EA5),
+                  color: ZenioColors.textPlaceholder,
                 ),
           isDense: true,
           filled: false,
@@ -248,7 +292,7 @@ class _AddVaultItemBottomSheetState
                 width: 32,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFD1D1D6),
+                  color: ZenioColors.border,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -301,8 +345,7 @@ class _AddVaultItemBottomSheetState
                 keyboardType: TextInputType.datetime,
                 isNumeric: true,
                 inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp('^[0-9/]*')),
-                  LengthLimitingTextInputFormatter(5),
+                  ExpiryDateInputFormatter(),
                 ],
               ),
               _buildTextField(
@@ -310,6 +353,7 @@ class _AddVaultItemBottomSheetState
                 'CVV',
                 keyboardType: TextInputType.number,
                 isNumeric: true,
+                obscureText: true,
                 inputFormatters: [
                   FilteringTextInputFormatter.digitsOnly,
                   LengthLimitingTextInputFormatter(4),
@@ -334,7 +378,7 @@ class _AddVaultItemBottomSheetState
                   padding:
                       const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF2F2F2),
+                    color: ZenioColors.fieldFill,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
@@ -342,7 +386,7 @@ class _AddVaultItemBottomSheetState
                       const Icon(
                         Icons.calendar_today_rounded,
                         size: 20,
-                        color: Color(0xFF8E8E93),
+                        color: ZenioColors.textSecondary,
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -360,7 +404,7 @@ class _AddVaultItemBottomSheetState
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
-                          color: Color(0xFF8E8E93),
+                          color: ZenioColors.textSecondary,
                         ),
                       ),
                     ],
@@ -371,13 +415,21 @@ class _AddVaultItemBottomSheetState
 
             const SizedBox(height: 12),
 
+            if (_formError != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                child: Text(
+                  _formError!,
+                  style: const TextStyle(fontSize: 12, color: ZenioColors.danger),
+                ),
+              ),
             // Save Button
             SizedBox(
               height: 60,
               child: ElevatedButton(
-                onPressed: _save,
+                onPressed: _isSaving ? null : _save,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF10B981),
+                  backgroundColor: ZenioColors.primary,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),

@@ -1,9 +1,10 @@
-import 'package:zenio/shared/providers/providers.dart';
 import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:zenio/features/split/domain/models/split_calculation_model.dart';
 import 'package:zenio/features/split/domain/repositories/interfaces/i_split_repository.dart';
+import 'package:zenio/shared/providers/providers.dart';
 
 part 'split_repository.g.dart';
 
@@ -17,40 +18,28 @@ const SplitCalculationModel defaultSplitData = SplitCalculationModel(
 class SplitRepository implements ISplitRepository {
   SplitRepository(this._prefs);
 
-  final SqlitePrefs? _prefs;
+  final SqlitePrefs _prefs;
 
   static const String _splitKey = 'split_calculation_data_v1';
 
   @override
   Future<SplitCalculationModel> getSavedSplit() async {
-    final prefs = _prefs;
-    if (prefs == null) return defaultSplitData;
-
-    final rawJson = prefs.getString(_splitKey);
-    if (rawJson != null && rawJson.isNotEmpty) {
-      try {
-        final map = jsonDecode(rawJson) as Map<String, dynamic>;
-        return SplitCalculationModel.fromJson(map);
-      } catch (_) {
-        // Fallback to default
-      }
-    }
-
-    await saveSplit(defaultSplitData);
-    return defaultSplitData;
+    final saved =
+        await _prefs.readJsonObject(_splitKey, SplitCalculationModel.fromJson);
+    return saved ?? defaultSplitData;
   }
 
   @override
   Future<void> saveSplit(SplitCalculationModel split) async {
-    final prefs = _prefs;
-    if (prefs == null) return;
-    await prefs.setString(_splitKey, jsonEncode(split.toJson()));
+    await _prefs.setString(_splitKey, jsonEncode(split.toJson()));
   }
 }
 
 @Riverpod(keepAlive: true)
 ISplitRepository splitRepositoryRepo(Ref ref) {
-  final prefsAsync = ref.watch(sqlitePrefsProvider);
-  final prefs = prefsAsync.valueOrNull;
+  final prefs = ref.watch(sqlitePrefsProvider).valueOrNull;
+  if (prefs == null) {
+    throw StateError('Local storage is not ready yet.');
+  }
   return SplitRepository(prefs);
 }

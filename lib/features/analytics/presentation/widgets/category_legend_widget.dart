@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:zenio/features/analytics/domain/models/category_spend/category_spend_model.dart';
+import 'package:zenio/shared/theme/zenio_tokens.dart';
 
 class CategoryLegendWidget extends StatelessWidget {
   const CategoryLegendWidget({
@@ -13,7 +14,7 @@ class CategoryLegendWidget extends StatelessWidget {
     try {
       return Color(int.parse(hex));
     } catch (_) {
-      return const Color(0xFF10B981);
+      return ZenioColors.primary;
     }
   }
 
@@ -44,7 +45,7 @@ class CategoryLegendWidget extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
-                color: Color(0xFF8E8E93),
+                color: ZenioColors.textSecondary,
               ),
             ),
           ],

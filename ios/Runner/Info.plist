@@ -38,7 +38,7 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSFaceIDUsageDescription</key>
-	<string>Zenio uses Face ID to securely authenticate and protect your Vault and settings.</string>
+	<string>Zenio uses Face ID to unlock your Vault when Vault Lock is on.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
