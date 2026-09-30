@@ -16,6 +16,8 @@ abstract class TransactionDetailModel with _$TransactionDetailModel {
     @JsonKey(name: 'bank_name') String? bankName,
     @JsonKey(name: 'timestamp') String? timestamp,
     @JsonKey(name: 'kind') String? kind,
+    @JsonKey(name: 'transfer_from') String? transferFrom,
+    @JsonKey(name: 'transfer_to') String? transferTo,
   }) = _TransactionDetailModel;
 
   factory TransactionDetailModel.fromJson(Map<String, dynamic> json) =>

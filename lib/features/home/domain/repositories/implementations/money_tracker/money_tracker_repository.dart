@@ -1,10 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:zenio/features/home/domain/models/transaction/transaction_kind.dart';
 import 'package:zenio/features/home/domain/models/transaction/transaction_model.dart';
 import 'package:zenio/features/home/domain/repositories/interfaces/money_tracker/i_money_tracker_repository.dart';
 import 'package:zenio/features/wallet/domain/wallet_balances.dart';
 import 'package:zenio/shared/providers/providers.dart';
+import 'package:zenio/shared/utils/money_limits.dart';
 
 part 'money_tracker_repository.g.dart';
 
@@ -19,9 +21,14 @@ class MoneyTrackerRepository implements IMoneyTrackerRepository {
     final transactions = <TransactionModel>[];
     for (final map in maps) {
       try {
-        transactions.add(TransactionModel.fromJson(_fromRow(map)));
+        final transaction = TransactionModel.fromJson(_fromRow(map));
+        // An amount no version should have stored (NaN or an infinity)
+        // would break every total and list it reached.
+        checkReadableAmount(transaction.amount, 'transaction amount');
+        transactions.add(transaction);
       } catch (error) {
-        // Leave the row in the database; it is simply not shown.
+        // Leave the row in the database, unchanged; it is simply not shown
+        // or counted.
         if (kDebugMode) {
           debugPrint('Skipping unreadable transaction ${map['id']}: $error');
         }
@@ -51,14 +58,29 @@ class MoneyTrackerRepository implements IMoneyTrackerRepository {
   @override
   Future<void> renameWallet(String oldName, String newName) async {
     await _dbService.updateTransactionRows((row) {
+      final title = row['title']! as String;
+      final bankName = row['bank_name'] as String?;
       final renamed = renamedWalletReferences(
-        title: row['title']! as String,
-        bankName: row['bank_name'] as String?,
+        kind: resolveTransactionKind(
+          kind: row['kind'] as String?,
+          title: title,
+          bankName: bankName,
+          isIncome: row['is_income'] == 1,
+        ),
+        title: title,
+        bankName: bankName,
+        transferFrom: row['transfer_from'] as String?,
+        transferTo: row['transfer_to'] as String?,
         oldName: oldName,
         newName: newName,
       );
       if (renamed == null) return null;
-      return {'title': renamed.title, 'bank_name': renamed.bankName};
+      return {
+        'title': renamed.title,
+        'bank_name': renamed.bankName,
+        'transfer_from': renamed.transferFrom,
+        'transfer_to': renamed.transferTo,
+      };
     });
   }
 
@@ -69,6 +91,10 @@ class MoneyTrackerRepository implements IMoneyTrackerRepository {
     map['is_income'] = isIncome == 1 || isIncome == true;
     return map;
   }
+
+  /// [transaction] as a database row.
+  static Map<String, dynamic> toRow(TransactionModel transaction) =>
+      _toRow(transaction);
 
   static Map<String, dynamic> _toRow(TransactionModel transaction) {
     final map = transaction.toJson();

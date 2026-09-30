@@ -12,30 +12,23 @@ class TransactionDetailCard extends ConsumerStatefulWidget {
     required this.transaction,
     this.onDelete,
     this.onEdit,
+    this.onTap,
     this.isOpen = false,
     this.onOpen,
     this.onClose,
-    this.isTileExpanded,
-    this.onTileTap,
-    this.onExpansionChanged,
-    this.note,
-    this.bankName,
-    this.timestamp,
     super.key,
   });
 
   final TransactionDetailModel transaction;
   final VoidCallback? onDelete;
   final VoidCallback? onEdit;
+
+  /// What a tap does when the transaction cannot be edited, for example
+  /// showing an adjustment's details. A tap otherwise opens [onEdit].
+  final VoidCallback? onTap;
   final bool isOpen;
   final VoidCallback? onOpen;
   final VoidCallback? onClose;
-  final bool? isTileExpanded;
-  final VoidCallback? onTileTap;
-  final ValueChanged<bool>? onExpansionChanged;
-  final String? note;
-  final String? bankName;
-  final String? timestamp;
 
   @override
   ConsumerState<TransactionDetailCard> createState() => _TransactionDetailCardState();
@@ -49,10 +42,6 @@ class _TransactionDetailCardState extends ConsumerState<TransactionDetailCard>
   /// How far the card slides open: Delete and Edit, or Delete alone for
   /// items that cannot be edited.
   double get _maxDragDistance => widget.onEdit == null ? 76 : 146;
-  bool _internalTileExpanded = false;
-
-  bool get _effectiveIsTileExpanded =>
-      widget.isTileExpanded ?? _internalTileExpanded;
 
   @override
   void initState() {
@@ -218,17 +207,14 @@ class _TransactionDetailCardState extends ConsumerState<TransactionDetailCard>
             child: GestureDetector(
               onHorizontalDragUpdate: _onHorizontalDragUpdate,
               onHorizontalDragEnd: _onHorizontalDragEnd,
+              // A tap opens the transaction for editing (or closes the
+              // swiped-open buttons). One that can't be edited, such as a
+              // balance adjustment, shows its details instead.
               onTap: () {
                 if (_dragOffset < 0) {
                   _close();
                 } else {
-                  if (widget.onTileTap != null) {
-                    widget.onTileTap!();
-                  } else {
-                    setState(() {
-                      _internalTileExpanded = !_internalTileExpanded;
-                    });
-                  }
+                  (widget.onEdit ?? widget.onTap)?.call();
                 }
               },
               child: AnimatedContainer(
@@ -250,9 +236,10 @@ class _TransactionDetailCardState extends ConsumerState<TransactionDetailCard>
                         amount: amountText,
                         when: tx.date.toRelativeDate,
                       ),
-                      onTapHint: _effectiveIsTileExpanded
-                          ? 'hide details'
-                          : 'show details',
+                      onTapHint: transactionTapHint(
+                        canEdit: widget.onEdit != null,
+                        hasDetails: widget.onTap != null,
+                      ),
                       excludeSemantics: true,
                       child: Row(
                       children: [
@@ -265,7 +252,13 @@ class _TransactionDetailCardState extends ConsumerState<TransactionDetailCard>
                             shape: BoxShape.circle,
                           ),
                           child: Center(
-                            child: widget.transaction.resolvedKind == TransactionKind.transfer
+                            child: kind == TransactionKind.adjustment
+                                ? const Icon(
+                                    transactionAdjustmentIcon,
+                                    size: 24,
+                                    color: Color(0xFF000000),
+                                  )
+                                : kind == TransactionKind.transfer
                                 ? Assets.icons.swap.svg(
                                     width: 24,
                                     height: 24,
@@ -332,102 +325,6 @@ class _TransactionDetailCardState extends ConsumerState<TransactionDetailCard>
                     ),
                     ),
 
-                    // Expandable Detail Section (Note, Divider, Bank Name & Timestamp)
-                    AnimatedCrossFade(
-                      duration: ZenioMotion.standard,
-                      firstCurve: Curves.fastOutSlowIn,
-                      secondCurve: Curves.fastOutSlowIn,
-                      sizeCurve: Curves.fastOutSlowIn,
-                      crossFadeState: _effectiveIsTileExpanded
-                          ? CrossFadeState.showSecond
-                          : CrossFadeState.showFirst,
-                      firstChild: const SizedBox(
-                        width: double.infinity,
-                        height: 0,
-                      ),
-                      secondChild: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.fromLTRB(20, 12, 0, 20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (widget.note != null && widget.note!.isNotEmpty) ...[
-                              const Text(
-                                'Note :',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w400,
-                                  color: ZenioColors.textSecondary,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                widget.note!,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                  color: Color(0xFF000000),
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              const Divider(
-                                color: Color(0xFFE5E5E5),
-                                height: 1,
-                                thickness: 1,
-                              ),
-                              const SizedBox(height: 12),
-                            ],
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Row(
-                                  children: [
-                                    Assets.icons.walletOpen.svg(
-                                      width: 24,
-                                      height: 24,
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Text(
-                                      widget.bankName ?? '—',
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        // fontWeight: FontWeight.bold,
-                                        color: ZenioColors.textPrimary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                Text(
-                                  widget.timestamp ?? '—',
-                                  style: AppFonts.numeric(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w400,
-                                    color: ZenioColors.textSecondary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            // Opening the row shows its details; editing is
-                            // one tap away from here.
-                            if (widget.onEdit != null) ...[
-                              const SizedBox(height: 8),
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: TextButton.icon(
-                                  onPressed: widget.onEdit,
-                                  style: TextButton.styleFrom(
-                                    foregroundColor: ZenioColors.primaryStrong,
-                                    minimumSize: const Size(48, 48),
-                                  ),
-                                  icon: const Icon(Icons.edit_outlined, size: 18),
-                                  label: const Text('Edit'),
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ),
                   ],
                 ),
               ),

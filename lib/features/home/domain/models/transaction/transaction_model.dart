@@ -20,6 +20,12 @@ sealed class TransactionModel with _$TransactionModel {
     /// A [TransactionKind] name. Null for rows saved before kinds were
     /// stored; see [resolveTransactionKind].
     @JsonKey(name: 'kind') String? kind,
+
+    /// The source and destination wallet of a transfer. Null for other
+    /// transactions, and for transfers saved before they were stored, whose
+    /// wallets are read from [bankName]; see [transferWallets].
+    @JsonKey(name: 'transfer_from') String? transferFrom,
+    @JsonKey(name: 'transfer_to') String? transferTo,
   }) = _TransactionModel;
 
   factory TransactionModel.fromJson(Map<String, dynamic> json) =>

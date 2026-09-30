@@ -12,6 +12,7 @@ class TransactionCard extends ConsumerStatefulWidget {
     required this.transaction,
     this.onDelete,
     this.onEdit,
+    this.onTap,
     this.isOpen = false,
     this.onOpen,
     this.onClose,
@@ -21,6 +22,10 @@ class TransactionCard extends ConsumerStatefulWidget {
   final TransactionModel transaction;
   final VoidCallback? onDelete;
   final VoidCallback? onEdit;
+
+  /// What a tap does when the transaction cannot be edited, for example
+  /// showing an adjustment's details. A tap otherwise opens [onEdit].
+  final VoidCallback? onTap;
   final bool isOpen;
   final VoidCallback? onOpen;
   final VoidCallback? onClose;
@@ -215,9 +220,11 @@ class _TransactionCardState extends ConsumerState<TransactionCard>
                 if (_dragOffset < 0) {
                   _close();
                 } else {
-                  widget.onEdit?.call();
+                  (widget.onEdit ?? widget.onTap)?.call();
                 }
               },
+              // No tap of its own: the row is one item for screen readers,
+              // with the label, the tap above and the Edit/Delete actions.
               child: Semantics(
                 label: transactionSemanticsLabel(
                   kind: kind,
@@ -225,8 +232,10 @@ class _TransactionCardState extends ConsumerState<TransactionCard>
                   amount: amountText,
                   when: tx.date.toRelativeDate,
                 ),
-                onTapHint: widget.onEdit == null ? null : 'edit',
-                onTap: widget.onEdit,
+                onTapHint: transactionTapHint(
+                  canEdit: widget.onEdit != null,
+                  hasDetails: widget.onTap != null,
+                ),
                 excludeSemantics: true,
                 child: Container(
                 padding: const EdgeInsets.fromLTRB(5, 5, 20, 5),
@@ -245,7 +254,13 @@ class _TransactionCardState extends ConsumerState<TransactionCard>
                         shape: BoxShape.circle,
                       ),
                       child: Center(
-                        child: widget.transaction.resolvedKind == TransactionKind.transfer
+                        child: kind == TransactionKind.adjustment
+                            ? const Icon(
+                                transactionAdjustmentIcon,
+                                size: 24,
+                                color: Color(0xFF000000),
+                              )
+                            : kind == TransactionKind.transfer
                             ? Assets.icons.swap.svg(
                                 width: 24,
                                 height: 24,
@@ -281,8 +296,12 @@ class _TransactionCardState extends ConsumerState<TransactionCard>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          // One line each: the row's height is fixed. The
+                          // full title is in the row's label.
                           Text(
                             widget.transaction.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -292,6 +311,8 @@ class _TransactionCardState extends ConsumerState<TransactionCard>
                           const SizedBox(height: 3),
                           Text(
                             widget.transaction.date.toRelativeDate,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w400,

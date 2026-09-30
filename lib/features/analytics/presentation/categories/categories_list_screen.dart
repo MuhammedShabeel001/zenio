@@ -44,8 +44,6 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
   CategoryFilterTab _activeTab = CategoryFilterTab.all;
   String? _expandedCategoryId;
 
-  String _formatAmount(double amount) => AppNumberFormat.formatAmount(amount);
-
   String _formatTxDate(String rawDate) {
     final parsed = DateTimeUtils.parseTransactionDate(rawDate);
     if (parsed == null) return rawDate;
@@ -669,7 +667,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                                 ),
                                 const SizedBox(height: 3),
                                 Text(
-                                  '$currencySymbol ${_formatAmount(avgSpend)}',
+                                  Money.balance(avgSpend, symbol: currencySymbol),
                                   style: AppFonts.numeric(
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold,
@@ -704,7 +702,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                                 ),
                                 const SizedBox(height: 3),
                                 Text(
-                                  '$currencySymbol ${_formatAmount(maxSpend)}',
+                                  Money.balance(maxSpend, symbol: currencySymbol),
                                   style: AppFonts.numeric(
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold,

@@ -44,7 +44,7 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
 
   String _formatCurrencyValue(double amount) {
     final symbol = ref.read(currencySymbolProvider);
-    return '$symbol ${AppNumberFormat.formatAmount(amount, alwaysShowDecimals: true)}';
+    return Money.balance(amount, symbol: symbol);
   }
 
   Future<void> _handleShare(BuildContext buttonContext, SplitState state) async {
@@ -131,7 +131,12 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
                           autofocus: state.billAmount == 0,
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
                           inputFormatters: [
-                            FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                            // At most 12 digits before the point, like every
+                            // amount field, so the bill is always a storable
+                            // amount.
+                            FilteringTextInputFormatter.allow(
+                              RegExp(r'^\d{0,12}(\.\d*)?'),
+                            ),
                           ],
                           style: AppFonts.numeric(
                             fontSize: 32,

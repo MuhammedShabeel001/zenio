@@ -41,7 +41,12 @@ class WalletCardWidget extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           image: card.gradientStartHex.startsWith('image:')
               ? DecorationImage(
-                  image: AssetImage(card.gradientStartHex.replaceFirst('image:', '')),
+                  // Decoded near the card's size on screen rather than
+                  // at the skin's full 2166px.
+                  image: ResizeImage(
+                    AssetImage(card.gradientStartHex.replaceFirst('image:', '')),
+                    width: 1080,
+                  ),
                   fit: BoxFit.cover,
                 )
               : null,

@@ -36,8 +36,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   StreamSubscription<String>? _reminderTaps;
 
   /// Coming back to Zenio on a new day moves renewals on and reschedules
-  /// their reminders, even if the app stayed in memory meanwhile.
+  /// their reminders, even if the app stayed in memory meanwhile; in a new
+  /// month, Home's "This month" figures follow.
   late final AppLifecycleListener _lifecycle;
+
+  /// Fires once when the next month starts, so Home's "This month" figures
+  /// follow the calendar while Zenio stays open.
+  Timer? _monthStart;
 
   /// A quick fade-in of the newly selected tab.
   late final AnimationController _tabFade = AnimationController(
@@ -52,19 +57,44 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final notifications = ref.read(notificationServiceProvider);
     _reminderTaps = notifications.reminderTaps.listen(_openSubscription);
     _lifecycle = AppLifecycleListener(
-      onResume: () => ref
-          .read(subscriptionsNotifierProvider.notifier)
-          .refreshIfStale()
-          .ignore(),
+      onResume: () {
+        ref
+            .read(subscriptionsNotifierProvider.notifier)
+            .refreshIfStale()
+            .ignore();
+        _followMonth();
+      },
     );
+    _scheduleMonthStart();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final launchedFrom = notifications.takeLaunchReminder();
       if (launchedFrom != null) _openSubscription(launchedFrom);
     });
   }
 
+  /// Works Home's month figures out again if the month has changed (see
+  /// [HomeNotifier.refreshForCurrentMonth]), and waits for the next one.
+  void _followMonth() {
+    ref.read(homeNotifierProvider.notifier).refreshForCurrentMonth();
+    _scheduleMonthStart();
+  }
+
+  void _scheduleMonthStart() {
+    _monthStart?.cancel();
+    final now = ref.read(clockProvider)();
+    final untilNextMonth = DateTime(now.year, now.month + 1).difference(now);
+    // A moment after midnight, so the new month has certainly begun. A
+    // suspended app's timer may be late; resuming checks again anyway.
+    _monthStart = Timer(
+      (untilNextMonth.isNegative ? Duration.zero : untilNextMonth) +
+          const Duration(seconds: 1),
+      _followMonth,
+    );
+  }
+
   @override
   void dispose() {
+    _monthStart?.cancel();
     _reminderTaps?.cancel();
     _lifecycle.dispose();
     _tabFade.dispose();

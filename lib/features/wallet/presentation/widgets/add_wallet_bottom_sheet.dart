@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
 import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
+import 'package:zenio/features/wallet/domain/wallet_kind.dart';
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/theme/zenio_tokens.dart';
 import 'package:zenio/shared/utils/app_fonts.dart';
@@ -64,7 +65,7 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
   static const List<Map<String, String>> _presetTypes = [
     {'value': 'BANK', 'label': 'Bank'},
     {'value': 'DEBIT CARD', 'label': 'Debit'},
-    {'value': 'CREDIT CARD', 'label': 'Credit'},
+    {'value': creditCardWalletType, 'label': 'Credit'},
     {'value': 'CASH', 'label': 'Cash'},
     {'value': 'SAVINGS', 'label': 'Savings'},
   ];
@@ -297,7 +298,7 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
     final type = _selectedType == '__CUSTOM__' || _isCustom
         ? _customTypeController.text
         : _selectedType;
-    return type.toUpperCase().contains('CREDIT');
+    return isCreditWalletType(type);
   }
 
   @override
@@ -604,7 +605,11 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
                         final isSelected = _selectedImageIndex == index;
                         final imagePath = _cardImages[index];
 
-                        return GestureDetector(
+                        return Semantics(
+                          button: true,
+                          selected: isSelected,
+                          label: 'Card design ${index + 1}',
+                          child: GestureDetector(
                           onTap: () {
                             setState(() {
                               _selectedImageIndex = index;
@@ -627,11 +632,13 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
                                       color: const Color(0xFFE5E5EA),
                                     ),
                               image: DecorationImage(
-                                image: AssetImage(imagePath),
+                                // Decoded at thumbnail size, not the full 2166px skin.
+                                image: ResizeImage(AssetImage(imagePath), width: 180),
                                 fit: BoxFit.cover,
                               ),
                             ),
                           ),
+                        ),
                         );
                       }),
                     ),
@@ -657,7 +664,7 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
                   widget.editingCard != null
                       ? 'Save changes'
                       : widget.isFirstWallet
-                          ? 'Add Wallet & Enter Zenio'
+                          ? 'Add wallet & enter Zenio'
                           : 'Create wallet',
                   style: const TextStyle(
                     fontSize: 16,

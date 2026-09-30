@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -8,7 +11,9 @@ import 'package:zenio/features/debts/presentation/widgets/add_debt_bottom_sheet.
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/theme/zenio_tokens.dart';
 import 'package:zenio/shared/utils/app_fonts.dart';
+import 'package:zenio/shared/utils/datetime.dart';
 import 'package:zenio/shared/utils/formatters.dart';
+import 'package:zenio/shared/widgets/zenio_snack_bar.dart';
 
 class EditDebtDialog extends ConsumerStatefulWidget {
   const EditDebtDialog({
@@ -152,12 +157,17 @@ class _EditDebtDialogState extends ConsumerState<EditDebtDialog> {
     }
     // The form may have been closed (or the Vault locked) meanwhile.
     if (!mounted) return;
+    unawaited(HapticFeedback.lightImpact());
+    ZenioSnackBar.show(
+      context,
+      message: 'Debt saved · ${updatedDebt.personName}',
+      type: ZenioSnackBarType.success,
+    );
     navigator.pop();
   }
 
   @override
   Widget build(BuildContext context) {
-    final formattedDate = DateFormat('dd MMMM yyyy').format(_selectedDate);
     final currencySymbol = ref.watch(currencySymbolProvider);
 
     final debtsState = ref.watch(debtsNotifierProvider);
@@ -194,7 +204,7 @@ class _EditDebtDialogState extends ConsumerState<EditDebtDialog> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    'Edit Debt',
+                    'Edit debt',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -249,7 +259,7 @@ class _EditDebtDialogState extends ConsumerState<EditDebtDialog> {
                   children: [
                     _buildTabItem(
                       type: DebtType.iOwe,
-                      label: 'I Owe',
+                      label: 'I owe',
                       activeColor: ZenioColors.danger,
                     ),
                     _buildTabItem(
@@ -490,7 +500,7 @@ class _EditDebtDialogState extends ConsumerState<EditDebtDialog> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          formattedDate,
+                          DateTimeUtils.displayDate(_selectedDate),
                           style: AppFonts.numeric(
                             fontSize: 13,
                             color: const Color(0xFF000000),
@@ -535,7 +545,7 @@ class _EditDebtDialogState extends ConsumerState<EditDebtDialog> {
                     ),
                   ),
                   child: const Text(
-                    'Save Changes',
+                    'Save changes',
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,

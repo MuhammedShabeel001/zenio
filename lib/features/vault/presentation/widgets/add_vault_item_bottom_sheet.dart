@@ -13,6 +13,7 @@ import 'package:zenio/features/vault/domain/repositories/implementations/vault_r
 import 'package:zenio/features/vault/domain/vault_card_validation.dart';
 import 'package:zenio/shared/theme/zenio_tokens.dart';
 import 'package:zenio/shared/utils/app_fonts.dart';
+import 'package:zenio/shared/utils/datetime.dart';
 import 'package:zenio/shared/utils/formatters.dart';
 import 'package:zenio/shared/widgets/zenio_snack_bar.dart';
 
@@ -282,7 +283,6 @@ class _AddVaultItemBottomSheetState
   @override
   Widget build(BuildContext context) {
     final isCard = _currentMode == VaultMode.cards;
-    final formattedDate = DateFormat('dd MMMM yyyy').format(_selectedDate);
 
 
     return Container(
@@ -403,7 +403,7 @@ class _AddVaultItemBottomSheetState
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          formattedDate,
+                          DateTimeUtils.displayDate(_selectedDate),
                           style: AppFonts.numeric(
                             fontSize: 14,
                             fontWeight: FontWeight.w400,

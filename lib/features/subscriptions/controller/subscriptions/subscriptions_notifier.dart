@@ -158,6 +158,17 @@ class SubscriptionsNotifier extends _$SubscriptionsNotifier {
     await _loadData();
   }
 
+  /// Puts a deleted [sub] back at [index] (Undo), unless it is there; its
+  /// reminders are scheduled again.
+  Future<void> restoreSubscription(SubscriptionModel sub, int index) async {
+    await _mutate((all) {
+      if (all.any((s) => s.id == sub.id)) return all;
+      return [...all]
+        ..insert(index.clamp(0, all.length), rolledForward(sub, DateTime.now()));
+    });
+    await _loadData();
+  }
+
   Future<void> addSubscription(SubscriptionModel sub) async {
     await _mutate((all) => [...all, _prepared(sub)]);
     await _loadData();

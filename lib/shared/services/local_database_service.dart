@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:zenio/shared/utils/money_limits.dart';
 
 final localDatabaseServiceProvider = Provider<LocalDatabaseService>((ref) {
   return LocalDatabaseService();
@@ -41,7 +42,7 @@ class LocalDatabaseService {
     return factory.openDatabase(
       path,
       options: OpenDatabaseOptions(
-        version: 3,
+        version: 4,
         onCreate: (db, version) async {
           await db.execute('''
             CREATE TABLE $_transactionsTable (
@@ -54,7 +55,9 @@ class LocalDatabaseService {
               note TEXT,
               bank_name TEXT,
               timestamp TEXT,
-              kind TEXT
+              kind TEXT,
+              transfer_from TEXT,
+              transfer_to TEXT
             )
           ''');
           await db.execute('''
@@ -78,17 +81,37 @@ class LocalDatabaseService {
             // exactly as before (see resolveTransactionKind). Checked first
             // because after a downgrade the version drops but the column
             // stays, and adding it twice would fail.
-            final columns =
-                await db.rawQuery('PRAGMA table_info($_transactionsTable)');
-            if (!columns.any((c) => c['name'] == 'kind')) {
-              await db.execute(
-                'ALTER TABLE $_transactionsTable ADD COLUMN kind TEXT',
-              );
-            }
+            await _addColumnIfMissing(db, 'kind');
+          }
+          if (oldVersion < 4) {
+            // Additive only: the source and destination wallet of a
+            // transfer. Existing transfers keep them NULL and are read from
+            // `bank_name` exactly as before (see transferWallets).
+            await _addColumnIfMissing(db, 'transfer_from');
+            await _addColumnIfMissing(db, 'transfer_to');
           }
         },
       ),
     );
+  }
+
+  static Future<void> _addColumnIfMissing(Database db, String column) async {
+    final columns = await db.rawQuery('PRAGMA table_info($_transactionsTable)');
+    if (!columns.any((c) => c['name'] == column)) {
+      await db.execute(
+        'ALTER TABLE $_transactionsTable ADD COLUMN $column TEXT',
+      );
+    }
+  }
+
+  /// Refuses a row whose amount is not a storable amount: NaN, an infinity
+  /// or beyond [maxMoneyAmount] never reaches the database.
+  static void _checkAmount(Map<String, dynamic> tx) {
+    final amount = tx['amount'];
+    if (amount is! num) {
+      throw const InvalidAmountException('transaction amount');
+    }
+    checkStorableAmount(amount, 'transaction amount');
   }
 
   Future<List<Map<String, dynamic>>> getTransactionsMap() async {
@@ -102,6 +125,7 @@ class LocalDatabaseService {
   /// Inserts a new transaction. Fails instead of overwriting when a row with
   /// the same id already exists.
   Future<void> insertTransactionMap(Map<String, dynamic> tx) async {
+    _checkAmount(tx);
     final db = await database;
     await db.insert(
       _transactionsTable,
@@ -112,6 +136,7 @@ class LocalDatabaseService {
 
   /// Updates the row with the same id. Returns the number of rows changed.
   Future<int> updateTransactionMap(Map<String, dynamic> tx) async {
+    _checkAmount(tx);
     final db = await database;
     return db.update(
       _transactionsTable,
@@ -128,18 +153,46 @@ class LocalDatabaseService {
     List<Map<String, dynamic>> transactions,
   ) async {
     if (transactions.isEmpty) return;
+    transactions.forEach(_checkAmount);
     final db = await database;
     await db.transaction((txn) async {
-      final batch = txn.batch();
-      for (final tx in transactions) {
-        batch.insert(
-          _transactionsTable,
-          tx,
-          conflictAlgorithm: ConflictAlgorithm.abort,
-        );
-      }
-      await batch.commit(noResult: true);
+      await _insertAll(txn, transactions);
     });
+  }
+
+  /// Inserts [transactions] and stores [value] under [key] in one database
+  /// transaction: either all of it is written or none of it. Fails (writing
+  /// nothing) if any row's amount is not storable or its id already exists.
+  Future<void> saveTransactionMapsAndKeyValue(
+    List<Map<String, dynamic>> transactions, {
+    required String key,
+    required String value,
+  }) async {
+    transactions.forEach(_checkAmount);
+    final db = await database;
+    await db.transaction((txn) async {
+      await _insertAll(txn, transactions);
+      await txn.insert(
+        _keyValueTable,
+        {'key': key, 'value': value},
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    });
+  }
+
+  static Future<void> _insertAll(
+    Transaction txn,
+    List<Map<String, dynamic>> transactions,
+  ) async {
+    final batch = txn.batch();
+    for (final tx in transactions) {
+      batch.insert(
+        _transactionsTable,
+        tx,
+        conflictAlgorithm: ConflictAlgorithm.abort,
+      );
+    }
+    await batch.commit(noResult: true);
   }
 
   /// Applies [change] to every transaction row in one database transaction.

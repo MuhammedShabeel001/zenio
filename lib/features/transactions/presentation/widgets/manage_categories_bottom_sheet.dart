@@ -6,6 +6,7 @@ import 'package:zenio/features/transactions/controller/categories/categories_not
 import 'package:zenio/features/transactions/domain/models/category_item_model.dart';
 import 'package:zenio/shared/theme/zenio_tokens.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
+import 'package:zenio/shared/widgets/zenio_snack_bar.dart';
 
 class ManageCategoriesBottomSheet extends ConsumerStatefulWidget {
   const ManageCategoriesBottomSheet({
@@ -127,47 +128,57 @@ class _ManageCategoriesBottomSheetState
         ? _customEmojiController.text.trim()
         : _selectedEmoji;
 
-    if (widget.isSubscription) {
-      final notifier =
-          ref.read(subscriptionCategoriesNotifierProvider.notifier);
-      if (_editingCategory != null) {
-        await notifier.updateCategory(
-          id: _editingCategory!.id,
-          name: name,
-          emoji: emoji,
-        );
-        if (!mounted) return;
-        setState(() {
-          _isCreatingOrEditing = false;
-          _editingCategory = null;
-        });
+    // A saved category shows in the list (or is picked in the form);
+    // a failure is said in the form rather than lost.
+    try {
+      if (widget.isSubscription) {
+        final notifier =
+            ref.read(subscriptionCategoriesNotifierProvider.notifier);
+        if (_editingCategory != null) {
+          await notifier.updateCategory(
+            id: _editingCategory!.id,
+            name: name,
+            emoji: emoji,
+          );
+          if (!mounted) return;
+          setState(() {
+            _isCreatingOrEditing = false;
+            _editingCategory = null;
+          });
+        } else {
+          final created = await notifier.addCategory(
+            name: name,
+            emoji: emoji,
+          );
+          widget.onCategorySelected?.call(created);
+        }
       } else {
-        final created = await notifier.addCategory(
-          name: name,
-          emoji: emoji,
-        );
-        widget.onCategorySelected?.call(created);
+        final notifier = ref.read(categoriesNotifierProvider.notifier);
+        if (_editingCategory != null) {
+          await notifier.updateCategory(
+            id: _editingCategory!.id,
+            name: name,
+            emoji: emoji,
+          );
+          if (!mounted) return;
+          setState(() {
+            _isCreatingOrEditing = false;
+            _editingCategory = null;
+          });
+        } else {
+          final created = await notifier.addCategory(
+            name: name,
+            emoji: emoji,
+          );
+          widget.onCategorySelected?.call(created);
+        }
       }
-    } else {
-      final notifier = ref.read(categoriesNotifierProvider.notifier);
-      if (_editingCategory != null) {
-        await notifier.updateCategory(
-          id: _editingCategory!.id,
-          name: name,
-          emoji: emoji,
-        );
-        if (!mounted) return;
-        setState(() {
-          _isCreatingOrEditing = false;
-          _editingCategory = null;
-        });
-      } else {
-        final created = await notifier.addCategory(
-          name: name,
-          emoji: emoji,
-        );
-        widget.onCategorySelected?.call(created);
-      }
+      await HapticFeedback.lightImpact();
+    } catch (_) {
+      if (!mounted) return;
+      setState(
+        () => _nameError = "Couldn't save the category. Please try again.",
+      );
     }
   }
 
@@ -352,11 +363,15 @@ class _ManageCategoriesBottomSheetState
               ),
 
               // Edit Action
-              GestureDetector(
+              Semantics(
+                button: true,
+                label: 'Edit ${category.name}',
+                excludeSemantics: true,
+                child: GestureDetector(
                 onTap: () => _startEdit(category),
                 behavior: HitTestBehavior.opaque,
                 child: Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(15),
                   child: Assets.icons.edit.svg(
                     width: 18,
                     height: 18,
@@ -367,24 +382,18 @@ class _ManageCategoriesBottomSheetState
                   ),
                 ),
               ),
-              const SizedBox(width: 4),
+              ),
 
-              // Delete Action
-              GestureDetector(
-                onTap: () async {
-                  if (widget.isSubscription) {
-                    await ref
-                        .read(subscriptionCategoriesNotifierProvider.notifier)
-                        .deleteCategory(category.id);
-                  } else {
-                    await ref
-                        .read(categoriesNotifierProvider.notifier)
-                        .deleteCategory(category.id);
-                  }
-                },
+              // Delete Action: asks first, like wallets and Vault items.
+              Semantics(
+                button: true,
+                label: 'Delete ${category.name}',
+                excludeSemantics: true,
+                child: GestureDetector(
+                onTap: () => _confirmDelete(category),
                 behavior: HitTestBehavior.opaque,
                 child: Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(15),
                   child: Assets.icons.delete.svg(
                     width: 18,
                     height: 18,
@@ -395,11 +404,59 @@ class _ManageCategoriesBottomSheetState
                   ),
                 ),
               ),
+              ),
             ],
           ),
         );
       }).toList(),
     );
+  }
+
+  /// Deletes [category] once confirmed. Transactions filed under it keep
+  /// its name, so nothing else changes.
+  Future<void> _confirmDelete(CategoryItemModel category) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: Colors.white,
+        title: Text('Delete ${category.name}?'),
+        content: const Text(
+          "Transactions keep this name. It just won't be offered as a "
+          'category any more.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: TextButton.styleFrom(foregroundColor: ZenioColors.danger),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (!(confirmed ?? false)) return;
+    try {
+      if (widget.isSubscription) {
+        await ref
+            .read(subscriptionCategoriesNotifierProvider.notifier)
+            .deleteCategory(category.id);
+      } else {
+        await ref
+            .read(categoriesNotifierProvider.notifier)
+            .deleteCategory(category.id);
+      }
+      await HapticFeedback.lightImpact();
+    } catch (_) {
+      if (!mounted) return;
+      ZenioSnackBar.show(
+        context,
+        message: "Couldn't delete ${category.name}. Please try again.",
+        type: ZenioSnackBarType.error,
+      );
+    }
   }
 
   Widget _buildCategoryForm() {

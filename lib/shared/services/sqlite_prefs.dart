@@ -41,6 +41,23 @@ class SqlitePrefs {
     _cache[key] = strVal;
   }
 
+  /// Stores [value] under [key] and inserts [transactions] in one database
+  /// transaction (see [LocalDatabaseService.saveTransactionMapsAndKeyValue]),
+  /// then caches [value]. Either both are stored or neither is.
+  Future<void> setStringListWithTransactions(
+    String key,
+    List<String> value,
+    List<Map<String, dynamic>> transactions,
+  ) async {
+    final strVal = jsonEncode(value);
+    await _dbService.saveTransactionMapsAndKeyValue(
+      transactions,
+      key: key,
+      value: strVal,
+    );
+    _cache[key] = strVal;
+  }
+
   List<String>? getStringList(String key) {
     final val = _cache[key];
     if (val == null) return null;

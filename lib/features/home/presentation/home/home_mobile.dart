@@ -8,6 +8,7 @@ import 'package:zenio/features/home/presentation/widgets/quick_action_item.dart'
 import 'package:zenio/features/home/presentation/widgets/transaction_card.dart';
 import 'package:zenio/features/split/split.dart';
 import 'package:zenio/features/subscriptions/subscriptions.dart';
+import 'package:zenio/features/transactions/presentation/widgets/adjustment_details_dialog.dart';
 import 'package:zenio/features/transactions/presentation/widgets/edit_transaction_dialog.dart';
 import 'package:zenio/features/transactions/transactions.dart';
 import 'package:zenio/features/vault/vault.dart';
@@ -16,7 +17,6 @@ import 'package:zenio/shared/providers/currency_provider/currency_provider.dart'
 import 'package:zenio/shared/theme/zenio_tokens.dart';
 import 'package:zenio/shared/utils/app_fonts.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
-import 'package:zenio/shared/utils/formatters.dart';
 import 'package:zenio/shared/widgets/add_transaction_bottom_sheet.dart';
 import 'package:zenio/shared/widgets/custom_navigation_bar.dart';
 import 'package:zenio/shared/widgets/inserted_item.dart';
@@ -155,13 +155,8 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                                 ],
                               ),
                               const SizedBox(height: 16),
-                              Text(
-                                '$currencySymbol ${AppNumberFormat.formatAmount(income, alwaysShowDecimals: true)}',
-                                style: AppFonts.numeric(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
+                              _MonthTotal(
+                                Money.balance(income, symbol: currencySymbol),
                               ),
                               if (incomeChange != null) ...[
                                 const SizedBox(height: 6),
@@ -215,13 +210,8 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                                 ],
                               ),
                               const SizedBox(height: 16),
-                              Text(
-                                '$currencySymbol ${AppNumberFormat.formatAmount(expense, alwaysShowDecimals: true)}',
-                                style: AppFonts.numeric(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
+                              _MonthTotal(
+                                Money.balance(expense, symbol: currencySymbol),
                               ),
                               if (expenseChange != null) ...[
                                 const SizedBox(height: 6),
@@ -260,10 +250,13 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                   ),
                   child: Stack(
                     children: [
-                      Column(
-                        children: [
-                          // Fixed Top Quick Actions & Section Header
-                          Padding(
+                      // On a short screen (a small phone, or large text) the
+                      // quick actions and header scroll with the list, so
+                      // the transactions are never squeezed out of view.
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final tight = constraints.maxHeight < 440;
+                          final top = Padding(
                             padding: const EdgeInsets.fromLTRB(10, 16, 10, 0),
                             child: Column(
                               children: [
@@ -408,82 +401,93 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                                 ),
                               ],
                             ),
-                          ),
-
-                          // Scrollable Transactions List ONLY
-                          Expanded(
-                            child: ListView(
-                              padding:
-                                  EdgeInsets.fromLTRB(
-                                    10,
-                                    15,
-                                    10,
-                                    CustomNavigationBar.reservedHeight(context),
-                                  ),
-                              children: [
-                                if (transactions.isEmpty)
-                                  switch (state.status) {
-                                    HomeStatus.initial ||
-                                    HomeStatus.loading =>
-                                      const ListStateMessage.loading(),
-                                    HomeStatus.error => ListStateMessage.error(
-                                        onRetry: notifier.loadMoneyTrackerData,
-                                      ),
-                                    HomeStatus.success => ListStateMessage(
-                                        title: 'No transactions yet',
-                                        message:
-                                            'Your spending and income will show up here once you add them.',
-                                        icon: Icons.receipt_long_outlined,
-                                        actionLabel: 'Add transaction',
-                                        onAction: () =>
-                                            AddTransactionBottomSheet.show(context),
-                                      ),
-                                  }
-                                else
-                                  ...transactions.take(10).map(
-                                    // A transaction added (or restored by
-                                    // Undo) while Home is showing eases in.
-                                    (tx) => InsertedItem(
-                                      key: ValueKey(tx.id),
-                                      animate: _listShown,
-                                      child: TransactionCard(
-                                      transaction: tx,
-                                      isOpen: _openTransactionId == tx.id,
-                                      onOpen: () {
-                                        if (_openTransactionId != tx.id) {
-                                          setState(() {
-                                            _openTransactionId = tx.id;
-                                          });
-                                        }
-                                      },
-                                      onClose: () {
-                                        if (_openTransactionId == tx.id) {
-                                          setState(() {
-                                            _openTransactionId = null;
-                                          });
-                                        }
-                                      },
-                                      onDelete: () => deleteTransactionWithUndo(
-                                        context,
-                                        ref,
-                                        tx.id,
-                                      ),
-                                      // Adjustments can't be edited, so
-                                      // they offer no Edit at all.
-                                      onEdit: tx.resolvedKind ==
-                                              TransactionKind.adjustment
-                                          ? null
-                                          : () => EditTransactionDialog.show(
-                                                context,
-                                                transaction: tx,
-                                              ),
+                          );
+                          final list = ListView(
+                            shrinkWrap: tight,
+                            physics: tight ? const NeverScrollableScrollPhysics() : null,
+                            padding:
+                                EdgeInsets.fromLTRB(
+                                  10,
+                                  15,
+                                  10,
+                                  CustomNavigationBar.reservedHeight(context),
+                                ),
+                            children: [
+                              if (transactions.isEmpty)
+                                switch (state.status) {
+                                  HomeStatus.initial ||
+                                  HomeStatus.loading =>
+                                    const ListStateMessage.loading(),
+                                  HomeStatus.error => ListStateMessage.error(
+                                      onRetry: notifier.loadMoneyTrackerData,
                                     ),
+                                  HomeStatus.success => ListStateMessage(
+                                      title: 'No transactions yet',
+                                      message:
+                                          'Your spending and income will show up here once you add them.',
+                                      icon: Icons.receipt_long_outlined,
+                                      actionLabel: 'Add transaction',
+                                      onAction: () =>
+                                          AddTransactionBottomSheet.show(context),
+                                    ),
+                                }
+                              else
+                                ...transactions.take(10).map(
+                                  // A transaction added (or restored by
+                                  // Undo) while Home is showing eases in.
+                                  (tx) => InsertedItem(
+                                    key: ValueKey(tx.id),
+                                    animate: _listShown,
+                                    child: TransactionCard(
+                                    transaction: tx,
+                                    isOpen: _openTransactionId == tx.id,
+                                    onOpen: () {
+                                      if (_openTransactionId != tx.id) {
+                                        setState(() {
+                                          _openTransactionId = tx.id;
+                                        });
+                                      }
+                                    },
+                                    onClose: () {
+                                      if (_openTransactionId == tx.id) {
+                                        setState(() {
+                                          _openTransactionId = null;
+                                        });
+                                      }
+                                    },
+                                    onDelete: () => deleteTransactionWithUndo(
+                                      context,
+                                      ref,
+                                      tx.id,
+                                    ),
+                                    // Adjustments can't be edited, so
+                                    // they offer no Edit; a tap shows
+                                    // what they did.
+                                    onEdit: tx.resolvedKind ==
+                                            TransactionKind.adjustment
+                                        ? null
+                                        : () => EditTransactionDialog.show(
+                                              context,
+                                              transaction: tx,
+                                            ),
+                                    onTap: () => showAdjustmentDetails(
+                                      context,
+                                      ref,
+                                      tx,
                                     ),
                                   ),
-                              ],
-                            ),
-                          ),
-                        ],
+                                  ),
+                                ),
+                            ],
+                          );
+                          return tight
+                              ? SingleChildScrollView(
+                                  child: Column(children: [top, list]),
+                                )
+                              : Column(
+                                  children: [top, Expanded(child: list)],
+                                );
+                        },
                       ),
 
                     ],
@@ -494,6 +498,51 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// A month total on the Income or Expense card. It stays on one line,
+/// scaled down to fit a narrow card, but never below caption size at the
+/// reader's text size; past that it wraps instead of shrinking further.
+class _MonthTotal extends StatelessWidget {
+  const _MonthTotal(this.text);
+
+  final String text;
+
+  static const double _fontSize = 18;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = AppFonts.numeric(
+      fontSize: _fontSize,
+      fontWeight: FontWeight.bold,
+      color: Colors.white,
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final painter = TextPainter(
+          text: TextSpan(
+            text: text,
+            style: DefaultTextStyle.of(context).style.merge(style),
+          ),
+          textDirection: Directionality.of(context),
+          textScaler: MediaQuery.textScalerOf(context),
+          maxLines: 1,
+        )..layout();
+        final width = painter.width;
+        painter.dispose();
+
+        const smallest = ZenioFontSizes.caption / _fontSize;
+        if (width * smallest > constraints.maxWidth) {
+          return Text(text, style: style);
+        }
+        return FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(text, style: style, maxLines: 1, softWrap: false),
+        );
+      },
     );
   }
 }

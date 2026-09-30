@@ -8,6 +8,7 @@ import 'package:zenio/shared/providers/currency_provider/currency_provider.dart'
 import 'package:zenio/shared/theme/zenio_tokens.dart';
 import 'package:zenio/shared/utils/app_fonts.dart';
 import 'package:zenio/shared/utils/formatters.dart';
+import 'package:zenio/shared/widgets/money.dart';
 import 'package:zenio/shared/widgets/zenio_snack_bar.dart';
 
 class WalletSettingsBottomSheet extends ConsumerWidget {
@@ -141,7 +142,7 @@ class WalletSettingsBottomSheet extends ConsumerWidget {
                   ),
                 ),
                 Text(
-                  '$currencySymbol ${AppNumberFormat.formatAmount(card.balance, alwaysShowDecimals: true)}',
+                  Money.balance(card.balance, symbol: currencySymbol),
                   style: AppFonts.numeric(
                     fontSize: 17,
                     fontWeight: FontWeight.bold,
@@ -156,7 +157,7 @@ class WalletSettingsBottomSheet extends ConsumerWidget {
           ListTile(
             leading: const Icon(Icons.edit, color: Colors.black87),
             title: const Text(
-              'Edit Wallet',
+              'Edit wallet',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
@@ -177,7 +178,7 @@ class WalletSettingsBottomSheet extends ConsumerWidget {
           ListTile(
             leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
             title: const Text(
-              'Delete Wallet',
+              'Delete wallet',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,

@@ -52,10 +52,11 @@ void main() {
   Future<void> openSheet(
     WidgetTester tester, {
     required String defaultWallet,
-  }) async {
     // Tall enough for the whole sheet in the test font, which is wider
     // than the real one.
-    tester.view.physicalSize = const Size(1170, 4500);
+    Size size = const Size(1170, 4500),
+  }) async {
+    tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
     tester.binding.defaultBinaryMessenger
@@ -161,7 +162,7 @@ void main() {
       find.text('Balance after transaction: −₹500.00'),
       findsOneWidget,
     );
-    expect(find.text('Insufficient Wallet Balance'), findsNothing);
+    expect(find.text('Not enough in this wallet'), findsNothing);
 
     await save(tester);
 
@@ -174,7 +175,7 @@ void main() {
     await openSheet(tester, defaultWallet: 'HDFC');
     await enterAmount(tester, '500');
 
-    expect(find.text('Insufficient Wallet Balance'), findsOneWidget);
+    expect(find.text('Not enough in this wallet'), findsOneWidget);
     expect(find.textContaining('Balance after transaction'), findsNothing);
   });
 
@@ -191,7 +192,7 @@ void main() {
     final saved = transactions.saved.single;
     expect(saved.title, 'Income');
     expect(saved.isIncome, isTrue);
-    expect(find.text('Income added · Income · ₹1,200'), findsOneWidget);
+    expect(find.text('Income added · Income · ₹1,200.00'), findsOneWidget);
   });
 
   testWidgets('a transfer names its From and To wallets', (tester) async {
@@ -202,5 +203,31 @@ void main() {
     expect(find.text('From'), findsOneWidget);
     expect(find.text('To'), findsOneWidget);
     expect(find.bySemanticsLabel('Swap From and To wallets'), findsOneWidget);
+  });
+
+  testWidgets('with the keyboard up, Save stays in view above it',
+      (tester) async {
+    // A 390 x 844 phone, with the keyboard over the lower 336pt.
+    await openSheet(tester, defaultWallet: 'HDFC', size: const Size(1170, 2532));
+    tester.view.viewInsets = const FakeViewPadding(bottom: 336 * 3);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    final save = tester.getRect(
+      find.widgetWithText(ElevatedButton, 'Save transaction'),
+    );
+    expect(save.top, greaterThan(0));
+    expect(save.bottom, lessThanOrEqualTo(844 - 336));
+
+    // The amount keeps focus, and its keyboard offers Done where it can.
+    EditableText amount() =>
+        tester.widget<EditableText>(find.byType(EditableText).first);
+    expect(amount().focusNode.hasFocus, isTrue);
+    expect(amount().textInputAction, TextInputAction.done);
+
+    // Dragging the form puts the keyboard away.
+    await tester.drag(find.text('Transfer'), const Offset(0, -100));
+    await tester.pump();
+    expect(amount().focusNode.hasFocus, isFalse);
   });
 }

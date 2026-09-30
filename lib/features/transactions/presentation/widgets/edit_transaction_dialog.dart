@@ -8,7 +8,7 @@ import 'package:zenio/features/home/domain/models/transaction/transaction_kind.d
 import 'package:zenio/features/home/domain/models/transaction/transaction_model.dart';
 import 'package:zenio/features/transactions/controller/categories/categories_notifier.dart';
 import 'package:zenio/features/transactions/domain/models/transaction_detail_model.dart';
-import 'package:zenio/features/transactions/presentation/widgets/manage_categories_bottom_sheet.dart';
+import 'package:zenio/features/transactions/presentation/widgets/category_picker.dart';
 import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
 import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
 import 'package:zenio/features/wallet/domain/wallet_kind.dart';
@@ -37,18 +37,7 @@ class EditTransactionDialog extends ConsumerStatefulWidget {
   }) {
     final TransactionModel txModel;
     if (transaction is TransactionDetailModel) {
-      txModel = TransactionModel(
-        id: transaction.id,
-        title: transaction.title,
-        date: transaction.date,
-        amount: transaction.amount,
-        isIncome: transaction.isIncome,
-        currency: transaction.currency,
-        note: transaction.note,
-        bankName: transaction.bankName,
-        timestamp: transaction.timestamp,
-        kind: transaction.kind,
-      );
+      txModel = transaction.toModel();
     } else if (transaction is TransactionModel) {
       txModel = transaction;
     } else {
@@ -99,6 +88,14 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
     return '$datePart   $timePart';
   }
 
+  /// The time of day in a stored timestamp ("yy-MM-dd   HH : mm") as
+  /// "HH:mm", or null when it has none.
+  static String? _timeOf(String? timestamp) {
+    final match =
+        RegExp(r'   (\d{1,2}) ?: ?(\d{2})$').firstMatch(timestamp ?? '');
+    return match == null ? null : '${match[1]}:${match[2]}';
+  }
+
   @override
   void initState() {
     super.initState();
@@ -108,7 +105,9 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
     _isIncome = tx.isIncome;
     _isTransfer = tx.resolvedKind == TransactionKind.transfer;
 
-    final transferEnds = parseTransferWallets(tx.bankName);
+    // Only a transfer names two wallets; any other transaction's wallet is
+    // taken whole, even if its name contains "->".
+    final transferEnds = tx.transferEnds;
     if (_isTransfer) {
       _destinationWallet = transferEnds?.to ??
           (title.startsWith(transferTitlePrefix)
@@ -141,10 +140,6 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
     super.dispose();
   }
 
-  String _formatAmount(double amount) {
-    return AppNumberFormat.formatAmount(amount);
-  }
-
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -171,7 +166,8 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final formattedDate = DateFormat('EEEE, MMMM d, yyyy').format(_selectedDate);
+    // Shown under the date; it is kept when the date changes.
+    final time = _timeOf(widget.transaction.timestamp);
 
     final categories = ref.watch(categoriesNotifierProvider);
     final walletState = ref.watch(walletNotifierProvider);
@@ -245,7 +241,7 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                     ),
                   ),
                   child: const Text(
-                    '+ Add Wallet',
+                    '+ Add wallet',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -291,8 +287,7 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
     // The wallet balance already includes this transaction, so what it took
     // from the same wallet is available again while editing it.
     final original = widget.transaction;
-    final originalEnds = parseTransferWallets(original.bankName);
-    final originalSource = originalEnds?.from ?? original.bankName;
+    final originalSource = original.transferEnds?.from ?? original.bankName;
     final tookFromSameWallet = !original.isIncome &&
         originalSource != null &&
         originalSource.trim().toLowerCase() ==
@@ -315,8 +310,8 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
     final currencySymbol = ref.watch(currencySymbolProvider);
 
     final dialogTitle = _isTransfer
-        ? 'Edit Transfer'
-        : (_isIncome ? 'Edit Income' : 'Edit Expense');
+        ? 'Edit transfer'
+        : (_isIncome ? 'Edit income' : 'Edit expense');
 
     final badgeColor = _isTransfer
         ? const Color(0xFF8949D5)
@@ -336,6 +331,8 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
         ),
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
+          // As in Add transaction: dragging the form puts the keyboard away.
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -344,36 +341,42 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Text(
-                        dialogTitle,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: ZenioColors.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: badgeColor.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          badgeText,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: badgeColor,
+                  // On a narrow screen with large text the title wraps
+                  // rather than pushing Close off the dialog.
+                  Flexible(
+                    child: Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            dialogTitle,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: ZenioColors.textPrimary,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: badgeColor.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            badgeText,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: badgeColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                   Semantics(
                     button: true,
@@ -437,6 +440,7 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                         controller: _amountController,
                         keyboardType:
                             const TextInputType.numberWithOptions(decimal: true),
+                        textInputAction: TextInputAction.done,
                         inputFormatters: [
                           ThousandsSeparatorInputFormatter(),
                         ],
@@ -478,7 +482,7 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 2),
                   child: Text(
-                    'Balance after transaction: ${Money.balance(availableBalance - enteredAmount, symbol: currencySymbol, alwaysShowDecimals: true)}',
+                    'Balance after transaction: ${Money.balance(availableBalance - enteredAmount, symbol: currencySymbol)}',
                     style: AppFonts.numeric(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
@@ -509,7 +513,7 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'Amount exceeds wallet balance (Available: $currencySymbol ${_formatAmount(availableBalance)} in $selectedSource). Change wallet or enter a valid amount.',
+                            'Amount exceeds wallet balance (Available: ${Money.balance(availableBalance, symbol: currencySymbol)} in $selectedSource). Change wallet or enter a valid amount.',
                             style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -560,6 +564,63 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                 ),
               const SizedBox(height: 6),
 
+              // Date Picker Field
+              GestureDetector(
+                onTap: _pickDate,
+                behavior: HitTestBehavior.opaque,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 15),
+                  decoration: BoxDecoration(
+                    color: ZenioColors.fieldFill,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.calendar_today_rounded,
+                        size: 20,
+                        color: ZenioColors.textSecondary,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              DateTimeUtils.displayDate(_selectedDate),
+                              style: AppFonts.numeric(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w400,
+                                color: const Color(0xFF000000),
+                              ),
+                            ),
+                            if (time != null)
+                              Text(
+                                time,
+                                style: AppFonts.numeric(
+                                  fontSize: ZenioFontSizes.caption,
+                                  fontWeight: FontWeight.w400,
+                                  color: ZenioColors.textSecondary,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      const Text(
+                        'Change',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: ZenioColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 6),
+
               // Source Wallet Selector
               ZenioDropdown<String>(
                 label: _isTransfer ? 'From' : null,
@@ -586,7 +647,7 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                   return ZenioDropdownItem<String>(
                     value: w,
                     label: w,
-                    subtitle: '$currencySymbol ${_formatAmount(bal)}',
+                    subtitle: Money.balance(bal, symbol: currencySymbol),
                     subtitleColor: !hasEnough
                         ? ZenioColors.danger
                         : ZenioColors.textSecondary,
@@ -634,7 +695,7 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                     return ZenioDropdownItem<String>(
                       value: w,
                       label: w,
-                      subtitle: '$currencySymbol ${_formatAmount(bal)}',
+                      subtitle: Money.balance(bal, symbol: currencySymbol),
                       icon: Assets.icons.wallet.svg(
                         width: 18,
                         height: 18,
@@ -652,131 +713,14 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                   },
                 ),
               ] else ...[
-                // Category Chips Section
-                Container(
-                  clipBehavior: Clip.antiAlias,
-                  decoration: BoxDecoration(
-                    color: ZenioColors.fieldFill,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 12, 16, 0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'Category',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: ZenioColors.textSecondary,
-                              ),
-                            ),
-                            GestureDetector(
-                              onTap: () async {
-                                final picked =
-                                    await ManageCategoriesBottomSheet.show(context);
-                                if (picked != null) {
-                                  setState(() {
-                                    _selectedCategory = picked.name;
-                                  });
-                                }
-                              },
-                              behavior: HitTestBehavior.opaque,
-                              child: const Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 4,
-                                  vertical: 2,
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.tune_rounded,
-                                      size: 14,
-                                      color: ZenioColors.primary,
-                                    ),
-                                    SizedBox(width: 4),
-                                    Text(
-                                      'Manage',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                        color: ZenioColors.primary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        physics: const BouncingScrollPhysics(),
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                        child: Row(
-                          children: categories.map((cat) {
-                            final isSelected = _selectedCategory == cat.name ||
-                                (_selectedCategory == null && cat == categories.first);
-                            return Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    _selectedCategory = cat.name;
-                                  });
-                                },
-                                behavior: HitTestBehavior.opaque,
-                                child: AnimatedContainer(
-                                  duration: ZenioMotion.fast,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 14,
-                                    vertical: 8,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: isSelected
-                                        ? ZenioColors.primary
-                                        : Colors.white,
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      if (isSelected) ...[
-                                        Text(
-                                          cat.emoji,
-                                          style: const TextStyle(fontSize: 14),
-                                        ),
-                                        const SizedBox(width: 6),
-                                      ],
-                                      Text(
-                                        cat.name,
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: isSelected
-                                              ? FontWeight.bold
-                                              : FontWeight.w500,
-                                          color: isSelected
-                                              ? Colors.white
-                                              : ZenioColors.textPrimary,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                    ],
-                  ),
+                // Category chips, as in Add transaction.
+                CategoryPicker(
+                  categories: categories,
+                  optional: _isIncome,
+                  selected: _selectedCategory ??
+                      (_isIncome ? null : categories.firstOrNull?.name),
+                  onSelected: (name) =>
+                      setState(() => _selectedCategory = name),
                 ),
               ],
               const SizedBox(height: 6),
@@ -816,48 +760,6 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                   ),
                 ),
               ),
-              const SizedBox(height: 6),
-
-              // Date Picker Field
-              GestureDetector(
-                onTap: _pickDate,
-                behavior: HitTestBehavior.opaque,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 15),
-                  decoration: BoxDecoration(
-                    color: ZenioColors.fieldFill,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.calendar_today_rounded,
-                        size: 20,
-                        color: ZenioColors.textSecondary,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          formattedDate,
-                          style: AppFonts.numeric(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w400,
-                            color: const Color(0xFF000000),
-                          ),
-                        ),
-                      ),
-                      const Text(
-                        'Change',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: ZenioColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
               const SizedBox(height: 16),
 
               if (_saveError != null)
@@ -889,8 +791,10 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
 
                           if (_isTransfer) {
                             title = '$transferTitlePrefix$selectedDestination';
-                            bankName =
-                                '$selectedSource$transferWalletSeparator$selectedDestination';
+                            bankName = transferBankName(
+                              selectedSource,
+                              selectedDestination,
+                            );
                             kind = TransactionKind.transfer;
                           } else {
                             title = _selectedCategory ??
@@ -918,6 +822,11 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                               widget.transaction.timestamp,
                             ),
                             kind: kind.name,
+                            // The wallets themselves, not read back from
+                            // bankName, so names with "->" stay whole.
+                            transferFrom: _isTransfer ? selectedSource : null,
+                            transferTo:
+                                _isTransfer ? selectedDestination : null,
                           );
 
                           setState(() => _isSaving = true);
@@ -957,10 +866,8 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                   ),
                   child: Text(
                     isExceedingBalance
-                        ? 'Insufficient Wallet Balance'
-                        : (isInvalidAmount
-                            ? 'Enter a Valid Amount'
-                            : 'Save Changes'),
+                        ? 'Not enough in this wallet'
+                        : 'Save changes',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,

@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:zenio/shared/utils/money_limits.dart';
 
 /// Centralized utility for formatting numbers, currencies, and balance displays.
 class AppNumberFormat {
@@ -56,11 +57,17 @@ class AppNumberFormat {
   }
 
   /// Parses an amount string that may contain thousands separators or currency symbols.
-  /// (e.g. '12,345.67' or '₹ 12,345' -> 12345.67)
-  static double parseAmount(String? text) {
-    if (text == null || text.trim().isEmpty) return 0;
+  /// (e.g. '12,345.67' or '₹ 12,345' -> 12345.67). Text with no amount is 0;
+  /// use [tryParseAmount] where that must be told apart from zero.
+  static double parseAmount(String? text) => tryParseAmount(text) ?? 0;
+
+  /// The amount in [text], or null when there is none or it is not a
+  /// storable amount (see [isStorableAmount]): never NaN or an infinity.
+  static double? tryParseAmount(String? text) {
+    if (text == null || text.trim().isEmpty) return null;
     final cleaned = text.replaceAll(',', '').replaceAll(RegExp(r'[^\d.-]'), '').trim();
-    return double.tryParse(cleaned) ?? 0;
+    final value = double.tryParse(cleaned);
+    return value != null && isStorableAmount(value) ? value : null;
   }
 }
 
@@ -70,9 +77,15 @@ class ThousandsSeparatorInputFormatter extends TextInputFormatter {
   ThousandsSeparatorInputFormatter({
     this.decimalRange = 2,
     this.allowNegative = false,
+    this.maxIntegerDigits = maxMoneyIntegerDigits,
   });
 
   final int decimalRange;
+
+  /// Digits allowed before the decimal point. Longer input is refused, so
+  /// an impossible amount (or one too large to store) cannot be typed or
+  /// pasted.
+  final int maxIntegerDigits;
 
   /// Whether a leading minus sign is kept, for values such as a wallet
   /// balance that can be below zero.
@@ -95,6 +108,13 @@ class ThousandsSeparatorInputFormatter extends TextInputFormatter {
       ),
     );
   }
+
+  static int _integerDigits(String text) => text
+      .split('.')
+      .first
+      .replaceAll(RegExp(r'\D'), '')
+      .replaceFirst(RegExp('^0+'), '')
+      .length;
 
   static TextEditingValue _withoutSign(TextEditingValue value) {
     if (!value.text.startsWith('-')) return value;
@@ -160,6 +180,12 @@ class ThousandsSeparatorInputFormatter extends TextInputFormatter {
     if (intPart.length > 1 && intPart.startsWith('0')) {
       intPart = intPart.replaceFirst(RegExp('^0+'), '');
       if (intPart.isEmpty) intPart = '0';
+    }
+    // Too many digits are refused, but a value that already has them (from
+    // older data) can still be shortened.
+    if (intPart.length > maxIntegerDigits &&
+        intPart.length >= _integerDigits(oldValue.text)) {
+      return oldValue;
     }
 
     final formattedInt = intPart.isEmpty

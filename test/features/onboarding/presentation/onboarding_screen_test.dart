@@ -116,7 +116,7 @@ void main() {
 
       // Verify Add your first wallet bottom sheet is displayed
       expect(find.text('Add your first wallet'), findsOneWidget);
-      expect(find.text('Add Wallet & Enter Zenio'), findsOneWidget);
+      expect(find.text('Add wallet & enter Zenio'), findsOneWidget);
     });
   });
 }

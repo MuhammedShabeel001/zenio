@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zenio/features/debts/controller/debts/debts_notifier.dart';
+import 'package:zenio/features/debts/presentation/widgets/add_debt_bottom_sheet.dart';
 import 'package:zenio/features/debts/presentation/widgets/debt_card.dart';
+import 'package:zenio/features/debts/presentation/widgets/edit_debt_dialog.dart';
 import 'package:zenio/shared/shared.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
-import 'package:zenio/features/debts/presentation/widgets/add_debt_bottom_sheet.dart';
-import 'package:zenio/features/debts/presentation/widgets/edit_debt_dialog.dart';
+import 'package:zenio/shared/widgets/delete_with_undo.dart';
 
 class DebtsScreenMobile extends ConsumerStatefulWidget {
   const DebtsScreenMobile({super.key});
@@ -124,7 +125,12 @@ class _DebtsScreenMobileState extends ConsumerState<DebtsScreenMobile> {
                   // Bottom Row: Filter Dropdown Pill (Debts v)
                   Row(
                     children: [
-                      _buildFilterPill(label: state.selectedFilter),
+                      // The filter's value stays 'I Owe'; it reads in sentence case.
+                      _buildFilterPill(
+                        label: state.selectedFilter == 'I Owe'
+                            ? 'I owe'
+                            : state.selectedFilter,
+                      ),
                     ],
                   ),
                 ],
@@ -200,26 +206,20 @@ class _DebtsScreenMobileState extends ConsumerState<DebtsScreenMobile> {
                                 });
                               }
                             },
-                            onDelete: () async {
-                              try {
-                                await ref
-                                    .read(debtsNotifierProvider.notifier)
-                                    .deleteDebt(item.id);
-                              } catch (_) {
-                                if (!context.mounted) return;
-                                ZenioSnackBar.show(
-                                  context,
-                                  message:
-                                      "Couldn't delete the debt. Please try again.",
-                                  type: ZenioSnackBarType.error,
-                                );
-                                return;
-                              }
-                              if (!context.mounted) return;
-                              ZenioSnackBar.show(
+                            // Deletes straight away, with Undo.
+                            onDelete: () {
+                              final notifier =
+                                  ref.read(debtsNotifierProvider.notifier);
+                              final index = ref
+                                  .read(debtsNotifierProvider)
+                                  .debts
+                                  .indexWhere((d) => d.id == item.id);
+                              deleteWithUndo(
                                 context,
-                                message: 'Debt deleted',
-                                type: ZenioSnackBarType.success,
+                                label: 'Debt with ${item.personName}',
+                                delete: () => notifier.deleteDebt(item.id),
+                                restore: () =>
+                                    notifier.restoreDebt(item, index),
                               );
                             },
                             onEdit: () {
@@ -253,7 +253,7 @@ class _DebtsScreenMobileState extends ConsumerState<DebtsScreenMobile> {
         ),
         const PopupMenuItem(
           value: 'I Owe',
-          child: Text('I Owe', style: TextStyle(color: Colors.white)),
+          child: Text('I owe', style: TextStyle(color: Colors.white)),
         ),
         const PopupMenuItem(
           value: 'Owed to me',

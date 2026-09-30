@@ -98,4 +98,12 @@ class DebtsNotifier extends _$DebtsNotifier {
       (current) => current.where((debt) => debt.id != id).toList(),
     );
   }
+
+  /// Puts a deleted [debt] back at [index] (Undo), unless it is there.
+  Future<void> restoreDebt(DebtModel debt, int index) {
+    return _mutate((current) {
+      if (current.any((d) => d.id == debt.id)) return current;
+      return [...current]..insert(index.clamp(0, current.length), debt);
+    });
+  }
 }

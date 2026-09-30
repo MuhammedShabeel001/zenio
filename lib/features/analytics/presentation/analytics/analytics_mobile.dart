@@ -124,7 +124,13 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
                   ),
                   child: Stack(
                     children: [
-                      Column(
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                      // On a short screen (a small phone, or large text) the
+                      // chart leaves no room for the list under it, so the
+                      // chart and the list scroll together instead.
+                      final tight = constraints.maxHeight < _tightSheetHeight;
+                      final content = Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           const SizedBox(height: 16),
@@ -145,7 +151,9 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
                               child: CategoryLegendWidget(categories: chartCategories),
                             ),
                             builder: (context, collapse, legend) {
-                              final visible = 1.0 - collapse;
+                              // Only the list scrolls it away, and only when
+                              // the list scrolls on its own.
+                              final visible = tight ? 1.0 : 1.0 - collapse;
                               return Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
@@ -186,12 +194,16 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
                                     );
                                   },
                                   behavior: HitTestBehavior.opaque,
-                                  child: Row(
+                                  // 48pt tall to tap, like other links.
+                                  child: ConstrainedBox(
+                                    constraints:
+                                        const BoxConstraints(minHeight: 48),
+                                    child: Row(
                                     mainAxisAlignment:
                                         MainAxisAlignment.spaceBetween,
                                     children: [
                                       const Text(
-                                        'Top Spent',
+                                        'Top spending',
                                         style: TextStyle(
                                           fontSize: 20,
                                           fontWeight: FontWeight.bold,
@@ -203,11 +215,11 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           const Text(
-                                            'See All',
+                                            'See all',
                                             style: TextStyle(
                                               fontSize: 13,
                                               fontWeight: FontWeight.w600,
-                                              color: ZenioColors.primary,
+                                              color: ZenioColors.primaryStrong,
                                             ),
                                           ),
                                           const SizedBox(width: 4),
@@ -215,13 +227,14 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
                                             width: 18,
                                             height: 18,
                                             colorFilter: const ColorFilter.mode(
-                                              ZenioColors.primary,
+                                              ZenioColors.primaryStrong,
                                               BlendMode.srcIn,
                                             ),
                                           ),
                                         ],
                                       ),
                                     ],
+                                  ),
                                   ),
                                 ),
                                 const SizedBox(height: 12),
@@ -236,7 +249,8 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
                           const SizedBox(height: 6),
 
                           // Categories List Only Scrolls!
-                          Expanded(
+                          _listArea(
+                            tight: tight,
                             child: categories.isEmpty
                                 ? Center(
                                     child: SingleChildScrollView(
@@ -266,8 +280,12 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
                                     ),
                                   )
                                 : ListView.builder(
-                                    controller: _scrollController,
-                                    physics: const BouncingScrollPhysics(),
+                                    controller:
+                                        tight ? null : _scrollController,
+                                    shrinkWrap: tight,
+                                    physics: tight
+                                        ? const NeverScrollableScrollPhysics()
+                                        : const BouncingScrollPhysics(),
                                     padding: EdgeInsets.fromLTRB(
                                       10,
                                       4,
@@ -297,8 +315,15 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
                                   ),
                           ),
                         ],
+                      );
+                      return tight
+                          ? SingleChildScrollView(
+                              physics: const BouncingScrollPhysics(),
+                              child: content,
+                            )
+                          : content;
+                        },
                       ),
-
                     ],
                   ),
                 ),
@@ -309,6 +334,16 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
       ),
     );
   }
+
+  /// The height of the content sheet below which [_listArea] stops scrolling
+  /// on its own: the chart, legend and header take about 400pt at large text,
+  /// which leaves too little of the list in view.
+  static const double _tightSheetHeight = 480;
+
+  /// The category list: it fills the rest of the sheet, or on a short sheet
+  /// takes its full height and scrolls with the chart.
+  Widget _listArea({required bool tight, required Widget child}) =>
+      tight ? child : Expanded(child: child);
 
   Widget _buildFilterPill({
     required String label,
@@ -586,6 +621,8 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
   Widget _buildTimeframePicker(String period, String timeframe) {
     if (period.toLowerCase() == 'custom') {
       return GestureDetector(
+        // The whole pill, padding included, is tappable.
+        behavior: HitTestBehavior.opaque,
         onTap: () async {
           List<DateTime?> selectedDates = [];
           final picked = await showModalBottomSheet<List<DateTime?>>(
@@ -616,7 +653,7 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
                           ),
                         ),
                         const Text(
-                          'Select Date Range',
+                          'Choose dates',
                           style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
                         ),
                         CalendarDatePicker2(
@@ -674,7 +711,7 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
                                     ),
                                     disabledBackgroundColor: Colors.white.withOpacity(0.3),
                                   ),
-                                  child: const Text('Save', style: TextStyle(fontWeight: FontWeight.bold)),
+                                  child: const Text('Apply', style: TextStyle(fontWeight: FontWeight.bold)),
                                 ),
                               ),
                             ],

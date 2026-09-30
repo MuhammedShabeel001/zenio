@@ -112,12 +112,16 @@ void main() {
         path: path,
       ).database;
 
-      expect(await upgraded.getVersion(), 3);
+      expect(await upgraded.getVersion(), 4);
       final rows = await upgraded.query('transactions');
       expect(rows.single['id'], 'kept');
       expect(rows.single['amount'], 12.5);
       expect(rows.single.containsKey('kind'), isTrue);
       expect(rows.single['kind'], isNull);
+      // The transfer wallets, added later, are empty for existing rows.
+      expect(rows.single['transfer_from'], isNull);
+      expect(rows.single['transfer_to'], isNull);
+      expect(rows.single.containsKey('transfer_from'), isTrue);
       expect(await upgraded.query('key_value_store'), hasLength(1));
       await upgraded.close();
     });

@@ -1,3 +1,4 @@
+export 'clock_provider/clock_provider.dart';
 export 'currency_provider/currency_provider.dart';
 export 'default_wallet_provider/default_wallet_provider.dart';
 export 'dio_provider/dio_provider.dart';

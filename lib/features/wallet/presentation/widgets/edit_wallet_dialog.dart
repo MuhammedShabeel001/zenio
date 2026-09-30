@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,7 +11,9 @@ import 'package:zenio/shared/theme/zenio_tokens.dart';
 import 'package:zenio/shared/utils/app_fonts.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/utils/formatters.dart';
+import 'package:zenio/shared/widgets/money.dart';
 import 'package:zenio/shared/widgets/zenio_dropdown.dart';
+import 'package:zenio/shared/widgets/zenio_snack_bar.dart';
 
 class EditWalletDialog extends ConsumerStatefulWidget {
   const EditWalletDialog({
@@ -52,7 +56,7 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
   static const List<Map<String, String>> _presetTypes = [
     {'value': 'BANK', 'label': 'Bank'},
     {'value': 'DEBIT CARD', 'label': 'Debit'},
-    {'value': 'CREDIT CARD', 'label': 'Credit'},
+    {'value': creditCardWalletType, 'label': 'Credit'},
     {'value': 'CASH', 'label': 'Cash'},
     {'value': 'SAVINGS', 'label': 'Savings'},
   ];
@@ -201,6 +205,14 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
   bool _isSaving = false;
   String? _nameError;
 
+  /// The balance typed in, or null when the field is empty (left as it is)
+  /// or not an amount.
+  double? get _enteredBalance {
+    final text = _balanceController.text.trim();
+    if (text.isEmpty || text == '-') return null;
+    return AppNumberFormat.tryParseAmount(text);
+  }
+
   Future<void> _saveChanges() async {
     if (_isSaving) return;
     final name = _nameController.text.trim();
@@ -215,10 +227,7 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
     }
 
     // An empty balance leaves it as it is rather than setting it to zero.
-    final balanceText = _balanceController.text.trim();
-    final balance = balanceText.isEmpty || balanceText == '-'
-        ? widget.card.balance
-        : AppNumberFormat.parseAmount(balanceText);
+    final balance = _enteredBalance ?? widget.card.balance;
     // The stored number changes only when the digits were changed here.
     final lastFour = _cardNumberController.text.trim();
     final cardNumber =
@@ -250,11 +259,14 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
       _isSaving = true;
       _nameError = null;
     });
+    final adjusts = balance != widget.card.balance;
+    var detailsSaved = false;
     try {
       await notifier.editCard(widget.cardIndex, updatedCard);
+      detailsSaved = true;
       // A different balance is recorded as an adjustment, so the change is
       // visible in the history instead of silently overwriting it.
-      if (balance != widget.card.balance) {
+      if (adjusts) {
         await notifier.adjustBalance(widget.card.id, balance);
       }
     } catch (e) {
@@ -264,11 +276,23 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
         _isSaving = false;
         _nameError = e is WalletNameConflictException
             ? e.message
-            : "Couldn't save the wallet. Please try again.";
+            : detailsSaved
+                ? "The wallet was saved, but its balance couldn't be "
+                    'changed. Please try again.'
+                : "Couldn't save the wallet. Please try again.";
       });
       return;
     }
     if (!mounted) return;
+    unawaited(HapticFeedback.lightImpact());
+    ZenioSnackBar.show(
+      context,
+      message: adjusts
+          ? 'Wallet saved · balance is now '
+              '${Money.balance(balance, symbol: ref.read(currencySymbolProvider))}'
+          : 'Wallet saved',
+      type: ZenioSnackBarType.success,
+    );
     Navigator.of(context).pop();
   }
 
@@ -279,6 +303,31 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
         ? _customTypeController.text
         : _selectedType;
     return type.toUpperCase().contains('CARD');
+  }
+
+  /// Says what saving a different balance does, before it is saved.
+  Widget _adjustmentNote(String currencySymbol) {
+    final entered = _enteredBalance;
+    if (entered == null) return const SizedBox(width: double.infinity);
+    final delta = entered - widget.card.balance;
+    if (delta.abs() < 0.005) return const SizedBox(width: double.infinity);
+    final change = Money.signed(
+      delta,
+      symbol: currencySymbol,
+      direction: delta > 0 ? MoneyDirection.incoming : MoneyDirection.outgoing,
+    );
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 8, 14, 2),
+      child: Text(
+        'Saving records a balance adjustment of $change. '
+        "It isn't income or spending.",
+        style: const TextStyle(
+          fontSize: 13,
+          height: 1.35,
+          color: ZenioColors.textSecondary,
+        ),
+      ),
+    );
   }
 
   @override
@@ -305,7 +354,7 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    'Edit Wallet',
+                    'Edit wallet',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -347,7 +396,18 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
               ),
               const SizedBox(height: 18),
 
-              // Balance (Amount) Input
+              // Balance: changing it records an adjustment, said below.
+              const Padding(
+                padding: EdgeInsets.only(left: 14, bottom: 6),
+                child: Text(
+                  'Current balance',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: ZenioColors.textSecondary,
+                  ),
+                ),
+              ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
                 decoration: BoxDecoration(
@@ -405,6 +465,12 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
                     ),
                   ],
                 ),
+              ),
+              AnimatedSize(
+                duration: ZenioMotion.of(context, ZenioMotion.standard),
+                curve: ZenioMotion.standardCurve,
+                alignment: Alignment.topCenter,
+                child: _adjustmentNote(currencySymbol),
               ),
               const SizedBox(height: 6),
 
@@ -649,7 +715,11 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
                           final isSelected = _selectedImageIndex == index;
                           final imagePath = _cardImages[index];
 
-                          return GestureDetector(
+                          return Semantics(
+                            button: true,
+                            selected: isSelected,
+                            label: 'Card design ${index + 1}',
+                            child: GestureDetector(
                             onTap: () {
                               setState(() {
                                 _selectedImageIndex = index;
@@ -672,11 +742,13 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
                                         color: const Color(0xFFE5E5EA),
                                       ),
                                 image: DecorationImage(
-                                  image: AssetImage(imagePath),
+                                  // Decoded at thumbnail size, not the full 2166px skin.
+                                  image: ResizeImage(AssetImage(imagePath), width: 180),
                                   fit: BoxFit.cover,
                                 ),
                               ),
                             ),
+                          ),
                           );
                         }),
                       ),
@@ -699,7 +771,7 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
                     ),
                   ),
                   child: const Text(
-                    'Save Changes',
+                    'Save changes',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,

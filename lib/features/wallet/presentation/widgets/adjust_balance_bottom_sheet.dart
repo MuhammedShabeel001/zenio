@@ -45,7 +45,7 @@ class AdjustBalanceBottomSheet extends ConsumerStatefulWidget {
 class _AdjustBalanceBottomSheetState
     extends ConsumerState<AdjustBalanceBottomSheet> {
   final TextEditingController _amountController = TextEditingController();
-  String _mode = 'add'; // 'add', 'subtract', 'set'
+  String _mode = 'add'; // 'add' (increase), 'subtract' (decrease), 'set'
 
   @override
   void dispose() {
@@ -56,18 +56,26 @@ class _AdjustBalanceBottomSheetState
   bool _isSaving = false;
   String? _saveError;
 
-  Future<void> _onSave(WalletCardModel card) async {
-    final amountText = _amountController.text.trim();
-    if (amountText.isEmpty || amountText == '-' || _isSaving) return;
-
-    final amount = AppNumberFormat.parseAmount(amountText);
-    if (amount <= 0 && _mode != 'set') return;
-
+  /// The balance the wallet will have, or null while the entry would not
+  /// change it (nothing typed, zero to add or take away, or the same
+  /// balance to set).
+  double? _newBalance(WalletCardModel card) {
+    final text = _amountController.text.trim();
+    if (text.isEmpty || text == '-') return null;
+    final amount = AppNumberFormat.tryParseAmount(text);
+    if (amount == null) return null;
+    if (_mode != 'set' && amount <= 0) return null;
     final target = switch (_mode) {
       'add' => card.balance + amount,
       'subtract' => card.balance - amount,
       _ => amount,
     };
+    return (target - card.balance).abs() < 0.005 ? null : target;
+  }
+
+  Future<void> _onSave(WalletCardModel card) async {
+    final target = _newBalance(card);
+    if (target == null || _isSaving) return;
 
     setState(() => _isSaving = true);
     try {
@@ -76,6 +84,12 @@ class _AdjustBalanceBottomSheetState
           .adjustBalance(card.id, target);
       await HapticFeedback.lightImpact();
       if (!mounted) return;
+      ZenioSnackBar.show(
+        context,
+        message: '${card.bankName} balance is now '
+            '${Money.balance(target, symbol: ref.read(currencySymbolProvider))}',
+        type: ZenioSnackBarType.success,
+      );
       Navigator.of(context).pop();
     } catch (e) {
       if (!mounted) return;
@@ -89,20 +103,26 @@ class _AdjustBalanceBottomSheetState
     }
   }
 
+  /// A mode: neutral, as a correction is neither good nor bad news.
   Widget _buildModeButton(String modeValue, String label) {
     final isSelected = _mode == modeValue;
     return Expanded(
-      child: GestureDetector(
+      child: Semantics(
+        button: true,
+        selected: isSelected,
+        child: GestureDetector(
         onTap: () {
           setState(() {
             _mode = modeValue;
             _amountController.clear();
           });
         },
-        child: Container(
+        child: AnimatedContainer(
+          duration: ZenioMotion.of(context, ZenioMotion.fast),
+          constraints: const BoxConstraints(minHeight: 48),
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? ZenioColors.primary : ZenioColors.fieldFill,
+            color: isSelected ? ZenioColors.textPrimary : ZenioColors.fieldFill,
             borderRadius: BorderRadius.circular(16),
           ),
           child: Center(
@@ -116,6 +136,7 @@ class _AdjustBalanceBottomSheetState
             ),
           ),
         ),
+        ),
       ),
     );
   }
@@ -127,6 +148,7 @@ class _AdjustBalanceBottomSheetState
         ? walletState.cards[widget.cardIndex]
         : null;
     final currencySymbol = ref.watch(currencySymbolProvider);
+    final newBalance = card == null ? null : _newBalance(card);
 
     return Container(
       width: double.infinity,
@@ -165,7 +187,7 @@ class _AdjustBalanceBottomSheetState
             if (card != null) ...[
               const SizedBox(height: 4),
               Text(
-                'Current: ${Money.balance(card.balance, symbol: currencySymbol, alwaysShowDecimals: true)}',
+                'Current: ${Money.balance(card.balance, symbol: currencySymbol)}',
                 style: AppFonts.numeric(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
@@ -208,11 +230,11 @@ class _AdjustBalanceBottomSheetState
 
             Row(
               children: [
-                _buildModeButton('add', 'Add (+)'),
+                _buildModeButton('add', 'Increase'),
                 const SizedBox(width: 8),
-                _buildModeButton('subtract', 'Subtract (-)'),
+                _buildModeButton('subtract', 'Decrease'),
                 const SizedBox(width: 8),
-                _buildModeButton('set', 'Set (=)'),
+                _buildModeButton('set', 'Set to'),
               ],
             ),
             const SizedBox(height: 24),
@@ -241,6 +263,7 @@ class _AdjustBalanceBottomSheetState
                         decimal: true,
                         signed: _mode == 'set',
                       ),
+                      textInputAction: TextInputAction.done,
                       inputFormatters: [
                         // Only a balance to set can be below zero.
                         ThousandsSeparatorInputFormatter(
@@ -276,7 +299,28 @@ class _AdjustBalanceBottomSheetState
                 ],
               ),
             ),
-            const SizedBox(height: 32),
+            // Where the balance ends up, before saving.
+            AnimatedSize(
+              duration: ZenioMotion.of(context, ZenioMotion.standard),
+              curve: ZenioMotion.standardCurve,
+              alignment: Alignment.topCenter,
+              child: newBalance == null
+                  ? const SizedBox(width: double.infinity)
+                  : Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: Text(
+                        'New balance: '
+                        '${Money.balance(newBalance, symbol: currencySymbol)}',
+                        textAlign: TextAlign.center,
+                        style: AppFonts.numeric(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: ZenioColors.textPrimary,
+                        ),
+                      ),
+                    ),
+            ),
+            const SizedBox(height: 28),
 
             if (_saveError != null)
               Padding(
@@ -291,10 +335,14 @@ class _AdjustBalanceBottomSheetState
 
             // Save button
             ElevatedButton(
-              onPressed: card == null || _isSaving ? null : () => _onSave(card),
+              onPressed: card == null || newBalance == null || _isSaving
+                  ? null
+                  : () => _onSave(card),
               style: ElevatedButton.styleFrom(
                 backgroundColor: ZenioColors.primary,
                 foregroundColor: Colors.white,
+                disabledBackgroundColor: const Color(0xFFE5E5EA),
+                disabledForegroundColor: ZenioColors.textSecondary,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
@@ -305,8 +353,8 @@ class _AdjustBalanceBottomSheetState
                 _mode == 'set'
                     ? 'Set balance'
                     : (_mode == 'add'
-                        ? 'Add to balance'
-                        : 'Subtract from balance'),
+                        ? 'Increase balance'
+                        : 'Decrease balance'),
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,

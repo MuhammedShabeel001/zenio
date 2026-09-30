@@ -29,7 +29,7 @@ Map<String, double> walletTransactionTotals(
   for (final tx in transactions) {
     switch (tx.resolvedKind) {
       case TransactionKind.transfer:
-        final ends = parseTransferWallets(tx.bankName);
+        final ends = tx.transferEnds;
         if (ends != null) {
           apply(ends.from, -tx.amount);
           apply(ends.to, tx.amount);
@@ -105,19 +105,31 @@ String walletNameKey(String name) => name.trim().toLowerCase();
 
 double roundToCents(double amount) => (amount * 100).roundToDouble() / 100;
 
-/// The title and wallet of a transaction after the wallet [oldName] was
-/// renamed to [newName], or null when the transaction does not refer to it.
-({String title, String? bankName})? renamedWalletReferences({
+/// A transaction's wallet references after the wallet [oldName] was renamed
+/// to [newName], or null when it does not refer to that wallet. Only a
+/// transfer ([kind]) is read as two wallets; any other transaction refers to
+/// its [bankName] as a whole, even if the name contains "->".
+({String title, String? bankName, String? transferFrom, String? transferTo})?
+    renamedWalletReferences({
+  required TransactionKind kind,
   required String title,
   required String? bankName,
+  required String? transferFrom,
+  required String? transferTo,
   required String oldName,
   required String newName,
 }) {
   final old = walletNameKey(oldName);
   bool isOld(String name) => walletNameKey(name) == old;
 
-  final ends = parseTransferWallets(bankName);
-  if (ends != null) {
+  if (kind == TransactionKind.transfer) {
+    final ends = transferWallets(
+      transferFrom: transferFrom,
+      transferTo: transferTo,
+      bankName: bankName,
+      title: title,
+    );
+    if (ends == null) return null;
     final from = isOld(ends.from) ? newName : ends.from;
     final to = isOld(ends.to) ? newName : ends.to;
     if (from == ends.from && to == ends.to) return null;
@@ -128,12 +140,19 @@ double roundToCents(double amount) => (amount * 100).roundToDouble() / 100;
             : title;
     return (
       title: renamedTitle,
-      bankName: '$from$transferWalletSeparator$to',
+      bankName: transferBankName(from, to),
+      transferFrom: from,
+      transferTo: to,
     );
   }
 
   if (bankName != null && isOld(bankName)) {
-    return (title: title, bankName: newName);
+    return (
+      title: title,
+      bankName: newName,
+      transferFrom: transferFrom,
+      transferTo: transferTo,
+    );
   }
   return null;
 }
@@ -148,14 +167,21 @@ List<TransactionModel> withWalletRenamed(
   return [
     for (final tx in transactions)
       switch (renamedWalletReferences(
+        kind: tx.resolvedKind,
         title: tx.title,
         bankName: tx.bankName,
+        transferFrom: tx.transferFrom,
+        transferTo: tx.transferTo,
         oldName: oldName,
         newName: newName,
       )) {
         null => tx,
-        final renamed =>
-          tx.copyWith(title: renamed.title, bankName: renamed.bankName),
+        final renamed => tx.copyWith(
+            title: renamed.title,
+            bankName: renamed.bankName,
+            transferFrom: renamed.transferFrom,
+            transferTo: renamed.transferTo,
+          ),
       },
   ];
 }

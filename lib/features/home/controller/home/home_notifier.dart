@@ -3,6 +3,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:zenio/features/home/domain/models/transaction/transaction_kind.dart';
 import 'package:zenio/features/home/home.dart';
 import 'package:zenio/features/wallet/domain/wallet_balances.dart';
+import 'package:zenio/shared/providers/clock_provider/clock_provider.dart';
 import 'package:zenio/shared/utils/datetime.dart';
 
 part 'home_notifier.freezed.dart';
@@ -16,6 +17,9 @@ part 'home_state.dart';
 class HomeNotifier extends _$HomeNotifier {
   IMoneyTrackerRepository? _moneyTrackerRepository;
   Future<void>? _initialLoad;
+
+  /// The calendar month the summary was last worked out for.
+  DateTime? _summaryMonth;
 
   @override
   HomeState build() {
@@ -115,6 +119,22 @@ class HomeNotifier extends _$HomeNotifier {
     _recalculateSummary(updatedTxs);
   }
 
+  /// Works out the month summary again if the calendar month has changed
+  /// since it was last worked out, for example when Zenio comes back on the
+  /// 1st after being left open. Transactions are neither reloaded nor
+  /// changed. Returns whether the summary was worked out again.
+  bool refreshForCurrentMonth() {
+    final summaryMonth = _summaryMonth;
+    if (state.status != HomeStatus.success || summaryMonth == null) {
+      return false;
+    }
+    if (_monthOf(ref.read(clockProvider)()) == summaryMonth) return false;
+    _recalculateSummary(state.transactions);
+    return true;
+  }
+
+  static DateTime _monthOf(DateTime time) => DateTime(time.year, time.month);
+
   /// The order the database returns: by timestamp, then date, newest first,
   /// so a restored or re-dated transaction appears where a reload puts it.
   static List<TransactionModel> _newestFirst(List<TransactionModel> txs) {
@@ -137,9 +157,10 @@ class HomeNotifier extends _$HomeNotifier {
   }
 
   void _recalculateSummary(List<TransactionModel> txs) {
-    final now = DateTime.now();
-    final currentMonth = DateTime(now.year, now.month);
+    final now = ref.read(clockProvider)();
+    final currentMonth = _monthOf(now);
     final previousMonth = DateTime(now.year, now.month - 1);
+    _summaryMonth = currentMonth;
 
     double thisMonthIncome = 0;
     double thisMonthExpense = 0;

@@ -39,6 +39,10 @@
 	<true/>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Zenio uses Face ID to unlock your Vault when Vault Lock is on.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Zenio only opens files you choose to import, such as a CSV export.</string>
+	<key>NSAppleMusicUsageDescription</key>
+	<string>Zenio only opens files you choose to import, such as a CSV export.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

@@ -152,8 +152,6 @@ class _DebtCardState extends ConsumerState<DebtCard>
     return ItemActions(
       onEdit: widget.onEdit,
       onDelete: widget.onDelete,
-      // The swipe button asks twice; long press and screen readers confirm.
-      confirmDeleteTitle: 'Delete this debt?',
       child: Container(
       margin: const EdgeInsets.only(bottom: 5),
       child: Stack(
@@ -170,18 +168,12 @@ class _DebtCardState extends ConsumerState<DebtCard>
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Delete Button (First tap: red trash icon; tap again to confirm: red circle with white checkmark)
+                  // Deletes straight away; the screen offers Undo.
                   SwipeDeleteButton(
-                    isConfirming: _isConfirmingDelete,
+                    isConfirming: false,
                     onTap: () {
-                      if (!_isConfirmingDelete) {
-                        setState(() {
-                          _isConfirmingDelete = true;
-                        });
-                      } else {
-                        _close();
-                        widget.onDelete?.call();
-                      }
+                      _close();
+                      widget.onDelete?.call();
                     },
                   ),
                   const SizedBox(width: 3),

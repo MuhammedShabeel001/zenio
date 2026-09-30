@@ -34,6 +34,19 @@ class SettingsItemTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // A switch row is one item for screen readers: its title names the
+    // switch ("Vault Lock, off").
+    final tile = LayoutBuilder(builder: _buildTile);
+    return isSwitch ? MergeSemantics(child: tile) : tile;
+  }
+
+  Widget _buildTile(BuildContext context, BoxConstraints constraints) {
+    // On a narrow row with large text, a picker goes under the title rather
+    // than squeezing it to a few letters per line.
+    final stacked = trailing != null &&
+        !isSwitch &&
+        badgeText == null &&
+        constraints.maxWidth < MediaQuery.textScalerOf(context).scale(280);
     return Container(
       margin: const EdgeInsets.only(bottom: 5),
       decoration: BoxDecoration(
@@ -94,6 +107,10 @@ class SettingsItemTile extends StatelessWidget {
                           ),
                         ),
                       ],
+                      if (stacked) ...[
+                        const SizedBox(height: ZenioSpacing.sm),
+                        trailing!,
+                      ],
                     ],
                   ),
                 ),
@@ -124,7 +141,7 @@ class SettingsItemTile extends StatelessWidget {
                       ),
                     ),
                   )
-                else if (trailing != null)
+                else if (trailing != null && !stacked)
                   trailing!,
               ],
             ),

@@ -1,15 +1,16 @@
-import 'package:flutter/material.dart';
 import 'package:calendar_date_picker2/calendar_date_picker2.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zenio/features/home/domain/models/transaction/transaction_kind.dart';
-import 'package:zenio/features/home/presentation/widgets/delete_transaction_with_undo.dart';
-import 'package:zenio/shared/utils/period_filter.dart';
-import 'package:zenio/features/transactions/controller/transactions/transactions_notifier.dart';
-import 'package:zenio/features/transactions/presentation/widgets/transaction_detail_card.dart';
 import 'package:zenio/features/home/home.dart';
+import 'package:zenio/features/home/presentation/widgets/delete_transaction_with_undo.dart';
+import 'package:zenio/features/transactions/controller/transactions/transactions_notifier.dart';
+import 'package:zenio/features/transactions/presentation/widgets/adjustment_details_dialog.dart';
+import 'package:zenio/features/transactions/presentation/widgets/edit_transaction_dialog.dart';
+import 'package:zenio/features/transactions/presentation/widgets/transaction_detail_card.dart';
 import 'package:zenio/shared/shared.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
-import 'package:zenio/features/transactions/presentation/widgets/edit_transaction_dialog.dart';
+import 'package:zenio/shared/utils/period_filter.dart';
 
 class TransactionsScreenMobile extends ConsumerStatefulWidget {
   const TransactionsScreenMobile({super.key});
@@ -22,7 +23,6 @@ class TransactionsScreenMobile extends ConsumerStatefulWidget {
 class _TransactionsScreenMobileState
     extends ConsumerState<TransactionsScreenMobile> {
   String? _openTransactionId;
-  String? _expandedTileId;
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(transactionsNotifierProvider);
@@ -179,19 +179,13 @@ class _TransactionsScreenMobileState
                               key: ValueKey(item.id),
                               transaction: item,
                               isOpen: _openTransactionId == item.id,
-                              isTileExpanded: _expandedTileId == item.id,
-                              note: item.note,
-                              bankName: item.bankName,
-                              timestamp: item.timestamp,
-                              onTileTap: () {
-                                setState(() {
-                                  if (_expandedTileId == item.id) {
-                                    _expandedTileId = null;
-                                  } else {
-                                    _expandedTileId = item.id;
-                                  }
-                                });
-                              },
+                              // An adjustment can't be edited; a tap
+                              // shows what it did.
+                              onTap: () => showAdjustmentDetails(
+                                context,
+                                ref,
+                                item.toModel(),
+                              ),
                               onOpen: () {
                                 if (_openTransactionId != item.id) {
                                   setState(() {
@@ -318,6 +312,8 @@ class _TransactionsScreenMobileState
   Widget _buildTimeframePicker(String period, String timeframe) {
     if (period.toLowerCase() == 'custom') {
       return GestureDetector(
+        // The whole pill, padding included, is tappable.
+        behavior: HitTestBehavior.opaque,
         onTap: () async {
           List<DateTime?> selectedDates = [];
           final picked = await showModalBottomSheet<List<DateTime?>>(
@@ -348,7 +344,7 @@ class _TransactionsScreenMobileState
                           ),
                         ),
                         const Text(
-                          'Select Date Range',
+                          'Choose dates',
                           style: TextStyle(
                               color: Colors.white,
                               fontSize: 18,
@@ -426,7 +422,7 @@ class _TransactionsScreenMobileState
                                     disabledBackgroundColor:
                                         Colors.white.withOpacity(0.3),
                                   ),
-                                  child: const Text('Save',
+                                  child: const Text('Apply',
                                       style: TextStyle(
                                           fontWeight: FontWeight.bold,),),
                                 ),

@@ -9,6 +9,7 @@ import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart'
 import 'package:zenio/features/wallet/domain/repositories/implementations/wallet_repository.dart';
 import 'package:zenio/features/wallet/domain/repositories/interfaces/i_wallet_repository.dart';
 import 'package:zenio/features/wallet/domain/wallet_balances.dart';
+import 'package:zenio/shared/utils/money_limits.dart';
 import 'package:zenio/shared/utils/serial_task_queue.dart';
 
 part 'wallet_notifier.freezed.dart';
@@ -24,17 +25,22 @@ part 'wallet_state.dart';
 @Riverpod(keepAlive: true)
 class WalletNotifier extends _$WalletNotifier {
   IWalletRepository? _walletRepository;
+  Future<void>? _cardNumberCleanup;
   Future<void>? _initialLoad;
   final _writes = SerialTaskQueue();
 
   @override
   WalletState build() {
     try {
-      _walletRepository = ref.watch(walletRepositoryRepoProvider);
+      final repo = ref.watch(walletRepositoryRepoProvider);
+      _walletRepository = repo;
+      _cardNumberCleanup =
+          Future.microtask(() => _clearGeneratedCardNumbers(repo));
       _initialLoad = Future.microtask(loadWalletData);
     } catch (_) {
       // Local storage is still opening; this notifier rebuilds once it is.
       _walletRepository = null;
+      _cardNumberCleanup = null;
       _initialLoad = null;
     }
 
@@ -51,9 +57,22 @@ class WalletNotifier extends _$WalletNotifier {
     return cards.where((c) => !c.isFrozen).fold(0, (sum, c) => sum + c.balance);
   }
 
+  /// One-time removal of the card numbers Zenio once made up for new
+  /// wallets. Every load waits for it and every write waits for the first
+  /// load, so nothing reads or saves the wallets while it runs.
+  static Future<void> _clearGeneratedCardNumbers(IWalletRepository repo) async {
+    try {
+      await repo.clearGeneratedCardNumbers();
+    } catch (_) {
+      // Not logged: the error could carry the stored wallets. The numbers
+      // stay stored but are never shown, and the next launch tries again.
+    }
+  }
+
   Future<void> loadWalletData() async {
     final repo = _walletRepository;
     if (repo == null) return;
+    await _cardNumberCleanup;
     state = state.copyWith(status: WalletStatus.loading);
     try {
       final transactions = await _loadedTransactions();
@@ -209,6 +228,7 @@ class WalletNotifier extends _$WalletNotifier {
   /// Sets the wallet's balance to [newBalance] by recording the difference as
   /// a balance adjustment, so the change stays visible in the history.
   Future<void> adjustBalance(String walletId, double newBalance) async {
+    checkStorableAmount(newBalance, 'balance');
     // Queued with the other wallet writes, and worked out from the stored
     // wallets and transactions rather than the balances on screen, which
     // can be out of date.
@@ -271,6 +291,52 @@ class WalletNotifier extends _$WalletNotifier {
   /// updates that follow transaction changes, are done.
   Future<void> idle() => _writes.run(() async {});
 
+  /// Adds [imported] transactions (from a CSV file) to the history.
+  ///
+  /// Every wallet keeps the balance it shows now. The file holds no
+  /// balances, and the balance a wallet shows is the one the user entered,
+  /// which already includes its past; so each wallet's opening balance takes
+  /// in the imported transactions, as when a wallet is added after its
+  /// transactions exist. Counting them again would change balances the user
+  /// set, for example when restoring an export into wallets just recreated
+  /// with their current balances.
+  ///
+  /// The transactions and the wallets are saved in one database transaction:
+  /// either both change or nothing does. Throws, changing nothing, if a
+  /// transaction names a wallet that does not exist or is already stored.
+  Future<void> importTransactions(List<TransactionModel> imported) async {
+    if (imported.isEmpty) return;
+    await _writes.run(() async {
+      final repo = await _ready();
+      final transactions = await _loadedTransactions();
+      final current = await repo.getCards();
+
+      final names = {for (final card in current) walletNameKey(card.bankName)};
+      for (final tx in imported) {
+        final ends = tx.transferEnds;
+        for (final name in ends == null ? [tx.bankName] : [ends.from, ends.to]) {
+          if (name == null || !names.contains(walletNameKey(name))) {
+            throw StateError('A wallet of an imported transaction is missing.');
+          }
+        }
+      }
+
+      final updated = _balanced(
+        current,
+        current,
+        [...transactions, ...imported],
+        keepBalances: true,
+        shownWith: transactions,
+      );
+      await repo.saveCardsWithTransactions(updated, imported);
+      _publish(updated);
+    });
+    // Reading the transactions again brings the imported ones into the
+    // history; the balances they lead to are the ones just saved.
+    await ref.read(homeNotifierProvider.notifier).loadMoneyTrackerData();
+    await idle();
+  }
+
   /// Freezes or unfreezes the wallet with [walletId]. A frozen wallet is
   /// left out of the total balance; nothing else about it changes.
   Future<void> setFrozen(String walletId, {required bool frozen}) async {
@@ -285,6 +351,7 @@ class WalletNotifier extends _$WalletNotifier {
   }
 
   Future<void> addCard(WalletCardModel card, double initialBalance) async {
+    checkStorableAmount(initialBalance, 'opening balance');
     final newCard = card.copyWith(
       balance: initialBalance,
       openingBalance: initialBalance,
@@ -407,7 +474,7 @@ class WalletNotifier extends _$WalletNotifier {
     if (card == null) return 0;
     final key = walletNameKey(card.bankName);
     return ref.read(homeNotifierProvider).transactions.where((tx) {
-      final ends = parseTransferWallets(tx.bankName);
+      final ends = tx.transferEnds;
       if (ends != null) {
         return walletNameKey(ends.from) == key || walletNameKey(ends.to) == key;
       }

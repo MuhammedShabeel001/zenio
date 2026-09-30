@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart' show DateUtils;
 import 'package:intl/intl.dart';
 import 'package:timezone/timezone.dart' as tz;
 
@@ -51,9 +52,36 @@ class DateTimeUtils {
     return parsed;
   }
 
+  /// How dates read in Zenio: "Today", "Yesterday", "Tomorrow", otherwise
+  /// "30 Sep 2026". [now] is for tests.
+  static String displayDate(DateTime date, {DateTime? now}) {
+    final today = DateUtils.dateOnly(now ?? DateTime.now());
+    final day = DateUtils.dateOnly(date);
+    final days = day.difference(today).inHours / 24;
+    return switch (days.round()) {
+      0 => 'Today',
+      -1 => 'Yesterday',
+      1 => 'Tomorrow',
+      _ => _displayFormat.format(day),
+    };
+  }
+
+  static final DateFormat _displayFormat = DateFormat('d MMM yyyy');
+
+  /// The time of day in a stored timestamp ("yy-MM-dd   HH : mm") as
+  /// "HH:mm", or null when it has none.
+  static String? timeOfTimestamp(String? timestamp) {
+    final match =
+        RegExp(r'   (\d{1,2}) ?: ?(\d{2})$').firstMatch(timestamp ?? '');
+    return match == null ? null : '${match[1]}:${match[2]}';
+  }
+
   static final Map<String, DateTime?> _parsedDates = {};
   static final RegExp _storedDate = RegExp(r'^(\d{2})-(\d{2})-(\d{4})$');
   static final DateFormat _longDate = DateFormat('EEEE, MMMM d, yyyy');
+  // "30 September 2026" (debts, notes) and "30 Sep 2026".
+  static final DateFormat _dayMonthYear = DateFormat('d MMMM yyyy');
+  static final DateFormat _dayShortMonthYear = DateFormat('d MMM yyyy');
   static final DateFormat _monthDayYear = DateFormat('MMMM d, yyyy');
   static final DateFormat _slashDate = DateFormat('dd/MM/yyyy');
   static final DateFormat _dashDate = DateFormat('dd-MM-yyyy');
@@ -74,9 +102,17 @@ class DateTimeUtils {
     if (iso != null) return iso;
 
     // 3. The other formats older versions stored.
+    // Older wallets stored "September 30 , 2026".
+    final tidy = clean.replaceAll(' ,', ',');
     for (final format in [_longDate, _monthDayYear, _slashDate, _dashDate]) {
       try {
-        return format.parse(clean);
+        return format.parse(tidy);
+      } catch (_) {}
+    }
+    // Debts and notes store "30 September 2026"; read exactly.
+    for (final format in [_dayMonthYear, _dayShortMonthYear]) {
+      try {
+        return format.parseStrict(tidy);
       } catch (_) {}
     }
     return null;
@@ -94,25 +130,11 @@ extension DateExtension on String {
 }
 
 extension RelativeDateExtension on String {
+  /// A stored date as Zenio shows dates (see [DateTimeUtils.displayDate]),
+  /// or the text itself when it is not a date.
   String get toRelativeDate {
-    try {
-      final date = DateTimeUtils.parseTransactionDate(this);
-      if (date == null) return this;
-      final now = DateTime.now();
-      final today = DateTime(now.year, now.month, now.day);
-      final yesterday = today.subtract(const Duration(days: 1));
-      final dateToCheck = DateTime(date.year, date.month, date.day);
-
-      if (dateToCheck == today) {
-        return 'Today';
-      } else if (dateToCheck == yesterday) {
-        return 'Yesterday';
-      } else {
-        return DateFormat('d MMM yyyy').format(date);
-      }
-    } catch (e) {
-      return this; // Fallback to original string if parsing fails
-    }
+    final date = DateTimeUtils.parseTransactionDate(this);
+    return date == null ? this : DateTimeUtils.displayDate(date);
   }
 }
 

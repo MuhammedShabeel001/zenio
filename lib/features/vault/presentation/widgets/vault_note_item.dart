@@ -4,6 +4,7 @@ import 'package:zenio/features/vault/domain/models/vault_note_model.dart';
 import 'package:zenio/shared/services/secure_platform.dart';
 import 'package:zenio/shared/theme/zenio_tokens.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
+import 'package:zenio/shared/utils/datetime.dart';
 import 'package:zenio/shared/widgets/item_actions.dart';
 import 'package:zenio/shared/widgets/swipe_delete_button.dart';
 import 'package:zenio/shared/widgets/zenio_snack_bar.dart';
@@ -210,71 +211,91 @@ class _VaultNoteItemState extends State<VaultNoteItem>
             child: GestureDetector(
               onHorizontalDragUpdate: _onHorizontalDragUpdate,
               onHorizontalDragEnd: _onHorizontalDragEnd,
+              // A tap opens the note to read in full or edit, like a
+              // transaction (or closes the swiped-open buttons).
               onTap: () {
                 if (_dragOffset < 0) {
                   _close();
+                } else {
+                  widget.onEdit?.call();
                 }
               },
               child: Container(
-                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(28),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Stack(
+                  fit: StackFit.expand,
                   children: [
-                    // Top Row: Date & Copy Button
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          widget.note.date,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: Color(0xFF333333),
+                    Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Top Row: Date & Copy Button
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                widget.note.date.toRelativeDate,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xFF333333),
+                                ),
+                              ),
+                              // Tapped through the larger target below.
+                              const Icon(
+                                Icons.copy_rounded,
+                                size: 18,
+                                color: ZenioColors.textPrimary,
+                              ),
+                            ],
                           ),
-                        ),
-                        Semantics(
-                          button: true,
-                          label: 'Copy note',
-                          excludeSemantics: true,
-                          onTap: () =>
-                              _copyToClipboard(context, widget.note.content),
-                          child: GestureDetector(
-                            onTap: () =>
-                                _copyToClipboard(context, widget.note.content),
-                            behavior: HitTestBehavior.opaque,
-                            child: const Icon(
-                              Icons.copy_rounded,
-                              size: 18,
-                              color: ZenioColors.textPrimary,
+                          const SizedBox(height: 12),
+
+                          // Divider line
+                          const Divider(
+                            color: Color(0xFFEAEAEA),
+                            height: 1,
+                          ),
+                          const SizedBox(height: 14),
+
+                          // Note Content Body
+                          Expanded(
+                            child: Text(
+                              widget.note.content,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w400,
+                                color: Color(0xFF555555),
+                                height: 1.4,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 12),
-
-                    // Divider line
-                    const Divider(
-                      color: Color(0xFFEAEAEA),
-                      height: 1,
-                    ),
-                    const SizedBox(height: 14),
-
-                    // Note Content Body
-                    Expanded(
-                      child: Text(
-                        widget.note.content,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w400,
-                          color: Color(0xFF555555),
-                          height: 1.4,
+                    // Copy: a 48pt target around the 18pt icon, reaching
+                    // into the card's padding so the card keeps its size.
+                    Positioned(
+                      top: 5,
+                      right: 5,
+                      width: 48,
+                      height: 48,
+                      child: Semantics(
+                        button: true,
+                        label: 'Copy note',
+                        excludeSemantics: true,
+                        onTap: () =>
+                            _copyToClipboard(context, widget.note.content),
+                        child: GestureDetector(
+                          onTap: () =>
+                              _copyToClipboard(context, widget.note.content),
+                          behavior: HitTestBehavior.opaque,
                         ),
                       ),
                     ),

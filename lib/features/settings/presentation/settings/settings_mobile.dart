@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zenio/features/feedback/presentation/widgets/feedback_bottom_sheet.dart';
-import 'package:zenio/features/home/controller/home/home_notifier.dart';
 import 'package:zenio/features/settings/controller/settings/settings_notifier.dart';
 import 'package:zenio/features/settings/presentation/widgets/settings_item_tile.dart';
 import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
+import 'package:zenio/features/wallet/domain/wallet_kind.dart';
 import 'package:zenio/shared/services/csv_export_service.dart';
 import 'package:zenio/shared/services/csv_import_service.dart';
 import 'package:zenio/shared/shared.dart';
@@ -85,11 +85,21 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
         box == null ? null : box.localToGlobal(Offset.zero) & box.size;
     setState(() => _isTransferringData = true);
     try {
-      final count = await ref
+      final result = await ref
           .read(csvExportServiceProvider)
           .exportDataToCsv(sharePositionOrigin: origin);
       if (!mounted) return;
-      if (count == 0) {
+      final leftOut = result.leftOut;
+      if (leftOut > 0) {
+        ZenioSnackBar.show(
+          context,
+          message: '${AppNumberFormat.formatNumber(leftOut)} '
+              "transaction${leftOut == 1 ? '' : 's'} with an invalid amount "
+              "${leftOut == 1 ? 'was' : 'were'} left out of the export.",
+          type: ZenioSnackBarType.warning,
+          duration: const Duration(seconds: 4),
+        );
+      } else if (result.exported == 0) {
         ZenioSnackBar.show(
           context,
           message: 'No transactions to export yet.',
@@ -111,41 +121,57 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
     if (_isTransferringData) return;
     setState(() => _isTransferringData = true);
     try {
-      final result = await ref
-          .read(csvImportServiceProvider)
-          .pickAndImportCsv(defaultWallet: ref.read(defaultWalletProvider));
-      if (result == null) return; // Cancelled.
-      await ref.read(homeNotifierProvider.notifier).loadMoneyTrackerData();
+      final service = ref.read(csvImportServiceProvider);
+      final content = await service.pickCsvContent();
+      if (content == null) return; // Cancelled.
+      // Every row is checked first; nothing is stored unless all are valid.
+      final plan = await service.planImport(
+        content,
+        walletNames: [
+          for (final card in ref.read(walletNotifierProvider).cards)
+            card.bankName,
+        ],
+      );
+      await ref
+          .read(walletNotifierProvider.notifier)
+          .importTransactions(plan.transactions);
       if (!mounted) return;
 
-      final imported = result.imported;
-      final skipped = result.skipped;
-      final present = result.alreadyPresent;
-      final skippedNote = [
-        if (present > 0)
-          ' ${AppNumberFormat.formatNumber(present)} '
-              "${present == 1 ? 'was' : 'were'} already in Zenio.",
-        if (skipped > 0)
-          ' Skipped ${AppNumberFormat.formatNumber(skipped)} '
-              "row${skipped == 1 ? '' : 's'} that couldn't be read.",
-      ].join();
+      final imported = plan.transactions.length;
+      final present = plan.alreadyPresent;
+      final presentNote = present > 0
+          ? ' ${AppNumberFormat.formatNumber(present)} '
+              "${present == 1 ? 'was' : 'were'} already in Zenio."
+          : '';
       ZenioSnackBar.show(
         context,
-        message: imported == 0
-            ? 'No transactions found in this file.$skippedNote'
-            : 'Imported ${AppNumberFormat.formatNumber(imported)} '
-                "transaction${imported == 1 ? '' : 's'}.$skippedNote",
-        type: imported == 0
-            ? ZenioSnackBarType.warning
-            : ZenioSnackBarType.success,
+        message: imported > 0
+            ? 'Imported ${AppNumberFormat.formatNumber(imported)} '
+                "transaction${imported == 1 ? '' : 's'}. Wallet balances "
+                'were kept as they were.$presentNote'
+            : (present > 0
+                ? 'Everything in this file is already in Zenio.'
+                : 'No transactions found in this file.'),
+        type: imported > 0
+            ? ZenioSnackBarType.success
+            : ZenioSnackBarType.warning,
         duration: const Duration(seconds: 4),
+      );
+    } on CsvImportException catch (e) {
+      if (!mounted) return;
+      ZenioSnackBar.show(
+        context,
+        message: '${e.message} Nothing was imported.',
+        type: ZenioSnackBarType.error,
+        duration: const Duration(seconds: 8),
       );
     } catch (_) {
       if (!mounted) return;
       ZenioSnackBar.show(
         context,
-        message: "Couldn't import that file. Check that it's a CSV "
-            'exported from Zenio or a spreadsheet, and try again.',
+        message: "Couldn't import that file. Nothing was imported. Check "
+            "that it's a CSV exported from Zenio or a spreadsheet, and try "
+            'again.',
         type: ZenioSnackBarType.error,
       );
     } finally {
@@ -158,6 +184,30 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
   /// opens. Changing it needs the same check, except that it can always be
   /// turned off on a device without a screen lock, where there is nothing to
   /// check and the Vault could otherwise never be opened.
+  /// Makes [walletName] the wallet new transactions start with, and says
+  /// so.
+  Future<void> _changeDefaultWallet(String walletName) async {
+    try {
+      await ref
+          .read(settingsNotifierProvider.notifier)
+          .updateDefaultWallet(walletName);
+      await HapticFeedback.selectionClick();
+      if (!mounted) return;
+      ZenioSnackBar.show(
+        context,
+        message: 'New transactions will use $walletName',
+        type: ZenioSnackBarType.success,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ZenioSnackBar.show(
+        context,
+        message: "Couldn't change the default wallet. Please try again.",
+        type: ZenioSnackBarType.error,
+      );
+    }
+  }
+
   Future<void> _setVaultLock({required bool enable}) async {
     setState(() => _isChangingVaultLock = true);
     try {
@@ -479,7 +529,7 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                           ),
                           if (cards.length >= 2)
                             SettingsItemTile(
-                              title: 'Default Wallet',
+                              title: 'Default wallet',
                               icon: Assets.icons.wallet.svg(
                                 width: 24,
                                 height: 24,
@@ -515,11 +565,7 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                                     ),
                                   ),
                                   offset: const Offset(0, 38),
-                                  onSelected: (String walletName) {
-                                    ref
-                                        .read(settingsNotifierProvider.notifier)
-                                        .updateDefaultWallet(walletName);
-                                  },
+                                  onSelected: _changeDefaultWallet,
                                   itemBuilder: (BuildContext context) {
                                     final items = <PopupMenuEntry<String>>[];
                                     for (var i = 0; i < cards.length; i++) {
@@ -574,7 +620,7 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                                                           TextOverflow.ellipsis,
                                                     ),
                                                     Text(
-                                                      '${card.cardType} • $currencySymbol ${AppNumberFormat.formatAmount(card.balance, alwaysShowDecimals: true)}',
+                                                      '${card.typeLabel} · ${Money.balance(card.balance, symbol: currencySymbol)}',
                                                       style: const TextStyle(
                                                         fontSize: 11,
                                                         color:
@@ -680,10 +726,10 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                           const SizedBox(height: 12),
 
                           // SECTION 3: DATA MANAGEMENT
-                          _buildSectionHeader('Data Management'),
+                          _buildSectionHeader('Data'),
                           Builder(
                             builder: (tileContext) => SettingsItemTile(
-                              title: 'Export Transactions (CSV)',
+                              title: 'Export transactions (CSV)',
                               icon: Assets.icons.export.svg(
                                 width: 24,
                                 height: 24,
@@ -697,7 +743,7 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                             ),
                           ),
                           SettingsItemTile(
-                            title: 'Import Transactions (CSV)',
+                            title: 'Import transactions (CSV)',
                             icon: Assets.icons.import.svg(
                               width: 24,
                               height: 24,
@@ -710,7 +756,7 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                             onTap: _importTransactions,
                           ),
                           SettingsItemTile(
-                            title: 'Clear All App Data',
+                            title: 'Clear all app data',
                             icon: Assets.icons.delete.svg(
                               width: 24,
                               height: 24,
@@ -778,9 +824,9 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                           const SizedBox(height: 12),
 
                           // SECTION 4: SUPPORT & FEEDBACK
-                          _buildSectionHeader('Support & Feedback'),
+                          _buildSectionHeader('Support & feedback'),
                           SettingsItemTile(
-                            title: 'Send Feedback',
+                            title: 'Send feedback',
                             icon: Assets.icons.feedback.svg(
                               width: 24,
                               height: 24,

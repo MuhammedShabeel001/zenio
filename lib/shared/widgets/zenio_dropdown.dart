@@ -107,37 +107,23 @@ class ZenioDropdown<T> extends StatelessWidget {
                           const SizedBox(width: 10),
                         ],
                         Expanded(
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  item.label,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: isSelected
-                                        ? FontWeight.w600
-                                        : FontWeight.w500,
-                                    color: item.labelColor ??
-                                        ZenioColors.textPrimary,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              if (item.subtitle != null) ...[
-                                const SizedBox(width: 6),
-                                Text(
-                                  '(${item.subtitle!})',
-                                  style: AppFonts.numeric(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                    color: item.subtitleColor ??
-                                        ZenioColors.textSecondary,
-                                  ),
-                                ),
-                              ],
-                            ],
+                          child: _LabelAndSubtitle(
+                            label: item.label,
+                            labelStyle: TextStyle(
+                              fontSize: 14,
+                              fontWeight: isSelected
+                                  ? FontWeight.w600
+                                  : FontWeight.w500,
+                              color: item.labelColor ??
+                                  ZenioColors.textPrimary,
+                            ),
+                            subtitle: item.subtitle,
+                            subtitleStyle: AppFonts.numeric(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: item.subtitleColor ??
+                                  ZenioColors.textSecondary,
+                            ),
                           ),
                         ),
                         if (item.trailing != null) ...[
@@ -183,37 +169,23 @@ class ZenioDropdown<T> extends StatelessWidget {
                     const SizedBox(width: 8),
                   ],
                   Expanded(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Flexible(
-                          child: Text(
-                            selectedItem?.label ?? hintText ?? '',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: selectedItem != null
-                                  ? (selectedItem.labelColor ??
-                                      ZenioColors.textPrimary)
-                                  : ZenioColors.textPlaceholder,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        if (selectedItem?.subtitle != null) ...[
-                          const SizedBox(width: 6),
-                          Text(
-                            '(${selectedItem!.subtitle})',
-                            style: AppFonts.numeric(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                              color: selectedItem.subtitleColor ??
-                                  ZenioColors.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ],
+                    child: _LabelAndSubtitle(
+                      label: selectedItem?.label ?? hintText ?? '',
+                      labelStyle: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: selectedItem != null
+                            ? (selectedItem.labelColor ??
+                                ZenioColors.textPrimary)
+                            : ZenioColors.textPlaceholder,
+                      ),
+                      subtitle: selectedItem?.subtitle,
+                      subtitleStyle: AppFonts.numeric(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: selectedItem?.subtitleColor ??
+                            ZenioColors.textSecondary,
+                      ),
                     ),
                   ),
                   if (trailing != null) ...[
@@ -234,6 +206,40 @@ class ZenioDropdown<T> extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// A choice's name and, in brackets, its detail (such as a wallet's balance).
+/// The detail goes under the name when both do not fit on one line, so the
+/// name is not squeezed out and the amount is never cut short.
+class _LabelAndSubtitle extends StatelessWidget {
+  const _LabelAndSubtitle({
+    required this.label,
+    required this.labelStyle,
+    required this.subtitle,
+    required this.subtitleStyle,
+  });
+
+  final String label;
+  final TextStyle labelStyle;
+  final String? subtitle;
+  final TextStyle subtitleStyle;
+
+  @override
+  Widget build(BuildContext context) {
+    final name = Text(
+      label,
+      style: labelStyle,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+    );
+    if (subtitle == null) return name;
+    return Wrap(
+      spacing: 6,
+      runSpacing: 2,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [name, Text('($subtitle)', style: subtitleStyle)],
     );
   }
 }

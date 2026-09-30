@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
 import 'package:zenio/features/subscriptions/controller/categories/subscription_categories_notifier.dart';
 import 'package:zenio/features/subscriptions/controller/subscriptions/subscriptions_notifier.dart';
 import 'package:zenio/features/subscriptions/domain/models/subscription_model.dart';
@@ -13,6 +12,7 @@ import 'package:zenio/shared/providers/currency_provider/currency_provider.dart'
 import 'package:zenio/shared/services/notification_service.dart';
 import 'package:zenio/shared/theme/zenio_tokens.dart';
 import 'package:zenio/shared/utils/app_fonts.dart';
+import 'package:zenio/shared/utils/datetime.dart';
 import 'package:zenio/shared/utils/formatters.dart';
 import 'package:zenio/shared/widgets/zenio_snack_bar.dart';
 
@@ -198,8 +198,6 @@ class _AddSubscriptionBottomSheetState
   @override
   Widget build(BuildContext context) {
     final categories = ref.watch(subscriptionCategoriesNotifierProvider);
-    final formattedDate =
-        DateFormat('EEEE, MMMM d, yyyy').format(_selectedDate);
     final currencySymbol = ref.watch(currencySymbolProvider);
 
 
@@ -519,7 +517,7 @@ class _AddSubscriptionBottomSheetState
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            formattedDate,
+                            DateTimeUtils.displayDate(_selectedDate),
                             style: AppFonts.numeric(
                               fontSize: 14,
                               fontWeight: FontWeight.w400,

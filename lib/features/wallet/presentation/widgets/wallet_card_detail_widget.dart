@@ -86,7 +86,7 @@ class WalletCardDetailWidget extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          card.createdAt ?? 'Unknown',
+                          card.createdAt?.toRelativeDate ?? 'Unknown',
                           style: AppFonts.numeric(
                             fontSize: 15,
                             fontWeight: FontWeight.bold,

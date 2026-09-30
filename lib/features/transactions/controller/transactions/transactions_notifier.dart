@@ -37,6 +37,8 @@ class TransactionsNotifier extends _$TransactionsNotifier {
           bankName: t.bankName,
           timestamp: t.timestamp,
           kind: t.kind,
+          transferFrom: t.transferFrom,
+          transferTo: t.transferTo,
         ),
     ];
   }

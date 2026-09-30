@@ -72,5 +72,10 @@ void main() {
     await show('DEBIT CARD', '1234 5678 9012 3456');
     expect(find.text('**** **** **** 3456'), findsOneWidget);
     expect(find.textContaining('1234 5678'), findsNothing);
+
+    // A number Zenio once made up for a new wallet is not the user's card.
+    await show('CREDIT CARD', '4821  1093  7702  5518');
+    expect(find.textContaining('5518'), findsNothing);
+    expect(find.textContaining('****'), findsNothing);
   });
 }

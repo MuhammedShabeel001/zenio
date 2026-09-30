@@ -5,6 +5,7 @@ import 'package:zenio/features/split/controller/split/split_state.dart';
 import 'package:zenio/features/split/domain/models/split_calculation_model.dart';
 import 'package:zenio/features/split/domain/repositories/implementations/split_repository.dart';
 import 'package:zenio/features/split/domain/repositories/interfaces/i_split_repository.dart';
+import 'package:zenio/shared/utils/money_limits.dart';
 
 part 'split_notifier.g.dart';
 
@@ -59,7 +60,10 @@ class SplitNotifier extends _$SplitNotifier {
 
   Future<void> loadData() async => _loadData();
 
+  /// Ignores values that are not storable amounts (NaN, infinities, or
+  /// beyond [maxMoneyAmount]); the field already refuses such input.
   void setBillAmount(double amount) {
+    if (!isStorableAmount(amount)) return;
     state = state.copyWith(billAmount: amount);
     _schedulePersist();
   }

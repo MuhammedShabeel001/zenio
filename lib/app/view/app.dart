@@ -5,6 +5,7 @@ import 'package:hancod_theme/hancod_theme.dart';
 import 'package:upgrader/upgrader.dart';
 import 'package:zenio/env.dart';
 import 'package:zenio/shared/shared.dart';
+import 'package:zenio/shared/widgets/dismiss_keyboard_on_tap.dart';
 
 class App extends ConsumerWidget {
   App({required this.environment, super.key});
@@ -37,7 +38,7 @@ class App extends ConsumerWidget {
         return PrivacyShield(
           child: UpgradeAlert(
             navigatorKey: appRouter.router.routerDelegate.navigatorKey,
-            child: child,
+            child: child == null ? null : DismissKeyboardOnTap(child: child),
           ),
         );
       },

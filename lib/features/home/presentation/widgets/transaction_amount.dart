@@ -44,3 +44,13 @@ String transactionSemanticsLabel({
   ];
   return parts.join(', ');
 }
+
+/// The icon of a balance adjustment, the same as the Adjust action on a
+/// wallet, so it is not mistaken for income or spending.
+const IconData transactionAdjustmentIcon = Icons.exposure_rounded;
+
+/// What a screen reader says a tap on a transaction row does.
+String? transactionTapHint({required bool canEdit, required bool hasDetails}) {
+  if (canEdit) return 'edit';
+  return hasDetails ? 'show details' : null;
+}

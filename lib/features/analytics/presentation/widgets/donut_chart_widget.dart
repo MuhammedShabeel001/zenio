@@ -137,10 +137,6 @@ class _DonutChartWidgetState extends ConsumerState<DonutChartWidget> {
     });
   }
 
-  String _formatAmount(double amount) {
-    return AppNumberFormat.formatAmount(amount);
-  }
-
   Widget _buildCenterInfo(CategorySpendModel category, double total) {
     final percent = total > 0 ? (category.amount / total * 100) : 0.0;
     final color = _parseColor(category.colorHex);
@@ -166,7 +162,7 @@ class _DonutChartWidgetState extends ConsumerState<DonutChartWidget> {
         const SizedBox(height: 2),
         // Amount
         Text(
-          '$currencySymbol${_formatAmount(category.amount)}',
+          Money.balance(category.amount, symbol: currencySymbol),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           textAlign: TextAlign.center,

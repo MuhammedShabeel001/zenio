@@ -150,7 +150,7 @@ class _FeedbackBottomSheetState extends ConsumerState<FeedbackBottomSheet> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
-                      'Send Feedback',
+                      'Send feedback',
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -235,7 +235,12 @@ class _FeedbackBottomSheetState extends ConsumerState<FeedbackBottomSheet> {
                       children: List.generate(5, (index) {
                         final starIndex = index + 1;
                         final isFilled = starIndex <= _selectedStar;
-                        return GestureDetector(
+                        return Semantics(
+                          button: true,
+                          selected: starIndex == _selectedStar,
+                          label: '$starIndex star${starIndex == 1 ? '' : 's'}',
+                          excludeSemantics: true,
+                          child: GestureDetector(
                           onTap: () {
                             HapticFeedback.lightImpact();
                             setState(() {
@@ -243,8 +248,12 @@ class _FeedbackBottomSheetState extends ConsumerState<FeedbackBottomSheet> {
                             });
                           },
                           behavior: HitTestBehavior.opaque,
+                          // 48pt tall, the star itself unchanged.
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 6),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 6,
+                            ),
                             child: AnimatedScale(
                               scale: isFilled ? 1.15 : 1.0,
                               duration: ZenioMotion.fast,
@@ -258,6 +267,7 @@ class _FeedbackBottomSheetState extends ConsumerState<FeedbackBottomSheet> {
                                 size: 36,
                               ),
                             ),
+                          ),
                           ),
                         );
                       }),

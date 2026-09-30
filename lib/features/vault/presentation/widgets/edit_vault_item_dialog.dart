@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,7 +12,9 @@ import 'package:zenio/features/vault/domain/repositories/implementations/vault_r
 import 'package:zenio/features/vault/domain/vault_card_validation.dart';
 import 'package:zenio/shared/theme/zenio_tokens.dart';
 import 'package:zenio/shared/utils/app_fonts.dart';
+import 'package:zenio/shared/utils/datetime.dart';
 import 'package:zenio/shared/utils/formatters.dart';
+import 'package:zenio/shared/widgets/zenio_snack_bar.dart';
 
 enum EditVaultType { card, note }
 
@@ -199,13 +203,18 @@ class _EditVaultItemDialogState extends ConsumerState<EditVaultItemDialog> {
     }
     // The form may have been closed (or the Vault locked) meanwhile.
     if (!mounted) return;
+    unawaited(HapticFeedback.lightImpact());
+    ZenioSnackBar.show(
+      context,
+      message: widget.type == EditVaultType.card ? 'Card saved' : 'Note saved',
+      type: ZenioSnackBarType.success,
+    );
     navigator.pop();
   }
 
   @override
   Widget build(BuildContext context) {
     final isCard = widget.type == EditVaultType.card;
-    final formattedDate = DateFormat('dd MMMM yyyy').format(_selectedDate);
 
     return Dialog(
       backgroundColor: Colors.white,
@@ -228,7 +237,7 @@ class _EditVaultItemDialogState extends ConsumerState<EditVaultItemDialog> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    isCard ? 'Edit Card' : 'Edit Note',
+                    isCard ? 'Edit card' : 'Edit note',
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -497,7 +506,7 @@ class _EditVaultItemDialogState extends ConsumerState<EditVaultItemDialog> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            formattedDate,
+                            DateTimeUtils.displayDate(_selectedDate),
                             style: AppFonts.numeric(
                               fontSize: 13,
                               color: const Color(0xFF000000),
@@ -540,7 +549,7 @@ class _EditVaultItemDialogState extends ConsumerState<EditVaultItemDialog> {
                     ),
                   ),
                   child: const Text(
-                    'Save Changes',
+                    'Save changes',
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,

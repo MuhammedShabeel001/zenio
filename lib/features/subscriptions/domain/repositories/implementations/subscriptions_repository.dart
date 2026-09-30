@@ -6,6 +6,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:zenio/features/subscriptions/domain/models/subscription_model.dart';
 import 'package:zenio/features/subscriptions/domain/repositories/interfaces/i_subscriptions_repository.dart';
 import 'package:zenio/shared/providers/providers.dart';
+import 'package:zenio/shared/utils/money_limits.dart';
 
 part 'subscriptions_repository.g.dart';
 
@@ -24,16 +25,27 @@ class SubscriptionsRepository implements ISubscriptionsRepository {
 
   @override
   Future<List<SubscriptionModel>> getSubscriptions() {
-    return _prefs.readJsonList(_subscriptionsKey, SubscriptionModel.fromJson);
+    return _prefs.readJsonList(_subscriptionsKey, _decode);
   }
 
   @override
   Future<void> saveSubscriptions(
     List<SubscriptionModel> subscriptions,
   ) async {
+    for (final subscription in subscriptions) {
+      checkStorableAmount(subscription.amount, 'subscription amount');
+    }
     final jsonList =
         subscriptions.map((item) => jsonEncode(item.toJson())).toList();
     await _prefs.setStringList(_subscriptionsKey, jsonList);
+  }
+
+  /// A stored subscription whose amount is NaN or an infinity is kept
+  /// aside as unreadable (see [SqlitePrefs.readJsonList]) rather than shown.
+  static SubscriptionModel _decode(Map<String, dynamic> json) {
+    final subscription = SubscriptionModel.fromJson(json);
+    checkReadableAmount(subscription.amount, 'subscription amount');
+    return subscription;
   }
 }
 

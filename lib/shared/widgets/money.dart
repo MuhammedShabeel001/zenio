@@ -10,7 +10,8 @@ import 'package:zenio/shared/utils/formatters.dart';
 enum MoneyDirection { incoming, outgoing, neutral }
 
 /// How amounts are written everywhere: the sign first, then the currency
-/// symbol, then the number ("+₹85,000", "−₹420", "₹2,000").
+/// symbol, then the number with two decimals ("+₹85,000.00", "−₹420.00",
+/// "₹2,000.00"). Never "₹ -420" or "-0.00".
 abstract final class Money {
   /// A true minus sign, which screen readers read as "minus".
   static const String minus = '−';
@@ -20,9 +21,11 @@ abstract final class Money {
     double amount, {
     required String symbol,
     required MoneyDirection direction,
-    bool alwaysShowDecimals = false,
+    bool alwaysShowDecimals = true,
   }) {
-    // Rounded to the cent first, so 0.001 reads "0", not "0.00".
+    // Nothing stored can be NaN or infinite; never break a screen if it is.
+    if (!amount.isFinite) return '$symbol—';
+    // Rounded to the cent first, so 0.001 reads "0.00" with no sign.
     final cents = (amount.abs() * 100).round();
     final value = AppNumberFormat.formatAmount(
       cents / 100,
@@ -40,11 +43,11 @@ abstract final class Money {
     return '$sign$symbol$value';
   }
 
-  /// A balance that may be below zero: "₹12,400" or "−₹12,400".
+  /// A balance that may be below zero: "₹12,400.00" or "−₹12,400.00".
   static String balance(
     double amount, {
     required String symbol,
-    bool alwaysShowDecimals = false,
+    bool alwaysShowDecimals = true,
   }) {
     return signed(
       amount,
@@ -127,9 +130,8 @@ class HeadlineAmount extends ConsumerWidget {
     );
     final prefix = [
       if (approximate) '≈ ',
-      if ((amount * 100).round() < 0) Money.minus,
+      if (amount.isFinite && (amount * 100).round() < 0) Money.minus,
       symbol,
-      ' ',
     ].join();
     return FittedBox(
       fit: BoxFit.scaleDown,

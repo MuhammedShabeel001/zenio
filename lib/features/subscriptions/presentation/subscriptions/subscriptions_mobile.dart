@@ -9,6 +9,7 @@ import 'package:zenio/features/subscriptions/presentation/widgets/edit_subscript
 import 'package:zenio/features/subscriptions/presentation/widgets/subscription_card.dart';
 import 'package:zenio/shared/shared.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
+import 'package:zenio/shared/widgets/delete_with_undo.dart';
 
 class SubscriptionsScreenMobile extends ConsumerStatefulWidget {
   const SubscriptionsScreenMobile({this.initialExpandedId, super.key});
@@ -285,26 +286,22 @@ class _SubscriptionsScreenMobileState
                                   });
                                 }
                               },
-                              onDelete: () async {
-                                try {
-                                  await ref
-                                      .read(subscriptionsNotifierProvider.notifier)
-                                      .deleteSubscription(item.id);
-                                } catch (_) {
-                                  if (!context.mounted) return;
-                                  ZenioSnackBar.show(
-                                    context,
-                                    message:
-                                        "Couldn't delete the subscription. Please try again.",
-                                    type: ZenioSnackBarType.error,
-                                  );
-                                  return;
-                                }
-                                if (!context.mounted) return;
-                                ZenioSnackBar.show(
+                              // Deletes straight away, with Undo.
+                              onDelete: () {
+                                final notifier = ref.read(
+                                  subscriptionsNotifierProvider.notifier,
+                                );
+                                final index = ref
+                                    .read(subscriptionsNotifierProvider)
+                                    .subscriptions
+                                    .indexWhere((s) => s.id == item.id);
+                                deleteWithUndo(
                                   context,
-                                  message: 'Subscription deleted',
-                                  type: ZenioSnackBarType.success,
+                                  label: item.title,
+                                  delete: () =>
+                                      notifier.deleteSubscription(item.id),
+                                  restore: () =>
+                                      notifier.restoreSubscription(item, index),
                                 );
                               },
                               onEdit: () {

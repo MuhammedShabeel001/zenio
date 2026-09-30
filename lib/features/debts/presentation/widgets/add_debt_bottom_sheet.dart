@@ -10,6 +10,7 @@ import 'package:zenio/features/debts/domain/models/debt_model.dart';
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/theme/zenio_tokens.dart';
 import 'package:zenio/shared/utils/app_fonts.dart';
+import 'package:zenio/shared/utils/datetime.dart';
 import 'package:zenio/shared/utils/formatters.dart';
 import 'package:zenio/shared/widgets/zenio_snack_bar.dart';
 
@@ -155,7 +156,7 @@ class _AddDebtBottomSheetState extends ConsumerState<AddDebtBottomSheet> {
                 children: [
                   _buildTabItem(
                     type: DebtType.iOwe,
-                    label: 'I Owe',
+                    label: 'I owe',
                     activeColor: ZenioColors.danger,
                   ),
                   _buildTabItem(
@@ -403,7 +404,7 @@ class _AddDebtBottomSheetState extends ConsumerState<AddDebtBottomSheet> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        formattedDate,
+                        DateTimeUtils.displayDate(_selectedDate),
                         style: AppFonts.numeric(
                           fontSize: 14,
                           fontWeight: FontWeight.w400,

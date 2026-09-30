@@ -3,11 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:zenio/shared/utils/datetime.dart';
 import 'package:zenio/features/home/controller/home/home_notifier.dart';
 import 'package:zenio/features/home/domain/models/transaction/transaction_kind.dart';
 import 'package:zenio/features/home/domain/models/transaction/transaction_model.dart';
 import 'package:zenio/features/transactions/controller/categories/categories_notifier.dart';
-import 'package:zenio/features/transactions/presentation/widgets/manage_categories_bottom_sheet.dart';
+import 'package:zenio/features/transactions/presentation/widgets/category_picker.dart';
 import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
 import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
 import 'package:zenio/features/wallet/domain/wallet_kind.dart';
@@ -31,6 +32,8 @@ class AddTransactionBottomSheet extends ConsumerStatefulWidget {
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      // A tall sheet stops below the status bar instead of going under it.
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (context) => Padding(
         padding: MediaQuery.of(context).viewInsets,
@@ -88,10 +91,6 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
     super.dispose();
   }
 
-  String _formatAmount(double amount) {
-    return AppNumberFormat.formatAmount(amount);
-  }
-
   void _swapWallets(String currentSource, String currentDestination) {
     setState(() {
       _sourceWallet = currentDestination;
@@ -126,8 +125,6 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
 
   @override
   Widget build(BuildContext context) {
-    final formattedDate =
-        DateFormat('EEEE, MMMM d, yyyy').format(_selectedDate);
 
     final categories = ref.watch(categoriesNotifierProvider);
     final walletState = ref.watch(walletNotifierProvider);
@@ -219,7 +216,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                   ),
                 ),
                 child: const Text(
-                  '+ Add Wallet',
+                  '+ Add wallet',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -307,7 +304,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
           return ZenioDropdownItem<String>(
             value: w,
             label: w,
-            subtitle: '$currencySymbol ${_formatAmount(bal)}',
+            subtitle: Money.balance(bal, symbol: currencySymbol),
             subtitleColor: hasEnough
                 ? ZenioColors.textSecondary
                 : ZenioColors.danger,
@@ -354,7 +351,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
           return ZenioDropdownItem<String>(
             value: w,
             label: w,
-            subtitle: '$currencySymbol ${_formatAmount(bal)}',
+            subtitle: Money.balance(bal, symbol: currencySymbol),
             icon: Assets.icons.wallet.svg(
               width: 18,
               height: 18,
@@ -380,14 +377,17 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
           top: Radius.circular(30),
         ),
       ),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(10, 16, 10, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Top Drag Handle Indicator
-            Center(
+      // The handle and Save stay put while the form between them scrolls:
+      // with the keyboard up, Save is still in view and the sheet can still
+      // be dragged down by its handle.
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Top Drag Handle Indicator
+          Padding(
+            padding: const EdgeInsets.only(top: 16, bottom: 26),
+            child: Center(
               child: Container(
                 width: 32,
                 height: 4,
@@ -397,94 +397,372 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                 ),
               ),
             ),
-            const SizedBox(height: 26),
-
-            // Segmented Mode Switcher (Expense, Income, Transfer)
-            Container(
-              height: 60,
-              padding: const EdgeInsets.all(3),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(30),
-                border: Border.all(
-                  color: const Color(0xFFCCCCCC),
-                ),
-              ),
-              child: Row(
+          ),
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              // Dragging the form puts the keyboard away; the decimal pad on
+              // iOS has no key for that.
+              keyboardDismissBehavior:
+                  ScrollViewKeyboardDismissBehavior.onDrag,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _buildTabItem(
-                    type: TransactionType.expense,
-                    label: 'Expense',
-                    activeColor: ZenioColors.danger,
-                  ),
-                  _buildTabItem(
-                    type: TransactionType.income,
-                    label: 'Income',
-                    activeColor: ZenioColors.primaryStrong,
-                  ),
-                  if (wallets.length >= 2)
-                    _buildTabItem(
-                      type: TransactionType.transfer,
-                      label: 'Transfer',
-                      activeColor: const Color(0xFF8949D5),
+                  // Segmented Mode Switcher (Expense, Income, Transfer)
+                  Container(
+                    height: 60,
+                    padding: const EdgeInsets.all(3),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(30),
+                      border: Border.all(
+                        color: const Color(0xFFCCCCCC),
+                      ),
                     ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 18),
-
-            // Amount Input Field
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-              decoration: BoxDecoration(
-                color: isExceedingBalance
-                    ? const Color(0xFFFFF5F5)
-                    : ZenioColors.fieldFill,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: isExceedingBalance
-                      ? ZenioColors.danger
-                      : Colors.transparent,
-                  width: 1.5,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Text(
-                    '$currencySymbol ',
-                    style: AppFonts.numeric(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: isExceedingBalance
-                          ? ZenioColors.danger
-                          : ZenioColors.textPrimary,
-                    ),
-                  ),
-                  Expanded(
-                    child: TextField(
-                      controller: _amountController,
-                      focusNode: _amountFocusNode,
-                      autofocus: true,
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
-                      inputFormatters: [
-                        ThousandsSeparatorInputFormatter(),
+                    child: Row(
+                      children: [
+                        _buildTabItem(
+                          type: TransactionType.expense,
+                          label: 'Expense',
+                          activeColor: ZenioColors.danger,
+                        ),
+                        _buildTabItem(
+                          type: TransactionType.income,
+                          label: 'Income',
+                          activeColor: ZenioColors.primaryStrong,
+                        ),
+                        if (wallets.length >= 2)
+                          _buildTabItem(
+                            type: TransactionType.transfer,
+                            label: 'Transfer',
+                            activeColor: const Color(0xFF8949D5),
+                          ),
                       ],
-                      onChanged: (val) {
-                        setState(() {});
-                      },
-                      style: AppFonts.numeric(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+
+                  // Amount Input Field
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                    decoration: BoxDecoration(
+                      color: isExceedingBalance
+                          ? const Color(0xFFFFF5F5)
+                          : ZenioColors.fieldFill,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
                         color: isExceedingBalance
                             ? ZenioColors.danger
-                            : ZenioColors.textPrimary,
+                            : Colors.transparent,
+                        width: 1.5,
                       ),
-                      decoration: InputDecoration(
-                        hintText: '0',
-                        hintStyle: AppFonts.numeric(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
+                    ),
+                    child: Row(
+                      children: [
+                        Text(
+                          '$currencySymbol ',
+                          style: AppFonts.numeric(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: isExceedingBalance
+                                ? ZenioColors.danger
+                                : ZenioColors.textPrimary,
+                          ),
+                        ),
+                        Expanded(
+                          child: TextField(
+                            controller: _amountController,
+                            focusNode: _amountFocusNode,
+                            autofocus: true,
+                            keyboardType:
+                                const TextInputType.numberWithOptions(decimal: true),
+                            // Done puts the keyboard away (Android; the iOS
+                            // decimal pad has no such key).
+                            textInputAction: TextInputAction.done,
+                            inputFormatters: [
+                              ThousandsSeparatorInputFormatter(),
+                            ],
+                            onChanged: (val) {
+                              setState(() {});
+                            },
+                            style: AppFonts.numeric(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: isExceedingBalance
+                                  ? ZenioColors.danger
+                                  : ZenioColors.textPrimary,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: '0',
+                              hintStyle: AppFonts.numeric(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: ZenioColors.textPlaceholder,
+                              ),
+                              isDense: true,
+                              filled: false,
+                              fillColor: Colors.transparent,
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              disabledBorder: InputBorder.none,
+                              focusedErrorBorder: InputBorder.none,
+                              errorBorder: InputBorder.none,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Balance notes and warnings ease in and out instead of making
+                  // the form jump.
+                  AnimatedSize(
+                    duration: ZenioMotion.of(context, ZenioMotion.standard),
+                    curve: ZenioMotion.standardCurve,
+                    alignment: Alignment.topCenter,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                      // What a credit card's balance becomes, said plainly.
+                      if (showBalanceAfter)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 8, 20, 2),
+                          child: Text(
+                            'Balance after transaction: ${Money.balance(availableBalance - enteredAmount, symbol: currencySymbol)}',
+                            style: AppFonts.numeric(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: ZenioColors.textSecondary,
+                            ),
+                          ),
+                        ),
+
+                      // Live Error Banner if Exceeding Balance or Frozen
+                      if (isExceedingBalance)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFEAEA),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: const Color(0xFFFCA5A5)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.error_outline_rounded,
+                                  color: ZenioColors.danger,
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Amount exceeds wallet balance (Available: ${Money.balance(availableBalance, symbol: currencySymbol)} in $selectedSource). Change wallet or enter a valid amount.',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: ZenioColors.danger,
+                                      height: 1.3,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      else if (isSourceFrozen)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFEF3C7),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: const Color(0xFFFCD34D)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.ac_unit_rounded,
+                                  color: Color(0xFFD97706),
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Note: $selectedSource is currently frozen.',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFFD97706),
+                                      height: 1.3,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+
+                  // Field 1: Date Selector
+                  GestureDetector(
+                    onTap: _pickDate,
+                    behavior: HitTestBehavior.opaque,
+                    child: Container(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                      decoration: BoxDecoration(
+                        color: ZenioColors.fieldFill,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.calendar_today_rounded,
+                            size: 20,
+                            color: ZenioColors.textSecondary,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              DateTimeUtils.displayDate(_selectedDate),
+                              style: AppFonts.numeric(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w400,
+                                color: const Color(0xFF000000),
+                              ),
+                            ),
+                          ),
+                          const Text(
+                            'Change',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: ZenioColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                   const SizedBox(height: 6),
+
+                  // Field 2 & 3: the wallet and a category, or for a transfer the
+                  // From and To wallets with a swap button between them.
+                  if (_selectedType == TransactionType.transfer)
+                    Stack(
+                      children: [
+                        Column(
+                          children: [
+                            sourceField(label: 'From'),
+                            const SizedBox(height: 6),
+                            destinationField(),
+                          ],
+                        ),
+                        // Straddles the two fields, inside the Stack so all of it
+                        // can be tapped.
+                        Positioned(
+                          right: 60,
+                          top: 0,
+                          bottom: 0,
+                          child: Center(
+                            child: Semantics(
+                              button: true,
+                              label: 'Swap From and To wallets',
+                              excludeSemantics: true,
+                              onTap: () =>
+                                  _swapWallets(selectedSource, selectedDestination),
+                              child: GestureDetector(
+                                onTap: () =>
+                                    _swapWallets(selectedSource, selectedDestination),
+                                child: Container(
+                                  width: 50,
+                                  height: 50,
+                                  decoration: BoxDecoration(
+                                    color: ZenioColors.fieldFill,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Colors.white,
+                                      width: 5,
+                                    ),
+                                  ),
+                                  child: Center(
+                                    child: AnimatedRotation(
+                                      turns: _swapTurns,
+                                      duration: ZenioMotion.standard,
+                                      curve: Curves.easeInOut,
+                                      child: Assets.icons.swap.svg(
+                                        width: 22,
+                                        height: 22,
+                                        colorFilter: const ColorFilter.mode(
+                                          Color(0xFF8C43E6),
+                                          BlendMode.srcIn,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  else ...[
+                    sourceField(),
+                    const SizedBox(height: 6),
+                    // Category chips for Expense / Income
+                    CategoryPicker(
+                      categories: categories,
+                      optional: _selectedType == TransactionType.income,
+                      // The first category is only a default for spending;
+                      // income is never filed under "Food" unless picked.
+                      selected: _selectedCategory ??
+                          (_selectedType == TransactionType.expense
+                              ? categories.firstOrNull?.name
+                              : null),
+                      onSelected: (name) =>
+                          setState(() => _selectedCategory = name),
+                    ),
+                  ],
+                  const SizedBox(height: 6),
+
+                  // Field 4: Note Input
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                    decoration: BoxDecoration(
+                      color: ZenioColors.fieldFill,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: TextField(
+                      controller: _noteController,
+                      maxLines: 3,
+                      minLines: 2,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w400,
+                        color: ZenioColors.textPrimary,
+                      ),
+                      decoration: const InputDecoration(
+                        hintText: 'Add a note...',
+                        hintStyle: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w400,
                           color: ZenioColors.textPlaceholder,
                         ),
                         isDense: true,
@@ -500,415 +778,32 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                       ),
                     ),
                   ),
+                  const SizedBox(height: 6),
                 ],
               ),
             ),
-
-            // Balance notes and warnings ease in and out instead of making
-            // the form jump.
-            AnimatedSize(
-              duration: ZenioMotion.of(context, ZenioMotion.standard),
-              curve: ZenioMotion.standardCurve,
-              alignment: Alignment.topCenter,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                // What a credit card's balance becomes, said plainly.
-                if (showBalanceAfter)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 2),
-                    child: Text(
-                      'Balance after transaction: ${Money.balance(availableBalance - enteredAmount, symbol: currencySymbol, alwaysShowDecimals: true)}',
-                      style: AppFonts.numeric(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: ZenioColors.textSecondary,
-                      ),
-                    ),
-                  ),
-
-                // Live Error Banner if Exceeding Balance or Frozen
-                if (isExceedingBalance)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 6),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFEAEA),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFFFCA5A5)),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.error_outline_rounded,
-                            color: ZenioColors.danger,
-                            size: 18,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Amount exceeds wallet balance (Available: $currencySymbol ${_formatAmount(availableBalance)} in $selectedSource). Change wallet or enter a valid amount.',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: ZenioColors.danger,
-                                height: 1.3,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                else if (isSourceFrozen)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 6),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFEF3C7),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFFFCD34D)),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.ac_unit_rounded,
-                            color: Color(0xFFD97706),
-                            size: 18,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Note: $selectedSource is currently frozen.',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFFD97706),
-                                height: 1.3,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 6),
-
-            // Field 1: Date Selector
-            GestureDetector(
-              onTap: _pickDate,
-              behavior: HitTestBehavior.opaque,
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                decoration: BoxDecoration(
-                  color: ZenioColors.fieldFill,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.calendar_today_rounded,
-                      size: 20,
-                      color: ZenioColors.textSecondary,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        formattedDate,
-                        style: AppFonts.numeric(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w400,
-                          color: const Color(0xFF000000),
-                        ),
-                      ),
-                    ),
-                    const Text(
-                      'Change',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: ZenioColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-             const SizedBox(height: 6),
-
-            // Field 2 & 3: the wallet and a category, or for a transfer the
-            // From and To wallets with a swap button between them.
-            if (_selectedType == TransactionType.transfer)
-              Stack(
-                children: [
-                  Column(
-                    children: [
-                      sourceField(label: 'From'),
-                      const SizedBox(height: 6),
-                      destinationField(),
-                    ],
-                  ),
-                  // Straddles the two fields, inside the Stack so all of it
-                  // can be tapped.
-                  Positioned(
-                    right: 60,
-                    top: 0,
-                    bottom: 0,
-                    child: Center(
-                      child: Semantics(
-                        button: true,
-                        label: 'Swap From and To wallets',
-                        excludeSemantics: true,
-                        onTap: () =>
-                            _swapWallets(selectedSource, selectedDestination),
-                        child: GestureDetector(
-                          onTap: () =>
-                              _swapWallets(selectedSource, selectedDestination),
-                          child: Container(
-                            width: 50,
-                            height: 50,
-                            decoration: BoxDecoration(
-                              color: ZenioColors.fieldFill,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Colors.white,
-                                width: 5,
-                              ),
-                            ),
-                            child: Center(
-                              child: AnimatedRotation(
-                                turns: _swapTurns,
-                                duration: ZenioMotion.standard,
-                                curve: Curves.easeInOut,
-                                child: Assets.icons.swap.svg(
-                                  width: 22,
-                                  height: 22,
-                                  colorFilter: const ColorFilter.mode(
-                                    Color(0xFF8C43E6),
-                                    BlendMode.srcIn,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              )
-            else ...[
-              sourceField(),
-              const SizedBox(height: 6),
-              // Category Chips Section for Expense / Income
-              Container(
-                clipBehavior: Clip.antiAlias,
-                decoration: BoxDecoration(
-                  color: ZenioColors.fieldFill,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // The Manage link's tap area reaches into the row's padding
-                    // and the gap below, so the row keeps its height.
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 1, 6, 0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Flexible(
-                            child: Text(
-                              _selectedType == TransactionType.income
-                                  ? 'Category (optional)'
-                                  : 'Category',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: ZenioColors.textSecondary,
-                              ),
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: () async {
-                              final picked =
-                                  await ManageCategoriesBottomSheet.show(context);
-                              if (picked != null) {
-                                setState(() {
-                                  _selectedCategory = picked.name;
-                                });
-                              }
-                            },
-                            behavior: HitTestBehavior.opaque,
-                            child: Semantics(
-                              button: true,
-                              label: 'Manage categories',
-                              excludeSemantics: true,
-                              child: const Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 13,
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.tune_rounded,
-                                      size: 14,
-                                      color: ZenioColors.primaryStrong,
-                                    ),
-                                    SizedBox(width: 4),
-                                    Text(
-                                      'Manage',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                        color: ZenioColors.primaryStrong,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                      child: Row(
-                        children: categories.map((cat) {
-                            // The first category is only a default for spending; income is
-                            // never filed under "Food" unless the user picks it.
-                            final isSelected = _selectedCategory == cat.name ||
-                                (_selectedCategory == null &&
-                                    _selectedType == TransactionType.expense &&
-                                    cat == categories.first);
-                            return Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    _selectedCategory = cat.name;
-                                  });
-                                },
-                                behavior: HitTestBehavior.opaque,
-                                child: AnimatedContainer(
-                                  duration: ZenioMotion.fast,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 14,
-                                    vertical: 8,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: isSelected
-                                        ? ZenioColors.primary
-                                        : Colors.white,
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      if (isSelected) ...[
-                                        Text(
-                                          cat.emoji,
-                                          style: const TextStyle(fontSize: 14),
-                                        ),
-                                        const SizedBox(width: 6),
-                                      ],
-                                      Text(
-                                        cat.name,
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: isSelected
-                                              ? FontWeight.bold
-                                              : FontWeight.w500,
-                                          color: isSelected
-                                              ? Colors.white
-                                              : ZenioColors.textPrimary,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ],
-            const SizedBox(height: 6),
-
-            // Field 4: Note Input
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-              decoration: BoxDecoration(
-                color: ZenioColors.fieldFill,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: TextField(
-                controller: _noteController,
-                maxLines: 3,
-                minLines: 2,
+          ),
+          if (_saveError != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(22, 0, 22, 8),
+              child: Text(
+                _saveError!,
                 style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w400,
-                  color: ZenioColors.textPrimary,
-                ),
-                decoration: const InputDecoration(
-                  hintText: 'Add a note...',
-                  hintStyle: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w400,
-                    color: ZenioColors.textPlaceholder,
-                  ),
-                  isDense: true,
-                  filled: false,
-                  fillColor: Colors.transparent,
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  disabledBorder: InputBorder.none,
-                  focusedErrorBorder: InputBorder.none,
-                  errorBorder: InputBorder.none,
-                  contentPadding: EdgeInsets.zero,
+                  fontSize: 12,
+                  color: ZenioColors.danger,
                 ),
               ),
             ),
-            const SizedBox(height: 6),
-
-            if (_saveError != null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-                child: Text(
-                  _saveError!,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: ZenioColors.danger,
-                  ),
-                ),
-              ),
-            // Save Transaction Button
-            SizedBox(
+          // Save Transaction Button; the bottom inset extends the white
+          // background behind the home indicator.
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              10,
+              0,
+              10,
+              24 + MediaQuery.of(context).padding.bottom,
+            ),
+            child: SizedBox(
               height: 60,
               child: ElevatedButton(
                 onPressed: canSave && !_isSaving
@@ -931,8 +826,10 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                         final formattedDate = DateFormat('dd-MM-yyyy').format(_selectedDate);
                         final timeString = DateFormat('HH : mm').format(DateTime.now());
                         final timestamp = '${DateFormat('yy-MM-dd').format(_selectedDate)}   $timeString';
-                        final bankName = _selectedType == TransactionType.transfer
-                            ? '$selectedSource$transferWalletSeparator$selectedDestination'
+                        final isTransfer =
+                            _selectedType == TransactionType.transfer;
+                        final bankName = isTransfer
+                            ? transferBankName(selectedSource, selectedDestination)
                             : selectedSource;
 
                         final id = DateTime.now().millisecondsSinceEpoch.toString();
@@ -952,6 +849,10 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                             TransactionType.income => TransactionKind.income.name,
                             TransactionType.transfer => TransactionKind.transfer.name,
                           },
+                          // The wallets themselves, so names with "->" are
+                          // never split apart.
+                          transferFrom: isTransfer ? selectedSource : null,
+                          transferTo: isTransfer ? selectedDestination : null,
                         );
 
                         // Wallet balances follow from the saved transaction.
@@ -999,7 +900,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                 ),
                 child: Text(
                   isExceedingBalance
-                      ? 'Insufficient Wallet Balance'
+                      ? 'Not enough in this wallet'
                       : 'Save transaction',
                   style: TextStyle(
                     fontSize: 16,
@@ -1009,10 +910,8 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                 ),
               ),
             ),
-            // Extends white background behind keyboard
-            SizedBox(height: MediaQuery.of(context).padding.bottom),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

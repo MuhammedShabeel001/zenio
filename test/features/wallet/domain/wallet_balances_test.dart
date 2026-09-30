@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:zenio/features/home/domain/models/transaction/transaction_kind.dart';
 import 'package:zenio/features/home/domain/models/transaction/transaction_model.dart';
 import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
 import 'package:zenio/features/wallet/domain/wallet_balances.dart';
@@ -122,41 +123,68 @@ void main() {
     test('renames a plain wallet reference', () {
       expect(
         renamedWalletReferences(
+          kind: TransactionKind.expense,
           title: 'Food',
           bankName: 'hdfc',
+          transferFrom: null,
+          transferTo: null,
           oldName: 'HDFC',
           newName: 'HDFC Savings',
         ),
-        (title: 'Food', bankName: 'HDFC Savings'),
+        (
+          title: 'Food',
+          bankName: 'HDFC Savings',
+          transferFrom: null,
+          transferTo: null,
+        ),
       );
     });
 
     test('renames either end of a transfer and its title', () {
       expect(
         renamedWalletReferences(
+          kind: TransactionKind.transfer,
           title: 'Transfer to Cash',
           bankName: 'HDFC -> Cash',
+          transferFrom: null,
+          transferTo: null,
           oldName: 'Cash',
           newName: 'Wallet',
         ),
-        (title: 'Transfer to Wallet', bankName: 'HDFC -> Wallet'),
+        (
+          title: 'Transfer to Wallet',
+          bankName: 'HDFC -> Wallet',
+          transferFrom: 'HDFC',
+          transferTo: 'Wallet',
+        ),
       );
       expect(
         renamedWalletReferences(
+          kind: TransactionKind.transfer,
           title: 'Transfer to Cash',
           bankName: 'HDFC -> Cash',
+          transferFrom: 'HDFC',
+          transferTo: 'Cash',
           oldName: 'HDFC',
           newName: 'Bank',
         ),
-        (title: 'Transfer to Cash', bankName: 'Bank -> Cash'),
+        (
+          title: 'Transfer to Cash',
+          bankName: 'Bank -> Cash',
+          transferFrom: 'Bank',
+          transferTo: 'Cash',
+        ),
       );
     });
 
     test('leaves unrelated transactions alone', () {
       expect(
         renamedWalletReferences(
+          kind: TransactionKind.expense,
           title: 'Food',
           bankName: 'SBI',
+          transferFrom: null,
+          transferTo: null,
           oldName: 'HDFC',
           newName: 'Bank',
         ),

@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zenio/features/home/controller/home/home_notifier.dart';
+import 'package:zenio/features/home/domain/models/transaction/transaction_kind.dart';
+import 'package:zenio/features/home/presentation/widgets/transaction_amount.dart';
+import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
+import 'package:zenio/shared/widgets/money.dart';
 import 'package:zenio/shared/widgets/zenio_snack_bar.dart';
 
 /// How long the Undo action stays available.
@@ -38,9 +42,18 @@ Future<void> deleteTransactionWithUndo(
 
   if (!context.mounted) return;
   var undone = false;
+  // Says what went, e.g. "Food · −₹420.00 deleted".
+  final amount = Money.signed(
+    deleted.amount,
+    symbol: ref.read(currencySymbolProvider),
+    direction: moneyDirectionOf(
+      deleted.resolvedKind,
+      isIncome: deleted.isIncome,
+    ),
+  );
   ZenioSnackBar.show(
     context,
-    message: 'Transaction deleted',
+    message: '${deleted.title} · $amount deleted',
     duration: _undoWindow,
     actionLabel: 'Undo',
     onAction: () async {

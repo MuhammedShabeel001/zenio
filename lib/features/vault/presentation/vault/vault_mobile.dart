@@ -159,8 +159,13 @@ class _VaultScreenMobileState extends ConsumerState<VaultScreenMobile>
           const ScreenTitleBar(title: 'Vault'),
           // Dark Header Section
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-            child: Row(
+            // The pills below are 48pt tall to tap; the header keeps its
+            // height.
+            padding: const EdgeInsets.fromLTRB(20, 3, 20, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+            Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 // Filter Dropdown Pill (Cards v / Notes v)
@@ -170,10 +175,17 @@ class _VaultScreenMobileState extends ConsumerState<VaultScreenMobile>
                 ),
 
                 // + Add Action Button Pill
-                GestureDetector(
+                Semantics(
+                  button: true,
+                  label: isCardsMode ? 'Add card' : 'Add note',
+                  excludeSemantics: true,
+                  child: GestureDetector(
                   onTap: () {
                     AddVaultItemBottomSheet.show(context, state.mode);
                   },
+                  behavior: HitTestBehavior.opaque,
+                  child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 5),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 18,
@@ -209,6 +221,24 @@ class _VaultScreenMobileState extends ConsumerState<VaultScreenMobile>
                         ),
                       ],
                     ),
+                  ),
+                  ),
+                  ),
+                ),
+              ],
+            ),
+                const SizedBox(height: 6),
+                // What is protected, and when it shows.
+                Text(
+                  isCardsMode
+                      ? 'Numbers and CVVs stay hidden until you tap the eye, '
+                          'and hide again after 30 seconds.'
+                      : 'Stored encrypted on this device. Tap a note to read '
+                          'or edit it.',
+                  style: const TextStyle(
+                    fontSize: ZenioFontSizes.caption,
+                    height: 1.35,
+                    color: ZenioColors.textOnDarkSecondary,
                   ),
                 ),
               ],
@@ -356,7 +386,11 @@ class _VaultScreenMobileState extends ConsumerState<VaultScreenMobile>
       offset: const Offset(0, 40),
       color: const Color(0xFF1A1A1A),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Container(
+      tooltip: 'Show cards or notes',
+      // 48pt tall to tap; the pill itself is unchanged.
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 7),
+        child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
           color: const Color(0xFF1A1A1A),
@@ -380,6 +414,7 @@ class _VaultScreenMobileState extends ConsumerState<VaultScreenMobile>
             ),
           ],
         ),
+      ),
       ),
     );
   }

@@ -427,8 +427,10 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                                             },
                                           ),
                                           const SizedBox(width: 12),
+                                          // Opens Edit and Delete for the
+                                          // wallet; not the Settings tab.
                                           _buildActionButton(
-                                            label: 'Settings',
+                                            label: 'Manage',
                                             backgroundColor:
                                                 const Color(0xFFEAEAEA),
                                             iconWidget: Assets.icons.settings.svg(
@@ -724,7 +726,7 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
             const SizedBox(height: 24),
 
             const Text(
-              'No Cards in Wallet',
+              'No wallets yet',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,

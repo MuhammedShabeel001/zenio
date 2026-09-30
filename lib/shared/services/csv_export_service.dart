@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:zenio/features/home/domain/models/transaction/transaction_kind.dart';
 import 'package:zenio/shared/services/local_database_service.dart';
+import 'package:zenio/shared/utils/currency_display.dart';
 import 'package:zenio/shared/utils/datetime.dart';
 
 final csvExportServiceProvider = Provider<CsvExportService>((ref) {
@@ -22,14 +23,22 @@ class CsvExportService {
 
   final LocalDatabaseService _dbService;
 
+  /// Whether [row] (as stored in the database) can be exported: its amount
+  /// is a finite number, so the file never holds NaN or an infinity.
+  static bool isExportable(Map<String, dynamic> row) {
+    final amount = row['amount'];
+    return amount is num && amount.isFinite;
+  }
+
   /// Builds the CSV text for [transactions] (rows as stored in the database).
+  /// Rows that are not [isExportable] are left out.
   static String buildCsv(List<Map<String, dynamic>> transactions) {
     final buffer = StringBuffer()
       ..writeln(
         'Date,Type,Category/Title,Amount,Currency,Wallet,Note,Transaction ID',
       );
 
-    for (final tx in transactions) {
+    for (final tx in transactions.where(isExportable)) {
       final title = (tx['title'] ?? '').toString();
       final isIncome = tx['is_income'] == 1 || tx['is_income'] == true;
       final kind = resolveTransactionKind(
@@ -56,7 +65,7 @@ class CsvExportService {
               ? -amount
               : amount,
         ),
-        _textCell(tx['currency'] ?? 'INR'),
+        _textCell(_exportCurrency(tx['currency'])),
         _textCell(tx['bank_name']),
         _textCell(tx['note']),
         _textCell(tx['id']),
@@ -66,12 +75,18 @@ class CsvExportService {
     return buffer.toString();
   }
 
-  /// Shares all transactions as a CSV file and returns how many were
-  /// exported. Nothing is shared when there are none. [sharePositionOrigin]
-  /// anchors the share sheet on iPad.
-  Future<int> exportDataToCsv({Rect? sharePositionOrigin}) async {
-    final transactions = await _dbService.getTransactionsMap();
-    if (transactions.isEmpty) return 0;
+  /// Shares all transactions as a CSV file. Returns how many were exported,
+  /// and how many were left out because their stored amount is NaN or an
+  /// infinity (see [isExportable]). Nothing is shared when there is
+  /// nothing to export. [sharePositionOrigin] anchors the share sheet on
+  /// iPad.
+  Future<({int exported, int leftOut})> exportDataToCsv({
+    Rect? sharePositionOrigin,
+  }) async {
+    final stored = await _dbService.getTransactionsMap();
+    final transactions = stored.where(isExportable).toList();
+    final leftOut = stored.length - transactions.length;
+    if (transactions.isEmpty) return (exported: 0, leftOut: leftOut);
 
     final tempDir = await getTemporaryDirectory();
     // Earlier exports hold the whole history; remove them now rather than
@@ -96,7 +111,7 @@ class CsvExportService {
         sharePositionOrigin: sharePositionOrigin,
       ),
     );
-    return transactions.length;
+    return (exported: transactions.length, leftOut: leftOut);
   }
 
   /// A text cell that spreadsheet apps will not run as a formula: a leading
@@ -118,6 +133,13 @@ class CsvExportService {
     final text = stored?.toString();
     final date = DateTimeUtils.parseTransactionDate(text);
     return date == null ? text : DateFormat('dd-MM-yyyy').format(date);
+  }
+
+  /// US dollars are stored as "DLR" but written as the standard "USD";
+  /// other codes are written as stored.
+  static String _exportCurrency(Object? stored) {
+    final code = (stored ?? 'INR').toString();
+    return currencyDisplayCode(code) == 'USD' ? 'USD' : code;
   }
 
   static String _numberCell(Object? value) {

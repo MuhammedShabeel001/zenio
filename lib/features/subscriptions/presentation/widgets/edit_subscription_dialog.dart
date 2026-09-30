@@ -1,7 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
 import 'package:zenio/features/subscriptions/controller/categories/subscription_categories_notifier.dart';
 import 'package:zenio/features/subscriptions/controller/subscriptions/subscriptions_notifier.dart';
 import 'package:zenio/features/subscriptions/domain/models/subscription_model.dart';
@@ -9,7 +11,9 @@ import 'package:zenio/features/transactions/domain/models/category_item_model.da
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/theme/zenio_tokens.dart';
 import 'package:zenio/shared/utils/app_fonts.dart';
+import 'package:zenio/shared/utils/datetime.dart';
 import 'package:zenio/shared/utils/formatters.dart';
+import 'package:zenio/shared/widgets/zenio_snack_bar.dart';
 
 class EditSubscriptionDialog extends ConsumerStatefulWidget {
   const EditSubscriptionDialog({
@@ -147,12 +151,17 @@ class _EditSubscriptionDialogState
     }
     // The form may have been closed (or the Vault locked) meanwhile.
     if (!mounted) return;
+    unawaited(HapticFeedback.lightImpact());
+    ZenioSnackBar.show(
+      context,
+      message: 'Subscription saved · ${updatedSub.title}',
+      type: ZenioSnackBarType.success,
+    );
     navigator.pop();
   }
 
   @override
   Widget build(BuildContext context) {
-    final formattedDate = DateFormat('dd MMMM yyyy').format(_selectedDate);
     final categories = ref.watch(subscriptionCategoriesNotifierProvider);
     final currencySymbol = ref.watch(currencySymbolProvider);
 
@@ -177,7 +186,7 @@ class _EditSubscriptionDialogState
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    'Edit Subscription',
+                    'Edit subscription',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -445,7 +454,7 @@ class _EditSubscriptionDialogState
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          formattedDate,
+                          DateTimeUtils.displayDate(_selectedDate),
                           style: AppFonts.numeric(
                             fontSize: 13,
                             color: const Color(0xFF000000),
@@ -487,7 +496,7 @@ class _EditSubscriptionDialogState
                     ),
                   ),
                   child: const Text(
-                    'Save Changes',
+                    'Save changes',
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,

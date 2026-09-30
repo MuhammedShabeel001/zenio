@@ -5,6 +5,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:zenio/features/split/domain/models/split_calculation_model.dart';
 import 'package:zenio/features/split/domain/repositories/interfaces/i_split_repository.dart';
 import 'package:zenio/shared/providers/providers.dart';
+import 'package:zenio/shared/utils/money_limits.dart';
 
 part 'split_repository.g.dart';
 
@@ -24,13 +25,21 @@ class SplitRepository implements ISplitRepository {
 
   @override
   Future<SplitCalculationModel> getSavedSplit() async {
-    final saved =
-        await _prefs.readJsonObject(_splitKey, SplitCalculationModel.fromJson);
+    final saved = await _prefs.readJsonObject(_splitKey, _decode);
     return saved ?? defaultSplitData;
+  }
+
+  /// A saved split whose bill is NaN or an infinity is kept aside as
+  /// unreadable (see [SqlitePrefs.readJsonObject]) rather than shown.
+  static SplitCalculationModel _decode(Map<String, dynamic> json) {
+    final split = SplitCalculationModel.fromJson(json);
+    checkReadableAmount(split.billAmount, 'bill amount');
+    return split;
   }
 
   @override
   Future<void> saveSplit(SplitCalculationModel split) async {
+    checkStorableAmount(split.billAmount, 'bill amount');
     await _prefs.setString(_splitKey, jsonEncode(split.toJson()));
   }
 }

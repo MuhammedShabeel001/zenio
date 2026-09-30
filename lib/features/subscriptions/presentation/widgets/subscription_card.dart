@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
-import 'package:zenio/shared/widgets/item_actions.dart';
 import 'package:zenio/features/subscriptions/controller/categories/subscription_categories_notifier.dart';
 import 'package:zenio/features/subscriptions/domain/models/subscription_model.dart';
 import 'package:zenio/shared/shared.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
+import 'package:zenio/shared/widgets/item_actions.dart';
 
 class SubscriptionCard extends ConsumerStatefulWidget {
   const SubscriptionCard({
@@ -184,13 +183,12 @@ class _SubscriptionCardState extends ConsumerState<SubscriptionCard>
       computedDueInText = 'In $difference days';
     }
 
-    final formattedNextBillingDate = DateFormat('MMMM dd, yyyy').format(widget.subscription.nextBillingDate);
+    final formattedNextBillingDate =
+        DateTimeUtils.displayDate(widget.subscription.nextBillingDate);
 
     return ItemActions(
       onEdit: widget.onEdit,
       onDelete: widget.onDelete,
-      // The swipe button asks twice; long press and screen readers confirm.
-      confirmDeleteTitle: 'Delete this subscription?',
       child: Container(
       margin: const EdgeInsets.only(bottom: 5),
       child: Stack(
@@ -207,18 +205,12 @@ class _SubscriptionCardState extends ConsumerState<SubscriptionCard>
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Delete Button (First tap: red trash icon; tap again to confirm: red circle with white checkmark)
+                  // Deletes straight away; the screen offers Undo.
                   SwipeDeleteButton(
-                    isConfirming: _isConfirmingDelete,
+                    isConfirming: false,
                     onTap: () {
-                      if (!_isConfirmingDelete) {
-                        setState(() {
-                          _isConfirmingDelete = true;
-                        });
-                      } else {
-                        _close();
-                        widget.onDelete?.call();
-                      }
+                      _close();
+                      widget.onDelete?.call();
                     },
                   ),
                   const SizedBox(width: 3),
@@ -310,6 +302,8 @@ class _SubscriptionCardState extends ConsumerState<SubscriptionCard>
                             children: [
                               Text(
                                 widget.subscription.title,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
@@ -317,8 +311,13 @@ class _SubscriptionCardState extends ConsumerState<SubscriptionCard>
                                 ),
                               ),
                               const SizedBox(height: 3),
+                              // One line: a long category ends in "…"
+                              // rather than breaking mid-word.
                               Text(
                                 widget.subscription.category,
+                                maxLines: 1,
+                                softWrap: false,
+                                overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w400,
@@ -384,7 +383,10 @@ class _SubscriptionCardState extends ConsumerState<SubscriptionCard>
                       secondChild: Container(
                         width: double.infinity,
                         padding: const EdgeInsets.fromLTRB(20, 12, 0, 20),
-                        child: Row(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                        Row(
                           children: [
                             // Left Column: Next Billing
                             Expanded(
@@ -445,6 +447,17 @@ class _SubscriptionCardState extends ConsumerState<SubscriptionCard>
                                     ),
                                   ],
                                 ),
+                              ),
+                            ),
+                          ],
+                        ),
+                            const SizedBox(height: ZenioSpacing.md),
+                            // When reminders come (see reminder_schedule).
+                            const Text(
+                              "You're reminded the day before, at 9 AM.",
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: ZenioColors.textSecondary,
                               ),
                             ),
                           ],
