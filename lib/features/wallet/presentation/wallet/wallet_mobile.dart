@@ -1,19 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
 import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
+import 'package:zenio/features/wallet/presentation/widgets/add_wallet_bottom_sheet.dart';
 import 'package:zenio/features/wallet/presentation/widgets/wallet_card_detail_widget.dart';
 import 'package:zenio/features/wallet/presentation/widgets/wallet_card_widget.dart';
-import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
-import 'package:zenio/shared/providers/default_wallet_provider/default_wallet_provider.dart';
+import 'package:zenio/features/wallet/presentation/widgets/wallet_settings_bottom_sheet.dart';
 import 'package:zenio/shared/shared.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
-import 'package:zenio/shared/widgets/add_transaction_bottom_sheet.dart';
-import 'package:zenio/features/wallet/presentation/widgets/add_wallet_bottom_sheet.dart';
-import 'package:zenio/features/wallet/presentation/widgets/wallet_settings_bottom_sheet.dart';
-import 'package:zenio/features/wallet/presentation/widgets/top_up_wallet_bottom_sheet.dart';
-import 'package:zenio/shared/widgets/custom_navigation_bar.dart';
 
 class WalletScreenMobile extends ConsumerStatefulWidget {
   const WalletScreenMobile({
@@ -342,14 +336,16 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                                     if (cards.length > 1) const SizedBox(height: 55),
                                     if (cards.length <= 1) const SizedBox(height: 65),
 
-                                    // Quick Action Buttons (Top up, Freeze, Details, Settings)
+                                    // Quick Action Buttons (Freeze, Details, Settings)
                                     Padding(
                                       padding: const EdgeInsets.symmetric(
-                                        horizontal: 10, // Exactly 10px padding from the screen edges
+                                        horizontal: 14,
                                       ),
                                       child: Row(
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                         children: [
+                                          // Top up button commented out temporarily:
+                                          /*
                                           _buildActionButton(
                                             label: 'Top up',
                                             backgroundColor:
@@ -362,13 +358,14 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                                                 BlendMode.srcIn,
                                               ),
                                             ),
-                                              onTap: () {
-                                                if (cards.isEmpty) return;
-                                                final actualIndex = _getActiveCardIndex(cards.length);
-                                                EditWalletBalanceBottomSheet.show(context, actualIndex);
-                                              },
+                                            onTap: () {
+                                              if (cards.isEmpty) return;
+                                              final actualIndex = _getActiveCardIndex(cards.length);
+                                              EditWalletBalanceBottomSheet.show(context, actualIndex);
+                                            },
                                           ),
-                                          const SizedBox(width: 10), // Exactly 10px gap
+                                          const SizedBox(width: 12),
+                                          */
                                           _buildActionButton(
                                             label: 'Freeze',
                                             backgroundColor: isActiveCardFrozen
@@ -384,12 +381,12 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                                                     )
                                                   : null,
                                             ),
-                                              onTap: () {
-                                                if (cards.isEmpty) return;
-                                                notifier.toggleFreezeCard();
-                                              },
+                                            onTap: () {
+                                              if (cards.isEmpty) return;
+                                              notifier.toggleFreezeCard();
+                                            },
                                           ),
-                                          const SizedBox(width: 10), // Exactly 10px gap
+                                          const SizedBox(width: 12),
                                           _buildActionButton(
                                             label: 'Details',
                                             backgroundColor:
@@ -398,43 +395,43 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                                               width: 24,
                                               height: 24,
                                             ),
-                                              onTap: () {
-                                                if (cards.isEmpty) return;
-                                                final pageIndex = (_pageController?.hasClients == true) ? _pageController!.page!.round() : 0;
-                                                final actualIndex = pageIndex % cards.length;
-                                                setState(() {
-                                                  _lastKnownPage = pageIndex;
-                                                  _tappedCardIndex = actualIndex;
-                                                  _isCardDetailExpanded = true;
-                                                });
-                                                Navigator.push(
-                                                  context,
-                                                  PageRouteBuilder(
-                                                    opaque: false,
-                                                    transitionDuration: const Duration(milliseconds: 380),
-                                                    reverseTransitionDuration: const Duration(milliseconds: 380),
-                                                    pageBuilder: (context, animation, secondaryAnimation) {
-                                                      return WalletCardDetailRoute(
-                                                        card: cards[actualIndex],
-                                                        isFrozen: cards[actualIndex].isFrozen,
-                                                        heroTag: 'wallet_hero_$pageIndex',
-                                                        onPop: () {
-                                                          if (mounted) {
-                                                            setState(() {
-                                                              _isCardDetailExpanded = false;
-                                                            });
-                                                          }
-                                                        },
-                                                      );
-                                                    },
-                                                    transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                                                      return FadeTransition(opacity: animation, child: child);
-                                                    },
-                                                  ),
-                                                );
-                                              },
+                                            onTap: () {
+                                              if (cards.isEmpty) return;
+                                              final pageIndex = (_pageController?.hasClients == true) ? _pageController!.page!.round() : 0;
+                                              final actualIndex = pageIndex % cards.length;
+                                              setState(() {
+                                                _lastKnownPage = pageIndex;
+                                                _tappedCardIndex = actualIndex;
+                                                _isCardDetailExpanded = true;
+                                              });
+                                              Navigator.push(
+                                                context,
+                                                PageRouteBuilder(
+                                                  opaque: false,
+                                                  transitionDuration: const Duration(milliseconds: 380),
+                                                  reverseTransitionDuration: const Duration(milliseconds: 380),
+                                                  pageBuilder: (context, animation, secondaryAnimation) {
+                                                    return WalletCardDetailRoute(
+                                                      card: cards[actualIndex],
+                                                      isFrozen: cards[actualIndex].isFrozen,
+                                                      heroTag: 'wallet_hero_$pageIndex',
+                                                      onPop: () {
+                                                        if (mounted) {
+                                                          setState(() {
+                                                            _isCardDetailExpanded = false;
+                                                          });
+                                                        }
+                                                      },
+                                                    );
+                                                  },
+                                                  transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                                                    return FadeTransition(opacity: animation, child: child);
+                                                  },
+                                                ),
+                                              );
+                                            },
                                           ),
-                                          const SizedBox(width: 10), // Exactly 10px gap
+                                          const SizedBox(width: 12),
                                           _buildActionButton(
                                             label: 'Settings',
                                             backgroundColor:

@@ -66,6 +66,11 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
     _noteController = TextEditingController();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(walletNotifierProvider.notifier).loadWalletData();
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (mounted) {
+          _amountFocusNode.requestFocus();
+        }
+      });
     });
   }
 
@@ -354,6 +359,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                     child: TextField(
                       controller: _amountController,
                       focusNode: _amountFocusNode,
+                      autofocus: true,
                       keyboardType:
                           const TextInputType.numberWithOptions(decimal: true),
                       inputFormatters: [
