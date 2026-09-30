@@ -56,8 +56,7 @@ class WalletNotifier extends _$WalletNotifier {
     if (repo == null) return;
     state = state.copyWith(status: WalletStatus.loading);
     try {
-      final transactions =
-          await ref.read(homeNotifierProvider.notifier).loadedTransactions();
+      final transactions = await _loadedTransactions();
       var cards = await repo.getCards();
 
       // One-time move to derived balances. Opening balances are chosen so
@@ -83,18 +82,14 @@ class WalletNotifier extends _$WalletNotifier {
     }
   }
 
-  void _publish(List<WalletCardModel> cards, {int? activeCardIndex}) {
-    var newActiveIndex = activeCardIndex ?? state.activeCardIndex;
-    if (cards.isEmpty) {
-      newActiveIndex = 0;
-    } else if (newActiveIndex >= cards.length) {
-      newActiveIndex = cards.length - 1;
-    }
+  void _publish(List<WalletCardModel> cards) {
     state = state.copyWith(
       status: WalletStatus.success,
       cards: cards,
       cardBalance: _calculateTotalBalance(cards),
-      activeCardIndex: newActiveIndex,
+      // The carousel's page, kept as is: capping it would point the page
+      // dots and the frozen look at a different card than the one on screen.
+      activeCardIndex: cards.isEmpty ? 0 : state.activeCardIndex,
     );
   }
 
@@ -110,8 +105,8 @@ class WalletNotifier extends _$WalletNotifier {
     _mutate((cards) => cards).ignore();
   }
 
-  List<TransactionModel> get _transactions =>
-      ref.read(homeNotifierProvider).transactions;
+  Future<List<TransactionModel>> _loadedTransactions() =>
+      ref.read(homeNotifierProvider.notifier).loadedTransactions();
 
   void onCardPageChanged(int index) {
     state = state.copyWith(activeCardIndex: index);
@@ -129,7 +124,6 @@ class WalletNotifier extends _$WalletNotifier {
   /// to show for added wallets.
   Future<List<WalletCardModel>?> _mutate(
     List<WalletCardModel>? Function(List<WalletCardModel> current) change, {
-    int? activeCardIndex,
     bool keepBalances = false,
     Map<String, double> newBalances = const {},
   }) {
@@ -139,7 +133,9 @@ class WalletNotifier extends _$WalletNotifier {
         throw StateError('Local storage is not ready yet.');
       }
       await _initialLoad;
-      final transactions = _transactions;
+      // Throws if the transactions cannot be loaded: opening balances worked
+      // out without them would count every transaction twice later on.
+      final transactions = await _loadedTransactions();
       final current = await repo.getCards();
       final changed = change(current);
       if (changed == null) return null;
@@ -157,7 +153,7 @@ class WalletNotifier extends _$WalletNotifier {
 
       await repo.saveCards(updated);
       await repo.saveCardBalance(_calculateTotalBalance(updated));
-      _publish(updated, activeCardIndex: activeCardIndex);
+      _publish(updated);
       return updated;
     });
   }
@@ -187,35 +183,50 @@ class WalletNotifier extends _$WalletNotifier {
 
   /// Sets the wallet's balance to [newBalance] by recording the difference as
   /// a balance adjustment, so the change stays visible in the history.
-  Future<void> adjustBalance(String walletId, double newBalance) async {
-    await _initialLoad;
-    final card = state.cards.where((c) => c.id == walletId).firstOrNull;
-    if (card == null) return;
-    // Transactions name their wallet; with a shared name the adjustment
-    // would land on the other wallet.
-    final owner = state.cards.firstWhere(
-      (c) => walletNameKey(c.bankName) == walletNameKey(card.bankName),
-    );
-    if (owner.id != card.id) throw const WalletNameConflictException();
-    final delta = roundToCents(newBalance - card.balance);
-    if (delta == 0) return;
+  Future<void> adjustBalance(String walletId, double newBalance) {
+    // Queued with the other wallet writes, and worked out from the stored
+    // wallets and transactions rather than the balances on screen, which
+    // can be out of date.
+    return _writes.run(() async {
+      final repo = _walletRepository;
+      if (repo == null) {
+        throw StateError('Local storage is not ready yet.');
+      }
+      await _initialLoad;
+      final cards = withDerivedBalances(
+        await repo.getCards(),
+        await _loadedTransactions(),
+      );
+      final card = cards.where((c) => c.id == walletId).firstOrNull;
+      if (card == null) return;
+      // Transactions name their wallet; with a shared name the adjustment
+      // would land on the other wallet.
+      final owner = cards.firstWhere(
+        (c) => walletNameKey(c.bankName) == walletNameKey(card.bankName),
+      );
+      if (owner.id != card.id) throw const WalletNameConflictException();
+      final delta = roundToCents(newBalance - card.balance);
+      if (delta == 0) return;
 
-    final now = DateTime.now();
-    await ref.read(homeNotifierProvider.notifier).addTransaction(
-          TransactionModel(
-            id: now.microsecondsSinceEpoch.toString(),
-            title: balanceAdjustmentTitle,
-            date: DateFormat('dd-MM-yyyy').format(now),
-            amount: delta.abs(),
-            isIncome: delta > 0,
-            currency:
-                ref.read(settingsNotifierProvider).settings.primaryCurrency,
-            bankName: card.bankName,
-            timestamp:
-                '${DateFormat('yy-MM-dd').format(now)}   ${DateFormat('HH : mm').format(now)}',
-            kind: TransactionKind.adjustment.name,
-          ),
-        );
+      final now = DateTime.now();
+      // The new balance is published by [_onTransactionsChanged], queued
+      // after this task.
+      await ref.read(homeNotifierProvider.notifier).addTransaction(
+            TransactionModel(
+              id: now.microsecondsSinceEpoch.toString(),
+              title: balanceAdjustmentTitle,
+              date: DateFormat('dd-MM-yyyy').format(now),
+              amount: delta.abs(),
+              isIncome: delta > 0,
+              currency:
+                  ref.read(settingsNotifierProvider).settings.primaryCurrency,
+              bankName: card.bankName,
+              timestamp:
+                  '${DateFormat('yy-MM-dd').format(now)}   ${DateFormat('HH : mm').format(now)}',
+              kind: TransactionKind.adjustment.name,
+            ),
+          );
+    });
   }
 
   /// Freezes or unfreezes the card at [index] (the card on screen).
@@ -252,9 +263,6 @@ class WalletNotifier extends _$WalletNotifier {
             .updateDefaultWallet(card.bankName);
       } catch (_) {}
     }
-
-    // Focus on the newly added card
-    state = state.copyWith(activeCardIndex: updated.length - 1);
   }
 
   /// Updates the wallet's details. Its balance is not changed here (see

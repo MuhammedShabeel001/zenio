@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:zenio/features/home/domain/models/transaction/transaction_kind.dart';
 import 'package:zenio/shared/services/local_database_service.dart';
+import 'package:zenio/shared/utils/datetime.dart';
 
 final csvExportServiceProvider = Provider<CsvExportService>((ref) {
   final dbService = ref.watch(localDatabaseServiceProvider);
@@ -46,7 +47,7 @@ class CsvExportService {
       };
 
       final row = [
-        _textCell(tx['date']),
+        _textCell(_exportDate(tx['date'])),
         type,
         _textCell(title),
         // An adjustment's direction is kept in the sign of its amount.
@@ -108,6 +109,15 @@ class CsvExportService {
       text = "'$text";
     }
     return _quoted(text);
+  }
+
+  /// The date as dd-MM-yyyy, the format Zenio stores and imports. Older
+  /// versions stored other formats, such as "Thursday, September 17, 2026";
+  /// those are written as the day the app shows for them.
+  static String? _exportDate(Object? stored) {
+    final text = stored?.toString();
+    final date = DateTimeUtils.parseTransactionDate(text);
+    return date == null ? text : DateFormat('dd-MM-yyyy').format(date);
   }
 
   static String _numberCell(Object? value) {

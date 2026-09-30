@@ -37,12 +37,17 @@ Future<void> deleteTransactionWithUndo(
   await HapticFeedback.lightImpact();
 
   if (!context.mounted) return;
+  var undone = false;
   ZenioSnackBar.show(
     context,
     message: 'Transaction deleted',
     duration: _undoWindow,
     actionLabel: 'Undo',
     onAction: () async {
+      // Undo stays tappable while the snack bar slides away; a second tap
+      // would try to restore it again and report a failure.
+      if (undone) return;
+      undone = true;
       try {
         await notifier.addTransaction(deleted);
       } catch (_) {

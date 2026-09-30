@@ -55,6 +55,22 @@ void main() {
       expect(csv, contains('01-09-2026,Transfer,Transfer to Cash,5,'));
       expect(csv, contains('01-09-2026,Adjustment,Balance adjustment,-7,'));
     });
+
+    test('writes dates older versions stored in the importable format', () {
+      final csv = CsvExportService.buildCsv([
+        {
+          'id': '1',
+          'title': 'Food',
+          'date': 'Thursday, September 17, 2026',
+          'amount': 10,
+          'currency': 'INR',
+          'is_income': 0,
+          'bank_name': 'HDFC',
+        },
+      ]);
+
+      expect(csv, contains('\n17-09-2026,Expense,Food,10,'));
+    });
   });
 
   group('import', () {
@@ -81,6 +97,51 @@ void main() {
       expect(salary['bank_name'], 'Cash');
       // Sorted by its own date rather than the day it was imported.
       expect(salary['timestamp'], '26-09-17   10 : 15');
+    });
+
+    test('reads the long dates older versions stored', () async {
+      final storage = TestStorage.create();
+      final service = CsvImportService(storage.open());
+
+      final result = await service.importCsvContent(
+        'Date,Type,Category,Amount,Wallet\n'
+        '"Thursday, September 17, 2026",Expense,Food,10,HDFC\n'
+        '"September 18, 2026",Expense,Taxi,20,HDFC\n',
+        now: now,
+      );
+
+      expect(result.imported, 2);
+      final dates = (await storage.transactionRows()).map((r) => r['date']);
+      expect(dates, containsAll(['17-09-2026', '18-09-2026']));
+    });
+
+    test('reads amounts written with a currency and skips unclear ones',
+        () async {
+      final storage = TestStorage.create();
+      final service = CsvImportService(storage.open());
+
+      final result = await service.importCsvContent(
+        'Date,Type,Category,Amount,Wallet\n'
+        '15-09-2026,Expense,Rupees dot,Rs. 500,HDFC\n'
+        '15-09-2026,Expense,Rupees no space,"Rs.1,00,000",HDFC\n'
+        '15-09-2026,Expense,Symbol,"₹ 1,234.50",HDFC\n'
+        '15-09-2026,Adjustment,Down,-₹ 20,HDFC\n'
+        '15-09-2026,Expense,Decimal comma,"1.234,50",HDFC\n'
+        '15-09-2026,Expense,Short group,"12,5",HDFC\n'
+        '15-09-2026,Expense,Leading dot,.5,HDFC\n',
+        now: now,
+      );
+
+      expect(result.imported, 4);
+      expect(result.skipped, 3);
+      final rows = {
+        for (final r in await storage.transactionRows()) r['title']: r,
+      };
+      expect(rows['Rupees dot']!['amount'], 500);
+      expect(rows['Rupees no space']!['amount'], 100000);
+      expect(rows['Symbol']!['amount'], 1234.5);
+      expect(rows['Down']!['amount'], 20);
+      expect(rows['Down']!['is_income'], 0);
     });
 
     test('reads a first row of data as data', () async {

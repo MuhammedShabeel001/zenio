@@ -6,8 +6,10 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zenio/features/home/controller/home/home_notifier.dart';
 import 'package:zenio/features/home/domain/models/transaction/transaction_model.dart';
+import 'package:zenio/features/home/domain/repositories/implementations/money_tracker/money_tracker_repository.dart';
 import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
 import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
+import 'package:zenio/shared/services/local_database_service.dart';
 import 'package:zenio/shared/services/sqlite_prefs.dart';
 
 import '../../../helpers/test_storage.dart';
@@ -29,8 +31,12 @@ WalletCardModel _card(
       balance: balance,
     );
 
-TransactionModel _tx(String id, String bankName, double amount,
-        {String? title,}) =>
+TransactionModel _tx(
+  String id,
+  String bankName,
+  double amount, {
+  String? title,
+}) =>
     TransactionModel(
       id: id,
       title: title ?? 'Food',
@@ -60,7 +66,8 @@ Future<List<WalletCardModel>> _stored(TestStorage storage) async {
 }
 
 Future<List<WalletCardModel>> _loadedWallets(
-    ProviderContainer container,) async {
+  ProviderContainer container,
+) async {
   await container.read(sqlitePrefsProvider.future);
   container.read(walletNotifierProvider);
   await container.read(walletNotifierProvider.notifier).loadWalletData();
@@ -216,7 +223,9 @@ void main() {
       expect(adjustment.amount, 50);
       expect(adjustment.isIncome, isFalse);
       expect(
-          container.read(homeNotifierProvider).summary?.expense, expenseBefore,);
+        container.read(homeNotifierProvider).summary?.expense,
+        expenseBefore,
+      );
     });
 
     test('renaming a wallet keeps its transactions and balance', () async {
@@ -232,9 +241,103 @@ void main() {
       final rows = await storage.transactionRows();
       expect(rows.single['bank_name'], 'HDFC Savings');
       expect(
+        container.read(homeNotifierProvider).transactions.single.bankName,
+        'HDFC Savings',
+      );
+      expect(
         container.read(walletNotifierProvider).cards.single.bankName,
         'HDFC Savings',
       );
     });
+
+    test('adjusting right after a transaction starts from the new balance',
+        () async {
+      final storage = TestStorage.create();
+      final container = await migratedContainer(storage);
+
+      // The wallet's balance is still being worked out when the adjustment
+      // starts.
+      await container
+          .read(homeNotifierProvider.notifier)
+          .addTransaction(_tx('t2', 'HDFC', 100));
+      await container
+          .read(walletNotifierProvider.notifier)
+          .adjustBalance('1', 450);
+
+      expect(await balanceAfterChanges(container), 450);
+    });
   });
+
+  test('wallet changes wait for the transactions instead of guessing',
+      () async {
+    final storage = TestStorage.create();
+    await seedTransaction(storage.open(), _tx('t1', 'HDFC', 200));
+    // Already moved to derived balances: 700 - 200 = 500.
+    await storage.putKeyValue(
+      _key,
+      jsonEncode([
+        jsonEncode(
+          _card('1', 'HDFC', balance: 500)
+              .copyWith(openingBalance: 700)
+              .toJson(),
+        ),
+      ]),
+    );
+    final container = storage.container(
+      overrides: [
+        moneyTrackerRepositoryRepoProvider.overrideWith((ref) {
+          final prefs = ref.watch(sqlitePrefsProvider).valueOrNull;
+          if (prefs == null) throw StateError('Local storage is not ready.');
+          return _UnreadableTransactions(
+            prefs,
+            ref.watch(localDatabaseServiceProvider),
+          );
+        }),
+      ],
+    );
+    await _loadedWallets(container);
+    expect(container.read(walletNotifierProvider).status, WalletStatus.error);
+
+    await expectLater(
+      container
+          .read(walletNotifierProvider.notifier)
+          .editCard(0, _card('1', 'HDFC').copyWith(cardType: 'Credit Card')),
+      throwsStateError,
+    );
+
+    // Saving 500 as the opening balance would count the 200 twice later.
+    expect((await _stored(storage)).single.openingBalance, 700);
+  });
+
+  test('the carousel keeps its page through wallet and transaction changes',
+      () async {
+    final storage = TestStorage.create();
+    await _seedLegacyWallets(storage, [
+      _card('1', 'HDFC'),
+      _card('2', 'SBI'),
+      _card('3', 'Cash'),
+    ]);
+    final container = storage.container();
+    await _loadedWallets(container);
+    // The carousel loops: page 3000 shows the first card.
+    final wallets = container.read(walletNotifierProvider.notifier)
+      ..onCardPageChanged(3000);
+    await wallets.toggleFreezeCard(0);
+    await container
+        .read(homeNotifierProvider.notifier)
+        .addTransaction(_tx('t1', 'HDFC', 10));
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    await wallets.addCard(_card('4', 'Card'), 0);
+
+    expect(container.read(walletNotifierProvider).activeCardIndex, 3000);
+  });
+}
+
+/// Transactions that cannot be read, as when the database fails.
+class _UnreadableTransactions extends MoneyTrackerRepository {
+  _UnreadableTransactions(super.prefs, super.db);
+
+  @override
+  Future<List<TransactionModel>> getTransactions() =>
+      throw StateError('The database could not be read.');
 }

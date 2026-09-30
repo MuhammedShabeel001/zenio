@@ -2,6 +2,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:zenio/features/home/domain/models/transaction/transaction_kind.dart';
 import 'package:zenio/features/home/home.dart';
+import 'package:zenio/features/wallet/domain/wallet_balances.dart';
 import 'package:zenio/shared/utils/datetime.dart';
 
 part 'home_notifier.freezed.dart';
@@ -73,7 +74,22 @@ class HomeNotifier extends _$HomeNotifier {
   Future<void> renameWallet(String oldName, String newName) async {
     final repository = await _readyRepository();
     await repository.renameWallet(oldName, newName);
-    await loadMoneyTrackerData();
+
+    // The same change the repository made, applied to the loaded list
+    // rather than reloading it: a failed reload would leave the old names
+    // in memory and the wallets would work out their balances from them.
+    final updatedTxs = state.transactions.map((tx) {
+      final renamed = renamedWalletReferences(
+        title: tx.title,
+        bankName: tx.bankName,
+        oldName: oldName,
+        newName: newName,
+      );
+      return renamed == null
+          ? tx
+          : tx.copyWith(title: renamed.title, bankName: renamed.bankName);
+    }).toList();
+    state = state.copyWith(transactions: updatedTxs);
   }
 
   Future<void> addTransaction(TransactionModel newTx) async {

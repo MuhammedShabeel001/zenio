@@ -195,20 +195,52 @@ class CsvImportService {
     );
   }
 
-  /// Reads amounts like "1,234.50", "₹ 1,234" or "-12". Returns null when the
-  /// text is not a number.
+  static final RegExp _number = RegExp(r'\d[\d,]*(?:\.\d+)?');
+
+  /// Digits grouped by commas, in threes ("1,234,567") or the Indian way
+  /// ("12,34,567").
+  static final RegExp _groupedDigits = RegExp(r'^\d{1,3}(?:,\d{2,3})*,\d{3}$');
+
+  /// A currency written with a dot, such as "Rs.".
+  static final RegExp _currencyWithDot = RegExp(r'[A-Za-z]\.$');
+
+  /// Reads amounts like "1,234.50", "₹ 1,234", "Rs. 500" or "-12". Returns
+  /// null unless the text holds exactly one clearly written number: "12,5"
+  /// or "1.234,50" are skipped rather than read as a different amount.
   static double? _parseAmount(String text) {
-    final cleaned = text.replaceAll(RegExp(r'[^0-9.\-]'), '');
-    if (cleaned.isEmpty) return null;
-    return double.tryParse(cleaned);
+    final matches = _number.allMatches(text).toList();
+    if (matches.length != 1) return null;
+    final match = matches.single;
+
+    // ".5" is not read as 5; a dot after letters ends a currency ("Rs.").
+    final before = text.substring(0, match.start);
+    if (before.endsWith('.') && !_currencyWithDot.hasMatch(before)) {
+      return null;
+    }
+
+    final number = match.group(0)!;
+    final wholePart = number.split('.').first;
+    if (wholePart.contains(',') && !_groupedDigits.hasMatch(wholePart)) {
+      return null;
+    }
+    final value = double.tryParse(number.replaceAll(',', ''));
+    if (value == null) return null;
+    return before.contains('-') ? -value : value;
   }
 
   /// Dates Zenio can read unambiguously: its own dd-MM-yyyy, ISO yyyy-MM-dd,
-  /// and dd/MM/yyyy. Anything else (for example the US 12/31/2025) is
+  /// dd/MM/yyyy, and the long forms older versions stored ("Thursday,
+  /// September 17, 2026"). Anything else (for example the US 12/31/2025) is
   /// rejected rather than read as a different day.
   static DateTime? _parseDate(String text) {
     if (text.isEmpty) return null;
-    for (final pattern in ['dd-MM-yyyy', 'yyyy-MM-dd', 'dd/MM/yyyy']) {
+    for (final pattern in [
+      'dd-MM-yyyy',
+      'yyyy-MM-dd',
+      'dd/MM/yyyy',
+      'EEEE, MMMM d, yyyy',
+      'MMMM d, yyyy',
+    ]) {
       try {
         return DateFormat(pattern).parseStrict(text);
       } catch (_) {}

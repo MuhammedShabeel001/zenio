@@ -40,12 +40,17 @@ class ZenioSnackBar {
         ),
     };
 
+    final hasAction = actionLabel != null && onAction != null;
+
     messenger.showSnackBar(
       SnackBar(
         behavior: SnackBarBehavior.floating,
         elevation: 0,
         backgroundColor: Colors.transparent,
         duration: duration,
+        // With a screen reader, reaching the action can take longer than the
+        // timeout, so it stays until it is used, dismissed or replaced.
+        persist: hasAction && MediaQuery.accessibleNavigationOf(context),
         margin: EdgeInsets.fromLTRB(16, 0, 16, bottomMargin),
         padding: EdgeInsets.zero,
         content: Container(
