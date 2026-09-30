@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -47,17 +49,10 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
     return (_pageController!.page?.round() ?? 0) % length;
   }
 
-  String _formatWholePart(double amount) =>
-      AppNumberFormat.formatWholePart(amount);
-
-  String _formatDecimalPart(double amount) =>
-      AppNumberFormat.formatDecimalPart(amount);
-
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(walletNotifierProvider);
     final notifier = ref.read(walletNotifierProvider.notifier);
-    final currencySymbol = ref.watch(currencySymbolProvider);
 
     // A new wallet is added at the end; bring it to the front of the
     // carousel.
@@ -85,10 +80,15 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
     
     double displayBalance = 0.0;
     bool isActiveCardFrozen = false;
+    var balanceCaption = 'No wallets yet';
     if (cards.isNotEmpty) {
       final actualIndex = _getActiveCardIndex(cards.length);
       displayBalance = cards[actualIndex].balance;
       isActiveCardFrozen = cards[actualIndex].isFrozen;
+      // Names the wallet shown, and says when it is left out of the total.
+      balanceCaption = isActiveCardFrozen
+          ? '${cards[actualIndex].bankName} · Frozen, not in total'
+          : '${cards[actualIndex].bankName} balance';
     }
 
     // Dynamically initialize controller to start at a clean multiple of cards.length focused on default card
@@ -125,52 +125,22 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          RichText(
-                            text: TextSpan(
-                              children: [
-                                TextSpan(
-                                  text: '$currencySymbol ',
-                                  style: AppFonts.numeric(
-                                    fontSize: 32,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                    letterSpacing: -0.5,
-                                  ),
-                                ),
-                                TextSpan(
-                                  text: _formatWholePart(displayBalance),
-                                  style: AppFonts.numeric(
-                                    fontSize: 32,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                    letterSpacing: -0.5,
-                                  ),
-                                ),
-                                TextSpan(
-                                  text: _formatDecimalPart(displayBalance),
-                                  style: AppFonts.numeric(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                    color: const Color(0xFF808080),
-                                  ),
-                                ),
-                              ],
-                            ),
+                      Flexible(
+                        // Cross-fades as the carousel moves between wallets.
+                        child: AnimatedSwitcher(
+                          duration: ZenioMotion.of(context, ZenioMotion.fast),
+                          layoutBuilder: (current, previous) => Stack(
+                            alignment: Alignment.centerLeft,
+                            children: [...previous, if (current != null) current],
                           ),
-                          const SizedBox(height: 4),
-                          const Text(
-                            'Card balance',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w400,
-                              color: Color(0xFF808080),
-                            ),
+                          child: HeadlineAmount(
+                            key: ValueKey('$displayBalance|$balanceCaption'),
+                            amount: displayBalance,
+                            caption: balanceCaption,
                           ),
-                        ],
+                        ),
                       ),
+                      const SizedBox(width: 8),
 
                       // + Add Pill Button
                       GestureDetector(
@@ -183,10 +153,10 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                             vertical: 17,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF1A1A1A),
+                            color: ZenioColors.surfaceDark,
                             borderRadius: BorderRadius.circular(30),
                             border: Border.all(
-                              color: const Color(0xFF313131),
+                              color: ZenioColors.surfaceDarkBorder,
                               width: 1,
                             ),
                           ),
@@ -373,17 +343,17 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                                       child: Row(
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                         children: [
+                                          // Neutral, unlike the green Add
+                                          // transaction: an adjustment is not
+                                          // income or spending.
                                           _buildActionButton(
                                             label: 'Adjust',
                                             backgroundColor:
-                                                ZenioColors.primary,
-                                            iconWidget: Assets.icons.add.svg(
-                                              width: 24,
-                                              height: 24,
-                                              colorFilter: const ColorFilter.mode(
-                                                Colors.white,
-                                                BlendMode.srcIn,
-                                              ),
+                                                const Color(0xFFEAEAEA),
+                                            iconWidget: const Icon(
+                                              Icons.exposure_rounded,
+                                              size: 24,
+                                              color: ZenioColors.textPrimary,
                                             ),
                                             onTap: () {
                                               if (cards.isEmpty) return;
@@ -393,7 +363,10 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                                           ),
                                           const SizedBox(width: 12),
                                           _buildActionButton(
-                                            label: 'Freeze',
+                                            label: isActiveCardFrozen
+                                                ? 'Unfreeze'
+                                                : 'Freeze',
+                                            toggled: isActiveCardFrozen,
                                             backgroundColor: isActiveCardFrozen
                                                 ? ZenioColors.primary
                                                 : const Color(0xFFEAEAEA),
@@ -407,13 +380,7 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
                                                     )
                                                   : null,
                                             ),
-                                            onTap: () {
-                                              if (cards.isEmpty) return;
-                                              HapticFeedback.selectionClick();
-                                              notifier.toggleFreezeCard(
-                                                _getActiveCardIndex(cards.length),
-                                              );
-                                            },
+                                            onTap: () => _toggleFreeze(cards),
                                           ),
                                           const SizedBox(width: 12),
                                           _buildActionButton(
@@ -506,8 +473,6 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
     required double height,
     required String heroTag,
   }) {
-    final state = ref.watch(walletNotifierProvider);
-    final activeIndex = state.activeCardIndex;
     return Hero(
       tag: heroTag,
       flightShuttleBuilder: (flightContext, animation, flightDirection, fromHeroContext, toHeroContext) {
@@ -519,7 +484,7 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
       },
       child: WalletCardWidget(
         card: card,
-        isFrozen: isFrozen && actualIndex == (activeIndex % state.cards.length),
+        isFrozen: isFrozen,
         onTap: () {
           setState(() {
             _lastKnownPage = (_pageController?.hasClients == true) ? _pageController!.page!.round() : index;
@@ -534,7 +499,7 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
               pageBuilder: (context, animation, secondaryAnimation) {
                 return WalletCardDetailRoute(
                   card: card,
-                  isFrozen: isFrozen && actualIndex == (activeIndex % state.cards.length),
+                  isFrozen: isFrozen,
                   heroTag: heroTag,
                   onPop: () {
                     if (mounted) {
@@ -555,15 +520,48 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
     );
   }
 
+  /// Freezes or unfreezes the wallet on screen and says what that means for
+  /// the total, with Undo.
+  Future<void> _toggleFreeze(List<WalletCardModel> cards) async {
+    if (cards.isEmpty) return;
+    final card = cards[_getActiveCardIndex(cards.length)];
+    final frozen = !card.isFrozen;
+    final notifier = ref.read(walletNotifierProvider.notifier);
+    unawaited(HapticFeedback.selectionClick());
+    try {
+      await notifier.setFrozen(card.id, frozen: frozen);
+    } catch (_) {
+      if (!mounted) return;
+      ZenioSnackBar.show(
+        context,
+        message: "Couldn't update ${card.bankName}. Please try again.",
+        type: ZenioSnackBarType.error,
+      );
+      return;
+    }
+    if (!mounted) return;
+    ZenioSnackBar.show(
+      context,
+      message: frozen
+          ? '${card.bankName} frozen · not counted in Total balance'
+          : '${card.bankName} unfrozen · counted in Total balance again',
+      duration: const Duration(seconds: 4),
+      actionLabel: 'Undo',
+      onAction: () => notifier.setFrozen(card.id, frozen: !frozen),
+    );
+  }
+
   Widget _buildActionButton({
     required String label,
     required Color backgroundColor,
     required Widget iconWidget,
     VoidCallback? onTap,
+    bool? toggled,
   }) {
     return Expanded(
       child: Semantics(
         button: true,
+        toggled: toggled,
         label: label,
         excludeSemantics: true,
         onTap: onTap,
@@ -573,7 +571,10 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
+              // Colour changes (Freeze ↔ Unfreeze) ease rather than jump.
+              AnimatedContainer(
+                duration: ZenioMotion.of(context, ZenioMotion.fast),
+                curve: ZenioMotion.standardCurve,
                 height: 60,
                 width: double.infinity,
                 decoration: BoxDecoration(

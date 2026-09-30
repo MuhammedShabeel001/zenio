@@ -11,19 +11,28 @@ import 'package:zenio/shared/shared.dart';
 class AdjustBalanceBottomSheet extends ConsumerStatefulWidget {
   const AdjustBalanceBottomSheet({
     required this.cardIndex,
+    this.onRecordTransaction,
     super.key,
   });
 
   final int cardIndex;
+
+  /// Opens Add transaction instead, for money that really came in or went
+  /// out.
+  final VoidCallback? onRecordTransaction;
 
   static void show(BuildContext context, int cardIndex) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Padding(
-        padding: MediaQuery.of(context).viewInsets,
-        child: AdjustBalanceBottomSheet(cardIndex: cardIndex),
+      builder: (sheetContext) => Padding(
+        padding: MediaQuery.of(sheetContext).viewInsets,
+        child: AdjustBalanceBottomSheet(
+          cardIndex: cardIndex,
+          // Opened from the screen behind, which stays after this closes.
+          onRecordTransaction: () => AddTransactionBottomSheet.show(context),
+        ),
       ),
     );
   }
@@ -156,7 +165,7 @@ class _AdjustBalanceBottomSheetState
             if (card != null) ...[
               const SizedBox(height: 4),
               Text(
-                'Current: $currencySymbol ${AppNumberFormat.formatAmount(card.balance, alwaysShowDecimals: true)}',
+                'Current: ${Money.balance(card.balance, symbol: currencySymbol, alwaysShowDecimals: true)}',
                 style: AppFonts.numeric(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
@@ -165,7 +174,37 @@ class _AdjustBalanceBottomSheetState
                 textAlign: TextAlign.center,
               ),
             ],
-            const SizedBox(height: 20),
+            const SizedBox(height: 12),
+            // What an adjustment is, before anything is typed.
+            const Text(
+              'Corrects the balance to match your real account. Saved as a '
+              'balance adjustment in your history, not as income or '
+              'spending.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 13,
+                height: 1.35,
+                color: ZenioColors.textSecondary,
+              ),
+            ),
+            if (widget.onRecordTransaction != null)
+              Center(
+                child: TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    widget.onRecordTransaction!();
+                  },
+                  style: TextButton.styleFrom(
+                    foregroundColor: ZenioColors.primaryStrong,
+                    minimumSize: const Size(48, 48),
+                  ),
+                  child: const Text(
+                    'Money came in or went out? Add a transaction',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+            const SizedBox(height: 12),
 
             Row(
               children: [
@@ -249,13 +288,6 @@ class _AdjustBalanceBottomSheetState
                       const TextStyle(fontSize: 12, color: ZenioColors.danger),
                 ),
               ),
-            const Text(
-              'Saved as a balance adjustment in your history. It is not '
-              'counted as income or spending.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12, color: Color(0xFF6E6E73)),
-            ),
-            const SizedBox(height: 16),
 
             // Save button
             ElevatedButton(

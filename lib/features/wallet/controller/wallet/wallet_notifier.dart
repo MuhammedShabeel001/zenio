@@ -208,11 +208,11 @@ class WalletNotifier extends _$WalletNotifier {
 
   /// Sets the wallet's balance to [newBalance] by recording the difference as
   /// a balance adjustment, so the change stays visible in the history.
-  Future<void> adjustBalance(String walletId, double newBalance) {
+  Future<void> adjustBalance(String walletId, double newBalance) async {
     // Queued with the other wallet writes, and worked out from the stored
     // wallets and transactions rather than the balances on screen, which
     // can be out of date.
-    return _writes.run(() async {
+    await _writes.run(() async {
       final repo = await _ready();
       final cards = withDerivedBalances(
         await repo.getCards(),
@@ -248,6 +248,9 @@ class WalletNotifier extends _$WalletNotifier {
             ),
           );
     });
+    // The new balance is worked out by the update queued behind the task
+    // above; wait for it, so it is on screen when this returns.
+    await idle();
   }
 
   /// Freezes or unfreezes the card at [index] (the card on screen).
@@ -259,6 +262,23 @@ class WalletNotifier extends _$WalletNotifier {
         final card = cards.where((c) => c.id == target.id).firstOrNull;
         if (card == null) return null;
         return _replaceById(cards, card.copyWith(isFrozen: !card.isFrozen));
+      },
+      keepBalances: true,
+    );
+  }
+
+  /// Completes once the wallet writes queued so far, including balance
+  /// updates that follow transaction changes, are done.
+  Future<void> idle() => _writes.run(() async {});
+
+  /// Freezes or unfreezes the wallet with [walletId]. A frozen wallet is
+  /// left out of the total balance; nothing else about it changes.
+  Future<void> setFrozen(String walletId, {required bool frozen}) async {
+    await _mutate(
+      (cards) {
+        final card = cards.where((c) => c.id == walletId).firstOrNull;
+        if (card == null || card.isFrozen == frozen) return null;
+        return _replaceById(cards, card.copyWith(isFrozen: frozen));
       },
       keepBalances: true,
     );

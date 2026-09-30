@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zenio/features/analytics/analytics.dart';
 import 'package:zenio/features/home/home.dart';
 import 'package:zenio/features/settings/settings.dart';
+import 'package:zenio/features/subscriptions/controller/subscriptions/subscriptions_notifier.dart';
 import 'package:zenio/features/subscriptions/presentation/subscriptions/subscriptions_mobile.dart';
 import 'package:zenio/features/wallet/wallet.dart';
 import 'package:zenio/shared/shared.dart';
@@ -34,6 +35,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   final Set<int> _openedTabs = {_homeTab};
   StreamSubscription<String>? _reminderTaps;
 
+  /// Coming back to Zenio on a new day moves renewals on and reschedules
+  /// their reminders, even if the app stayed in memory meanwhile.
+  late final AppLifecycleListener _lifecycle;
+
   /// A quick fade-in of the newly selected tab.
   late final AnimationController _tabFade = AnimationController(
     vsync: this,
@@ -46,6 +51,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     super.initState();
     final notifications = ref.read(notificationServiceProvider);
     _reminderTaps = notifications.reminderTaps.listen(_openSubscription);
+    _lifecycle = AppLifecycleListener(
+      onResume: () => ref
+          .read(subscriptionsNotifierProvider.notifier)
+          .refreshIfStale()
+          .ignore(),
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final launchedFrom = notifications.takeLaunchReminder();
       if (launchedFrom != null) _openSubscription(launchedFrom);
@@ -55,6 +66,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   @override
   void dispose() {
     _reminderTaps?.cancel();
+    _lifecycle.dispose();
     _tabFade.dispose();
     super.dispose();
   }

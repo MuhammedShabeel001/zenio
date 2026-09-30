@@ -178,8 +178,9 @@ void main() {
     }
 
     Future<double> balanceAfterChanges(ProviderContainer container) async {
-      // Balances update from the transaction listener.
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      // Balances update from the transaction listener, through the wallet
+      // write queue.
+      await container.read(walletNotifierProvider.notifier).idle();
       return container.read(walletNotifierProvider).cards.single.balance;
     }
 

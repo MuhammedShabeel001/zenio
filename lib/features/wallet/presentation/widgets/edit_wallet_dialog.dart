@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
 import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
+import 'package:zenio/features/wallet/domain/wallet_kind.dart';
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/theme/zenio_tokens.dart';
 import 'package:zenio/shared/utils/app_fonts.dart';
@@ -72,7 +73,8 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
     super.initState();
     final card = widget.card;
     _nameController = TextEditingController(text: card.bankName);
-    _cardNumberController = TextEditingController(text: card.cardNumber);
+    // Only a card's last four digits are shown, never a full number.
+    _cardNumberController = TextEditingController(text: card.lastFour ?? '');
     _customTypeController = TextEditingController();
     
     final balance = card.balance;
@@ -217,9 +219,12 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
     final balance = balanceText.isEmpty || balanceText == '-'
         ? widget.card.balance
         : AppNumberFormat.parseAmount(balanceText);
-    final cardNumber = _cardNumberController.text.trim().isNotEmpty
-        ? _cardNumberController.text.trim()
-        : widget.card.cardNumber;
+    // The stored number changes only when the digits were changed here.
+    final lastFour = _cardNumberController.text.trim();
+    final cardNumber =
+        lastFour.isNotEmpty && lastFour != (widget.card.lastFour ?? '')
+            ? lastFour
+            : widget.card.cardNumber;
 
     final selectedImage = _cardImages[_selectedImageIndex];
 
@@ -265,6 +270,15 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
     }
     if (!mounted) return;
     Navigator.of(context).pop();
+  }
+
+
+  /// Whether the chosen type is a card, which has digits to show.
+  bool get _typeIsCard {
+    final type = _selectedType == '__CUSTOM__' || _isCustom
+        ? _customTypeController.text
+        : _selectedType;
+    return type.toUpperCase().contains('CARD');
   }
 
   @override
@@ -549,7 +563,8 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
                 const SizedBox(height: 6),
               ],
 
-              // Field 3: Card Number
+              // Field 3: a card's last four digits (other wallets have none)
+              if (_typeIsCard)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
                 decoration: BoxDecoration(
@@ -573,7 +588,7 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
                         keyboardType: TextInputType.number,
                         inputFormatters: [
                           FilteringTextInputFormatter.digitsOnly,
-                          LengthLimitingTextInputFormatter(19),
+                          LengthLimitingTextInputFormatter(4),
                         ],
                         style: AppFonts.numeric(
                           fontSize: 14,
@@ -581,7 +596,7 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
                           color: ZenioColors.textPrimary,
                         ),
                         decoration: InputDecoration(
-                          hintText: 'Card number',
+                          hintText: 'Last 4 digits (optional)',
                           hintStyle: AppFonts.numeric(
                             fontSize: 14,
                             color: ZenioColors.textPlaceholder,
@@ -602,7 +617,7 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
                   ],
                 ),
               ),
-              const SizedBox(height: 6),
+              if (_typeIsCard) const SizedBox(height: 6),
 
               // Card Skin Selector
               Container(

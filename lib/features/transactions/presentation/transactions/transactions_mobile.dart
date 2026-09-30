@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:calendar_date_picker2/calendar_date_picker2.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:zenio/features/home/domain/models/transaction/transaction_kind.dart';
 import 'package:zenio/features/home/presentation/widgets/delete_transaction_with_undo.dart';
 import 'package:zenio/shared/utils/period_filter.dart';
 import 'package:zenio/features/transactions/controller/transactions/transactions_notifier.dart';
@@ -22,12 +23,6 @@ class _TransactionsScreenMobileState
     extends ConsumerState<TransactionsScreenMobile> {
   String? _openTransactionId;
   String? _expandedTileId;
-  String _formatWholePart(double amount) =>
-      AppNumberFormat.formatWholePart(amount);
-
-  String _formatDecimalPart(double amount) =>
-      AppNumberFormat.formatDecimalPart(amount);
-
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(transactionsNotifierProvider);
@@ -41,7 +36,6 @@ class _TransactionsScreenMobileState
     // Spending in the shown period, worked out with the filtered list.
     final totalExpenses = state.totalBalance;
 
-    final currencySymbol = ref.watch(currencySymbolProvider);
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -52,7 +46,7 @@ class _TransactionsScreenMobileState
             const ScreenTitleBar(title: 'Transactions'),
             // Dark Header Section
             Padding(
-              padding: const EdgeInsets.fromLTRB(10, 4, 10, 20),
+              padding: const EdgeInsets.fromLTRB(10, 4, 10, 13),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -60,44 +54,14 @@ class _TransactionsScreenMobileState
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Total Balance
+                      // Spending in the shown period.
                       Flexible(
-                        // Large amounts and text sizes shrink to fit instead of overflowing.
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.centerLeft,
-                          child: RichText(
-                            text: TextSpan(
-                              children: [
-                                TextSpan(
-                                  text: '$currencySymbol ',
-                                  style: AppFonts.numeric(
-                                    fontSize: 32,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                    letterSpacing: -0.5,
-                                  ),
-                                ),
-                                TextSpan(
-                                  text: _formatWholePart(totalExpenses),
-                                  style: AppFonts.numeric(
-                                    fontSize: 32,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                    letterSpacing: -0.5,
-                                  ),
-                                ),
-                                TextSpan(
-                                  text: _formatDecimalPart(totalExpenses),
-                                  style: AppFonts.numeric(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                    color: const Color(0xFF808080),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                        child: HeadlineAmount(
+                          amount: totalExpenses,
+                          caption: 'Spent · ${periodLabel(
+                            state.selectedPeriod,
+                            state.selectedTimeframe,
+                          )}',
                         ),
                       ),
 
@@ -112,10 +76,10 @@ class _TransactionsScreenMobileState
                             vertical: 17,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF1A1A1A),
+                            color: ZenioColors.surfaceDark,
                             borderRadius: BorderRadius.circular(30),
                             border: Border.all(
-                              color: const Color(0xFF313131),
+                              color: ZenioColors.surfaceDarkBorder,
                               width: 1,
                             ),
                           ),
@@ -145,7 +109,7 @@ class _TransactionsScreenMobileState
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 13),
 
                   // Bottom Row: Filter Dropdown Pills
                   Row(
@@ -247,12 +211,15 @@ class _TransactionsScreenMobileState
                                 ref,
                                 item.id,
                               ),
-                              onEdit: () {
-                                EditTransactionDialog.show(
-                                  context,
-                                  transaction: item,
-                                );
-                              },
+                              // Adjustments can't be edited, so they offer
+                              // no Edit at all.
+                              onEdit: item.resolvedKind ==
+                                      TransactionKind.adjustment
+                                  ? null
+                                  : () => EditTransactionDialog.show(
+                                        context,
+                                        transaction: item,
+                                      ),
                             );
                           },
                         ),
@@ -266,29 +233,34 @@ class _TransactionsScreenMobileState
   }
 
   Widget _buildFilterPill({required String label}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
-        borderRadius: BorderRadius.circular(30),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: ZenioColors.border,
+    // 7pt of invisible padding above and below makes the tap target 48pt;
+    // the space around the pill row is reduced by the same amount.
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: ZenioColors.surfaceDark,
+          borderRadius: BorderRadius.circular(30),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: ZenioColors.border,
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          Assets.icons.dropDown.svg(
-            width: 24,
-            height: 24,
-          ),
-        ],
+            const SizedBox(width: 8),
+            Assets.icons.dropDown.svg(
+              width: 24,
+              height: 24,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -334,10 +306,10 @@ class _TransactionsScreenMobileState
                   fontWeight: FontWeight.w500,),),
         ),
       ],
-      color: const Color(0xFF1A1A1A),
+      color: ZenioColors.surfaceDark,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: const BorderSide(color: Color(0xFF313131), width: 1),
+        side: const BorderSide(color: ZenioColors.surfaceDarkBorder, width: 1),
       ),
       child: _buildFilterPill(label: currentPeriod),
     );
@@ -351,7 +323,7 @@ class _TransactionsScreenMobileState
           final picked = await showModalBottomSheet<List<DateTime?>>(
             context: context,
             isScrollControlled: true,
-            backgroundColor: const Color(0xFF1A1A1A),
+            backgroundColor: ZenioColors.surfaceDark,
             shape: const RoundedRectangleBorder(
               borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
             ),
@@ -371,7 +343,7 @@ class _TransactionsScreenMobileState
                           height: 4,
                           margin: const EdgeInsets.only(bottom: 16),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF313131),
+                            color: ZenioColors.surfaceDarkBorder,
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),
@@ -393,7 +365,7 @@ class _TransactionsScreenMobileState
                                 fontWeight: FontWeight.bold,),
                             dayTextStyle: AppFonts.numeric(color: Colors.white),
                             disabledDayTextStyle: AppFonts.numeric(
-                                color: const Color(0xFF313131),),
+                                color: ZenioColors.surfaceDarkBorder,),
                             yearTextStyle:
                                 AppFonts.numeric(color: Colors.white),
                             monthTextStyle:
@@ -427,7 +399,7 @@ class _TransactionsScreenMobileState
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(30),
                                       side: const BorderSide(
-                                          color: Color(0xFF313131),),
+                                          color: ZenioColors.surfaceDarkBorder,),
                                     ),
                                   ),
                                   child: const Text('Cancel',
@@ -521,10 +493,10 @@ class _TransactionsScreenMobileState
                         fontWeight: FontWeight.w500,),),
               ),)
           .toList(),
-      color: const Color(0xFF1A1A1A),
+      color: ZenioColors.surfaceDark,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: const BorderSide(color: Color(0xFF313131), width: 1),
+        side: const BorderSide(color: ZenioColors.surfaceDarkBorder, width: 1),
       ),
       child: _buildFilterPill(label: timeframe),
     );

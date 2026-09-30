@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zenio/features/home/controller/home/home_notifier.dart';
 import 'package:zenio/shared/utils/period_filter.dart';
 import 'package:zenio/features/analytics/controller/analytics/analytics_notifier.dart';
+import 'package:zenio/features/analytics/domain/spending_breakdown.dart';
 import 'package:zenio/features/analytics/presentation/categories/categories_list_screen.dart';
 import 'package:zenio/features/analytics/presentation/widgets/category_legend_widget.dart';
 import 'package:zenio/features/analytics/presentation/widgets/donut_chart_widget.dart';
@@ -53,12 +54,6 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
     _legendCollapse.value = (_scrollController.offset / 60.0).clamp(0.0, 1.0);
   }
 
-  String _formatWholePart(double amount) =>
-      AppNumberFormat.formatWholePart(amount);
-
-  String _formatDecimalPart(double amount) =>
-      AppNumberFormat.formatDecimalPart(amount);
-
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(analyticsNotifierProvider);
@@ -68,7 +63,9 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
     );
     final totalBalance = state.totalBalance;
     final categories = state.categorySpends.take(10).toList();
-    final currencySymbol = ref.watch(currencySymbolProvider);
+    // The chart shows all spending: the largest categories, and the rest
+    // together as "Other", so its shares match the total above.
+    final chartCategories = withOtherSlice(state.categorySpends);
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -78,7 +75,7 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
           children: [
             // Dark Header Section
             Padding(
-              padding: const EdgeInsets.fromLTRB(10, 10, 10, 20),
+              padding: const EdgeInsets.fromLTRB(10, 10, 10, 13),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -86,46 +83,18 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Total Balance
+                      // Spending for the chosen period and wallet.
                       Flexible(
-                        child: RichText(
-                          text: TextSpan(
-                            children: [
-                              TextSpan(
-                                text: '$currencySymbol ',
-                                style: AppFonts.numeric(
-                                  fontSize: 32,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                  letterSpacing: -0.5,
-                                ),
-                              ),
-                              TextSpan(
-                                text: _formatWholePart(totalBalance),
-                                style: AppFonts.numeric(
-                                  fontSize: 32,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                  letterSpacing: -0.5,
-                                ),
-                              ),
-                              TextSpan(
-                                text: _formatDecimalPart(totalBalance),
-                                style: AppFonts.numeric(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                  color: const Color(0xFF808080),
-                                ),
-                              ),
-                            ],
-                          ),
+                        child: HeadlineAmount(
+                          amount: totalBalance,
+                          caption: state.spentCaption,
                         ),
                       ),
                       const SizedBox(width: 8),
                       _buildWalletPicker(state.selectedWallet, walletCards),
                     ],
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 13),
 
                   // Filter Dropdown Pills Row (Period v, Timeframe v)
                   Row(
@@ -163,7 +132,7 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
                           // Donut Chart Centered (Fixed / Pinned)
                           Center(
                             child: RepaintBoundary(
-                              child: DonutChartWidget(categories: categories),
+                              child: DonutChartWidget(categories: chartCategories),
                             ),
                           ),
 
@@ -173,7 +142,7 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
                             valueListenable: _legendCollapse,
                             child: Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 16),
-                              child: CategoryLegendWidget(categories: categories),
+                              child: CategoryLegendWidget(categories: chartCategories),
                             ),
                             builder: (context, collapse, legend) {
                               final visible = 1.0 - collapse;
@@ -346,48 +315,53 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
     Widget? leading,
     double? maxWidth,
   }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
-        borderRadius: BorderRadius.circular(30),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (leading != null) ...[
-            leading,
-            const SizedBox(width: 6),
-          ],
-          if (maxWidth != null)
-            ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: maxWidth),
-              child: Text(
+    // 7pt of invisible padding above and below makes the tap target 48pt;
+    // the space around the pill row is reduced by the same amount.
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: ZenioColors.surfaceDark,
+          borderRadius: BorderRadius.circular(30),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (leading != null) ...[
+              leading,
+              const SizedBox(width: 6),
+            ],
+            if (maxWidth != null)
+              ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: maxWidth),
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: ZenioColors.border,
+                  ),
+                ),
+              )
+            else
+              Text(
                 label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
                   color: ZenioColors.border,
                 ),
               ),
-            )
-          else
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: ZenioColors.border,
-              ),
+            const SizedBox(width: 8),
+            Assets.icons.dropDown.svg(
+              width: 24,
+              height: 24,
             ),
-          const SizedBox(width: 8),
-          Assets.icons.dropDown.svg(
-            width: 24,
-            height: 24,
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -562,10 +536,10 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
 
         return items;
       },
-      color: const Color(0xFF1A1A1A),
+      color: ZenioColors.surfaceDark,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: const BorderSide(color: Color(0xFF313131), width: 1),
+        side: const BorderSide(color: ZenioColors.surfaceDarkBorder, width: 1),
       ),
       child: _buildFilterPill(
         label: isAll ? 'All Wallets' : selectedWallet,
@@ -600,10 +574,10 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
           child: Text('Custom', style: TextStyle(color: ZenioColors.border, fontSize: 14, fontWeight: FontWeight.w500)),
         ),
       ],
-      color: const Color(0xFF1A1A1A),
+      color: ZenioColors.surfaceDark,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: const BorderSide(color: Color(0xFF313131), width: 1),
+        side: const BorderSide(color: ZenioColors.surfaceDarkBorder, width: 1),
       ),
       child: _buildFilterPill(label: currentPeriod),
     );
@@ -617,7 +591,7 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
           final picked = await showModalBottomSheet<List<DateTime?>>(
             context: context,
             isScrollControlled: true,
-            backgroundColor: const Color(0xFF1A1A1A),
+            backgroundColor: ZenioColors.surfaceDark,
             shape: const RoundedRectangleBorder(
               borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
             ),
@@ -637,7 +611,7 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
                           height: 4,
                           margin: const EdgeInsets.only(bottom: 16),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF313131),
+                            color: ZenioColors.surfaceDarkBorder,
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),
@@ -652,7 +626,7 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
                             selectedRangeHighlightColor: Colors.white.withOpacity(0.15),
                             selectedDayTextStyle: AppFonts.numeric(color: Colors.black, fontWeight: FontWeight.bold),
                             dayTextStyle: AppFonts.numeric(color: Colors.white),
-                            disabledDayTextStyle: AppFonts.numeric(color: const Color(0xFF313131)),
+                            disabledDayTextStyle: AppFonts.numeric(color: ZenioColors.surfaceDarkBorder),
                             yearTextStyle: AppFonts.numeric(color: Colors.white),
                             monthTextStyle: const TextStyle(color: Colors.white),
                             controlsTextStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
@@ -679,7 +653,7 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
                                     padding: const EdgeInsets.symmetric(vertical: 16),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(30),
-                                      side: const BorderSide(color: Color(0xFF313131)),
+                                      side: const BorderSide(color: ZenioColors.surfaceDarkBorder),
                                     ),
                                   ),
                                   child: const Text('Cancel', style: TextStyle(color: Colors.white)),
@@ -746,10 +720,10 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
         value: opt, 
         child: Text(opt, style: const TextStyle(color: ZenioColors.border, fontSize: 14, fontWeight: FontWeight.w500)),
       ),).toList(),
-      color: const Color(0xFF1A1A1A),
+      color: ZenioColors.surfaceDark,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: const BorderSide(color: Color(0xFF313131), width: 1),
+        side: const BorderSide(color: ZenioColors.surfaceDarkBorder, width: 1),
       ),
       child: _buildFilterPill(label: timeframe),
     );

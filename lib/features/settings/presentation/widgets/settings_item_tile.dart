@@ -6,6 +6,7 @@ class SettingsItemTile extends StatelessWidget {
   const SettingsItemTile({
     required this.title,
     required this.icon,
+    this.subtitle,
     this.trailing,
     this.badgeText,
     this.isSwitch = false,
@@ -18,6 +19,9 @@ class SettingsItemTile extends StatelessWidget {
   });
 
   final String title;
+
+  /// A short explanation under the title.
+  final String? subtitle;
   final Widget icon;
   final Widget? trailing;
   final String? badgeText;
@@ -64,15 +68,33 @@ class SettingsItemTile extends StatelessWidget {
 
                 // Title
                 Expanded(
-                  child: Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: isDestructive
-                          ? ZenioColors.danger
-                          : const Color(0xFF000000),
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: isDestructive
+                              ? ZenioColors.danger
+                              : const Color(0xFF000000),
+                        ),
+                      ),
+                      if (subtitle != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          subtitle!,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: ZenioFontSizes.caption,
+                            color: ZenioColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
 

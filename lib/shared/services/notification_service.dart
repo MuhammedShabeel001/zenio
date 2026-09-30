@@ -7,6 +7,8 @@ import 'package:intl/intl.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:zenio/features/subscriptions/domain/models/subscription_model.dart';
+import 'package:zenio/features/subscriptions/domain/reminder_schedule.dart';
+import 'package:zenio/shared/utils/currency_display.dart';
 import 'package:zenio/shared/utils/formatters.dart';
 import 'package:zenio/shared/utils/serial_task_queue.dart';
 
@@ -126,61 +128,24 @@ class NotificationService {
     return true;
   }
 
-  /// A positive 31-bit notification id derived from a subscription id. Uses
-  /// FNV-1a because `String.hashCode` is not guaranteed to stay the same
-  /// between app runs.
+  /// The notification id of a subscription's next renewal reminder.
   @visibleForTesting
-  static int notificationIdFor(String subscriptionId) {
-    var hash = 0x811c9dc5;
-    for (final unit in subscriptionId.codeUnits) {
-      hash ^= unit;
-      hash = (hash * 0x01000193) & 0x7FFFFFFF;
-    }
-    // Android notification ids must fit a signed 32-bit int.
-    return hash & 0x7FFFFFFF;
-  }
+  static int notificationIdFor(String subscriptionId) =>
+      reminderIdFor(subscriptionId);
 
-  int _getNotificationId(String subscriptionId) =>
-      notificationIdFor(subscriptionId);
-
-  /// Schedule a renewal reminder notification for a subscription
-  Future<void> scheduleSubscriptionReminder(
-      SubscriptionModel subscription,) async {
-    if (kIsWeb) return;
-    await initialize();
-
-    final id = _getNotificationId(subscription.id);
-    // Cancel any previous reminder for this subscription
-    await _notificationsPlugin.cancel(id);
-
-    final now = DateTime.now();
-    var reminderTime = DateTime(
-      subscription.nextBillingDate.year,
-      subscription.nextBillingDate.month,
-      subscription.nextBillingDate.day - 1,
-      9,
-    );
-
-    // If 1 day before at 9:00 AM is already in the past, try the due date itself at 9:00 AM
-    if (reminderTime.isBefore(now)) {
-      reminderTime = DateTime(
-        subscription.nextBillingDate.year,
-        subscription.nextBillingDate.month,
-        subscription.nextBillingDate.day,
-        9,
-      );
-    }
-
-    // If still in the past, nothing to schedule for this cycle
-    if (reminderTime.isBefore(now)) {
-      return;
-    }
-
-    final tzDateTime = tz.TZDateTime.from(reminderTime, tz.local);
-    final formattedDate =
-        DateFormat.yMMMd().format(subscription.nextBillingDate);
+  /// Schedules [reminder] for [subscription], replacing whatever was
+  /// scheduled under the same id.
+  Future<void> _scheduleReminder(
+    SubscriptionModel subscription,
+    PlannedReminder reminder,
+  ) async {
+    final tzDateTime = tz.TZDateTime.from(reminder.at, tz.local);
+    final formattedDate = DateFormat.yMMMd().format(reminder.renewal);
     final formattedAmount =
-        '${subscription.currency} ${AppNumberFormat.formatAmount(subscription.amount, alwaysShowDecimals: true)}';
+        '${currencyDisplayCode(subscription.currency)} ${AppNumberFormat.formatAmount(subscription.amount, alwaysShowDecimals: true)}';
+    final title = 'Subscription Due: ${subscription.title}';
+    final body =
+        'Your ${subscription.title} subscription ($formattedAmount) is due for renewal on $formattedDate.';
 
     const androidDetails = AndroidNotificationDetails(
       _channelId,
@@ -202,43 +167,39 @@ class NotificationService {
       iOS: iosDetails,
     );
 
-    try {
-      await _notificationsPlugin.zonedSchedule(
-        id,
-        'Subscription Due: ${subscription.title}',
-        'Your ${subscription.title} subscription ($formattedAmount) is due for renewal on $formattedDate.',
+    Future<void> schedule(AndroidScheduleMode mode) {
+      return _notificationsPlugin.zonedSchedule(
+        reminder.id,
+        title,
+        body,
         tzDateTime,
         details,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        androidScheduleMode: mode,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
+        // Opens this subscription when tapped.
         payload: subscription.id,
       );
+    }
+
+    try {
+      await schedule(AndroidScheduleMode.exactAllowWhileIdle);
       if (kDebugMode) {
-        debugPrint('Scheduled subscription reminder $id at $tzDateTime');
+        debugPrint('Scheduled subscription reminder ${reminder.id} at $tzDateTime');
       }
-    } catch (e) {
+    } catch (_) {
       // Fallback without exact alarm if permission is restricted
       try {
-        await _notificationsPlugin.zonedSchedule(
-          id,
-          'Subscription Due: ${subscription.title}',
-          'Your ${subscription.title} subscription ($formattedAmount) is due for renewal on $formattedDate.',
-          tzDateTime,
-          details,
-          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-          uiLocalNotificationDateInterpretation:
-              UILocalNotificationDateInterpretation.absoluteTime,
-          payload: subscription.id,
-        );
+        await schedule(AndroidScheduleMode.inexactAllowWhileIdle);
       } catch (e2) {
         if (kDebugMode) debugPrint('Failed to schedule notification: $e2');
       }
     }
   }
 
-  /// Makes the scheduled reminders match [subscriptions]: one reminder per
-  /// subscription, and none for subscriptions that no longer exist.
+  /// Makes the scheduled reminders match [subscriptions]: reminders for the
+  /// next few renewals of each, and none for subscriptions that no longer
+  /// exist.
   Future<void> syncSubscriptionReminders(
     List<SubscriptionModel> subscriptions,
   ) {
@@ -255,20 +216,24 @@ class NotificationService {
     if (kIsWeb) return;
     try {
       await initialize();
-      final ids = {for (final sub in subscriptions) sub.id};
+      final now = DateTime.now();
+      // The next few renewals of each subscription, by notification id.
+      final planned = {
+        for (final sub in subscriptions)
+          for (final reminder in plannedReminders(sub, now))
+            reminder.id: (subscription: sub, reminder: reminder),
+      };
       final pending = await _notificationsPlugin.pendingNotificationRequests();
       for (final request in pending) {
-        // Also drops reminders scheduled under an older id for the same
-        // subscription, so it is never reminded twice.
-        final payload = request.payload;
-        if (payload == null ||
-            !ids.contains(payload) ||
-            request.id != _getNotificationId(payload)) {
+        // Reminders of deleted subscriptions, renewals no longer ahead and
+        // ids from older versions are removed, so nothing arrives twice.
+        final plan = planned[request.id];
+        if (plan == null || request.payload != plan.subscription.id) {
           await _notificationsPlugin.cancel(request.id);
         }
       }
-      for (final sub in subscriptions) {
-        await scheduleSubscriptionReminder(sub);
+      for (final plan in planned.values) {
+        await _scheduleReminder(plan.subscription, plan.reminder);
       }
     } catch (error) {
       // Reminders are best effort; they are synced again on the next launch.

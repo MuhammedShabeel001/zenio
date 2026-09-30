@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:zenio/features/home/domain/models/transaction/transaction_kind.dart';
 import 'package:zenio/features/analytics/controller/analytics/analytics_notifier.dart';
 import 'package:zenio/features/analytics/domain/models/category_spend/category_spend_model.dart';
+import 'package:zenio/features/analytics/domain/spending_breakdown.dart';
+import 'package:zenio/features/home/domain/models/transaction/transaction_kind.dart';
 import 'package:zenio/features/home/controller/home/home_notifier.dart';
 import 'package:zenio/features/home/domain/models/transaction/transaction_model.dart';
 import 'package:zenio/features/transactions/controller/categories/categories_notifier.dart';
@@ -44,12 +45,6 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
   String? _expandedCategoryId;
 
   String _formatAmount(double amount) => AppNumberFormat.formatAmount(amount);
-
-  String _formatWholePart(double amount) =>
-      AppNumberFormat.formatWholePart(amount);
-
-  String _formatDecimalPart(double amount) =>
-      AppNumberFormat.formatDecimalPart(amount);
 
   String _formatTxDate(String rawDate) {
     final parsed = DateTimeUtils.parseTransactionDate(rawDate);
@@ -112,6 +107,16 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
         .read(analyticsNotifierProvider.notifier)
         .filterTransactions(allTransactions);
 
+    int newestFirst(TransactionModel a, TransactionModel b) {
+      final aDate = DateTimeUtils.parseTransactionDate(a.date) ??
+          DateTime.fromMillisecondsSinceEpoch(0);
+      final bDate = DateTimeUtils.parseTransactionDate(b.date) ??
+          DateTime.fromMillisecondsSinceEpoch(0);
+      final dateComp = bDate.compareTo(aDate);
+      if (dateComp != 0) return dateComp;
+      return b.id.compareTo(a.id);
+    }
+
     // Combine category definitions with their calculated spends
     final categoriesWithData = allCategories.map((cat) {
       final cleanCatName = cat.name.trim().toLowerCase();
@@ -134,15 +139,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
         if (tx.resolvedKind != TransactionKind.expense) return false;
         return tx.title.trim().toLowerCase() == cleanCatName;
       }).toList()
-        ..sort((a, b) {
-          final aDate = DateTimeUtils.parseTransactionDate(a.date) ??
-              DateTime.fromMillisecondsSinceEpoch(0);
-          final bDate = DateTimeUtils.parseTransactionDate(b.date) ??
-              DateTime.fromMillisecondsSinceEpoch(0);
-          final dateComp = bDate.compareTo(aDate);
-          if (dateComp != 0) return dateComp;
-          return b.id.compareTo(a.id);
-        });
+        ..sort(newestFirst);
 
       final matchingAmount = matchingTxs.fold<double>(0.0, (sum, tx) => sum + tx.amount);
       final actualAmount = matchSpend.amount > 0 ? matchSpend.amount : matchingAmount;
@@ -159,6 +156,36 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
         ratio: 0.0,
       );
     }).toList();
+
+    // Spending filed under a title that is not (or is no longer) a category,
+    // for example after renaming one or importing a file. Shown together so
+    // the rows still add up to the total.
+    final uncategorisedTxs = uncategorisedExpenses(
+      filteredTxs,
+      allCategories.map((c) => c.name),
+    )..sort(newestFirst);
+    if (uncategorisedTxs.isNotEmpty) {
+      const uncategorised = CategoryItemModel(
+        id: '_uncategorised',
+        name: 'Uncategorised',
+        emoji: '🗂️',
+      );
+      categoriesWithData.add(
+        _CategoryWithData(
+          item: uncategorised,
+          spend: CategorySpendModel(
+            id: uncategorised.id,
+            name: uncategorised.name,
+            amount: uncategorisedTxs.fold<double>(0, (sum, tx) => sum + tx.amount),
+            spendsCount: uncategorisedTxs.length,
+            colorHex: '',
+            iconName: uncategorised.emoji,
+          ),
+          transactions: uncategorisedTxs,
+          ratio: 0,
+        ),
+      );
+    }
 
     final totalFromCategories = categoriesWithData.fold<double>(0.0, (sum, c) => sum + c.spend.amount);
     final effectiveTotalBalance = totalBalance > 0 ? totalBalance : totalFromCategories;
@@ -191,7 +218,6 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
         filtered.sort((a, b) => a.item.name.compareTo(b.item.name));
     }
 
-    final currencySymbol = ref.watch(currencySymbolProvider);
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -210,44 +236,11 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Total Balance
+                      // All spending for the chosen period and wallet.
                       Flexible(
-                        // Large amounts and text sizes shrink to fit instead of overflowing.
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.centerLeft,
-                          child: RichText(
-                            text: TextSpan(
-                              children: [
-                                TextSpan(
-                                  text: '$currencySymbol ',
-                                  style: AppFonts.numeric(
-                                    fontSize: 32,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                    letterSpacing: -0.5,
-                                  ),
-                                ),
-                                TextSpan(
-                                  text: _formatWholePart(effectiveTotalBalance),
-                                  style: AppFonts.numeric(
-                                    fontSize: 32,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                    letterSpacing: -0.5,
-                                  ),
-                                ),
-                                TextSpan(
-                                  text: _formatDecimalPart(effectiveTotalBalance),
-                                  style: AppFonts.numeric(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                    color: const Color(0xFF808080),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                        child: HeadlineAmount(
+                          amount: effectiveTotalBalance,
+                          caption: analyticsState.spentCaption,
                         ),
                       ),
 
@@ -263,10 +256,10 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                             vertical: 17,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF1A1A1A),
+                            color: ZenioColors.surfaceDark,
                             borderRadius: BorderRadius.circular(30),
                             border: Border.all(
-                              color: const Color(0xFF313131),
+                              color: ZenioColors.surfaceDarkBorder,
                             ),
                           ),
                           child: const Row(
@@ -374,7 +367,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
+        color: ZenioColors.surfaceDark,
         borderRadius: BorderRadius.circular(30),
       ),
       child: Row(
@@ -428,10 +421,10 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
           _activeTab = tab;
         });
       },
-      color: const Color(0xFF1A1A1A),
+      color: ZenioColors.surfaceDark,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: const BorderSide(color: Color(0xFF313131)),
+        side: const BorderSide(color: ZenioColors.surfaceDarkBorder),
       ),
       child: _buildFilterPill(label: _activeTab.label),
       itemBuilder: (context) => CategoryFilterTab.values.map((tab) {
@@ -460,10 +453,10 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
           _sortOption = opt;
         });
       },
-      color: const Color(0xFF1A1A1A),
+      color: ZenioColors.surfaceDark,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: const BorderSide(color: Color(0xFF313131)),
+        side: const BorderSide(color: ZenioColors.surfaceDarkBorder),
       ),
       child: _buildFilterPill(label: _sortOption.label),
       itemBuilder: (context) => CategorySortOption.values.map((opt) {
@@ -494,7 +487,6 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
 
     // Calculate metrics
     final currencySymbol = ref.watch(currencySymbolProvider);
-    final currencyCode = ref.watch(currencyCodeProvider);
     final totalSpent = data.spend.amount > 0
         ? data.spend.amount
         : data.transactions.fold<double>(0.0, (sum, t) => sum + t.amount);
@@ -561,36 +553,17 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                         style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w400,
-                          color: Color(0xFFB2B2B2),
+                          color: ZenioColors.textSecondary,
                         ),
                       ),
                     ],
                   ),
                 ),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
-                  children: [
-                    Text(
-                      totalSpent > 0 ? '- ${_formatAmount(totalSpent)}' : '$currencySymbol ${_formatAmount(0)}',
-                      style: AppFonts.numeric(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: totalSpent > 0
-                            ? const Color(0xFF000000)
-                            : ZenioColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      currencyCode,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: ZenioColors.textSecondary,
-                      ),
-                    ),
-                  ],
+                // Spending, written like every other amount: −₹3,698.
+                AmountText(
+                  totalSpent,
+                  direction: MoneyDirection.outgoing,
+                  color: totalSpent > 0 ? null : ZenioColors.textSecondary,
                 ),
               ],
             ),
@@ -891,7 +864,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                                                       child: Text(
                                                         tx.bankName!.trim(),
                                                         style: const TextStyle(
-                                                          fontSize: 10,
+                                                          fontSize: 11,
                                                           fontWeight:
                                                               FontWeight.w500,
                                                           color:
@@ -916,7 +889,7 @@ class _CategoriesListScreenState extends ConsumerState<CategoriesListScreen> {
                                         ),
                                         const SizedBox(width: 10),
                                         Text(
-                                          '- $currencySymbol ${_formatAmount(tx.amount)}',
+                                          Money.signed(tx.amount, symbol: currencySymbol, direction: MoneyDirection.outgoing),
                                           style: AppFonts.numeric(
                                             fontSize: 13,
                                             fontWeight: FontWeight.bold,

@@ -29,6 +29,7 @@ class ZenioDropdown<T> extends StatelessWidget {
     required this.items,
     required this.onChanged,
     this.leadingIcon,
+    this.label,
     this.hintText,
     this.trailing,
     this.margin = EdgeInsets.zero,
@@ -40,6 +41,9 @@ class ZenioDropdown<T> extends StatelessWidget {
   final List<ZenioDropdownItem<T>> items;
   final ValueChanged<T> onChanged;
   final Widget? leadingIcon;
+
+  /// Says what the field is for, shown before the chosen value ("From").
+  final String? label;
   final String? hintText;
   final Widget? trailing;
   final EdgeInsetsGeometry? margin;
@@ -166,6 +170,17 @@ class ZenioDropdown<T> extends StatelessWidget {
                   if (leadingIcon != null) ...[
                     leadingIcon!,
                     const SizedBox(width: 12),
+                  ],
+                  if (label != null) ...[
+                    Text(
+                      label!,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: ZenioColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
                   ],
                   Expanded(
                     child: Row(

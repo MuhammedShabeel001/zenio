@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/intl.dart';
 import 'package:zenio/features/home/controller/home/home_notifier.dart';
+import 'package:zenio/features/home/domain/models/transaction/transaction_model.dart';
 import 'package:zenio/shared/services/sqlite_prefs.dart';
 
 import '../../../helpers/test_storage.dart';
@@ -32,8 +34,10 @@ void main() {
           .addTransaction(sampleTransaction('new'));
 
       final rows = await storage.transactionRows();
-      expect(rows.map((r) => r['id']),
-          containsAll(['old-0', 'old-1', 'old-2', 'new']),);
+      expect(
+        rows.map((r) => r['id']),
+        containsAll(['old-0', 'old-1', 'old-2', 'new']),
+      );
       expect(rows, hasLength(4));
       expect(container.read(homeNotifierProvider).transactions, hasLength(4));
     });
@@ -112,6 +116,55 @@ void main() {
 
       expect((await storage.transactionRows()).map((r) => r['id']), ['old-1']);
       expect(container.read(homeNotifierProvider).transactions, hasLength(1));
+    });
+  });
+
+  group('month summary', () {
+    TransactionModel income(String id, double amount, DateTime day) =>
+        TransactionModel(
+          id: id,
+          title: 'Salary',
+          date: DateFormat('dd-MM-yyyy').format(day),
+          amount: amount,
+          currency: 'INR',
+          isIncome: true,
+          bankName: 'HDFC',
+          kind: 'income',
+        );
+
+    Future<HomeState> loaded(List<TransactionModel> transactions) async {
+      final storage = TestStorage.create();
+      final db = storage.open();
+      for (final tx in transactions) {
+        await seedTransaction(db, tx);
+      }
+      final container = storage.container();
+      await container.read(sqlitePrefsProvider.future);
+      container.read(homeNotifierProvider);
+      await container.read(homeNotifierProvider.notifier).loadedTransactions();
+      return container.read(homeNotifierProvider);
+    }
+
+    final now = DateTime.now();
+    final thisMonth = DateTime(now.year, now.month);
+    final lastMonth = DateTime(now.year, now.month - 1);
+
+    test('shows no change when last month has nothing to compare with',
+        () async {
+      final state = await loaded([income('a', 500, thisMonth)]);
+
+      expect(state.summary!.income, 500);
+      expect(state.summary!.incomeChangePercentage, isNull);
+      expect(state.summary!.expenseChangePercentage, isNull);
+    });
+
+    test('compares with last month when it has a figure', () async {
+      final state = await loaded([
+        income('a', 150, thisMonth),
+        income('b', 100, lastMonth),
+      ]);
+
+      expect(state.summary!.incomeChangePercentage, closeTo(50, 0.001));
     });
   });
 }

@@ -56,3 +56,29 @@ SubscriptionModel rolledForward(SubscriptionModel subscription, DateTime now) {
   }
   return subscription.copyWith(nextBillingDate: due, billingDay: anchorDay);
 }
+
+/// What [subscription] costs per month on average: weekly × 52 / 12, yearly
+/// / 12, daily × 365 / 12. An unknown cycle counts as monthly.
+double monthlyEquivalent(SubscriptionModel subscription) {
+  final amount = subscription.amount;
+  return switch (subscription.billingCycle.trim().toLowerCase()) {
+    'daily' => amount * 365 / 12,
+    'weekly' => amount * 52 / 12,
+    'yearly' => amount / 12,
+    _ => amount,
+  };
+}
+
+/// The total shown for [subscriptions] under [filter]: the monthly
+/// equivalent when all cycles are shown (adding a weekly and a yearly price
+/// together would mean nothing), otherwise the plain total of that cycle.
+double subscriptionsTotal(
+  List<SubscriptionModel> subscriptions,
+  String filter,
+) {
+  final allCycles = filter.trim().toLowerCase() == 'all';
+  return subscriptions.fold<double>(
+    0,
+    (sum, sub) => sum + (allCycles ? monthlyEquivalent(sub) : sub.amount),
+  );
+}

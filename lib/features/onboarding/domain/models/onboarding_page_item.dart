@@ -32,9 +32,9 @@ class OnboardingPageItem {
         ),
         OnboardingPageItem(
           image: Assets.images.page4Png,
-          title: 'Build Your Vault',
+          title: 'Keep It in Your Vault',
           subtitle:
-              'Set meaningful savings goals and watch your money grow. Ready to master your finances with Zenio?',
+              'Store card details and private notes, encrypted on this device and hidden until you choose to see them. Ready to master your finances with Zenio?',
         ),
       ];
 }

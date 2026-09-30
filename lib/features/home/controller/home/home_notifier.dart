@@ -177,21 +177,12 @@ class HomeNotifier extends _$HomeNotifier {
       }
     }
 
-    double incomeChange = 0;
-    if (lastMonthIncome > 0) {
-      incomeChange =
-          ((thisMonthIncome - lastMonthIncome) / lastMonthIncome) * 100;
-    } else if (thisMonthIncome > 0) {
-      incomeChange = 100;
-    }
-
-    double expenseChange = 0;
-    if (lastMonthExpense > 0) {
-      expenseChange =
-          ((thisMonthExpense - lastMonthExpense) / lastMonthExpense) * 100;
-    } else if (thisMonthExpense > 0) {
-      expenseChange = 100;
-    }
+    // Without last month's figure there is nothing to compare with; a
+    // made-up +100% would be misleading.
+    double? changeFrom(double last, double current) =>
+        last > 0 ? (current - last) / last * 100 : null;
+    final incomeChange = changeFrom(lastMonthIncome, thisMonthIncome);
+    final expenseChange = changeFrom(lastMonthExpense, thisMonthExpense);
 
     final newSummary = FinancialSummaryModel(
       totalBalance: totalBalance,

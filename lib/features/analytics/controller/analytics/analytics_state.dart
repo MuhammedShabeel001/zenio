@@ -21,3 +21,17 @@ sealed class AnalyticsState with _$AnalyticsState {
 
   factory AnalyticsState.initial() => const AnalyticsState();
 }
+
+extension AnalyticsStateCaption on AnalyticsState {
+  /// What the spending headline covers: "Spent · September", with the
+  /// wallet when one is chosen ("Spent · This week · HDFC").
+  String get spentCaption {
+    final allWallets =
+        selectedWallet == 'All Wallets' || selectedWallet == 'All';
+    return [
+      'Spent',
+      periodLabel(selectedPeriod, selectedTimeframe),
+      if (!allWallets) selectedWallet,
+    ].join(' · ');
+  }
+}

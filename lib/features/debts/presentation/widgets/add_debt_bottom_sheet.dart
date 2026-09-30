@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -8,6 +11,7 @@ import 'package:zenio/shared/providers/currency_provider/currency_provider.dart'
 import 'package:zenio/shared/theme/zenio_tokens.dart';
 import 'package:zenio/shared/utils/app_fonts.dart';
 import 'package:zenio/shared/utils/formatters.dart';
+import 'package:zenio/shared/widgets/zenio_snack_bar.dart';
 
 enum DebtType { iOwe, owedToMe }
 
@@ -93,6 +97,9 @@ class _AddDebtBottomSheetState extends ConsumerState<AddDebtBottomSheet> {
   Widget build(BuildContext context) {
     final formattedDate = DateFormat('dd MMMM yyyy').format(_selectedDate);
     final currencySymbol = ref.watch(currencySymbolProvider);
+    final canSave =
+        AppNumberFormat.parseAmount(_amountController.text) > 0 &&
+            _personNameController.text.trim().isNotEmpty;
 
     final debtsState = ref.watch(debtsNotifierProvider);
     final existingNames = debtsState.debts
@@ -181,13 +188,15 @@ class _AddDebtBottomSheetState extends ConsumerState<AddDebtBottomSheet> {
                   Expanded(
                     child: TextField(
                       controller: _amountController,
+                      // Like Add transaction: the amount comes first.
+                      autofocus: true,
                       keyboardType:
                           const TextInputType.numberWithOptions(decimal: true),
                       inputFormatters: [
                         ThousandsSeparatorInputFormatter(),
                       ],
                       onChanged: (val) {
-                        setState(() {});
+                        setState(() => _formError = null);
                       },
                       style: AppFonts.numeric(
                         fontSize: 24,
@@ -237,7 +246,8 @@ class _AddDebtBottomSheetState extends ConsumerState<AddDebtBottomSheet> {
                     child: TextField(
                       controller: _personNameController,
                       focusNode: _personNameFocusNode,
-                      onChanged: (_) => setState(() {}),
+                      textCapitalization: TextCapitalization.words,
+                      onChanged: (_) => setState(() => _formError = null),
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
@@ -430,7 +440,9 @@ class _AddDebtBottomSheetState extends ConsumerState<AddDebtBottomSheet> {
             SizedBox(
               height: 60,
               child: ElevatedButton(
-                onPressed: _isSaving
+                // Like Add transaction: ready once there is an amount and a
+                // name.
+                onPressed: _isSaving || !canSave
                     ? null
                     : () async {
                   final amount = AppNumberFormat.parseAmount(_amountController.text);
@@ -476,22 +488,33 @@ class _AddDebtBottomSheetState extends ConsumerState<AddDebtBottomSheet> {
                     return;
                   }
                   // The form may have been closed (or the Vault locked) meanwhile.
-                  if (!mounted) return;
+                  if (!context.mounted) return;
+                  unawaited(HapticFeedback.lightImpact());
+                  ZenioSnackBar.show(
+                    context,
+                    message: isOwed
+                        ? 'Saved · You owe $personName'
+                        : 'Saved · $personName owes you',
+                    type: ZenioSnackBarType.success,
+                  );
                   navigator.pop();
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: ZenioColors.primary,
+                  disabledBackgroundColor: const Color(0xFFE5E5EA),
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                   ),
                 ),
-                child: const Text(
+                child: Text(
                   'Save',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: _isSaving || !canSave
+                        ? ZenioColors.textSecondary
+                        : Colors.white,
                   ),
                 ),
               ),

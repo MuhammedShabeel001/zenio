@@ -108,6 +108,19 @@ DayRange? resolvePeriodRange(
   return null;
 }
 
+/// The period a timeframe covers, for captions: the timeframe itself
+/// ("This week", "All time"), with the year added to a month from an earlier
+/// year ("December 2025").
+String periodLabel(String period, String timeframe, {DateTime? now}) {
+  if (period.trim().toLowerCase() == 'monthly') {
+    final range = resolvePeriodRange(period, timeframe, now: now);
+    if (range != null && range.start.year != (now ?? DateTime.now()).year) {
+      return '$timeframe ${range.start.year}';
+    }
+  }
+  return timeframe;
+}
+
 /// Reads 'dd MMM yy', or the older 'dd MMM' (taken as the current year).
 DateTime? _parseRangeDay(String text, DateTime today) {
   final value = text.trim();

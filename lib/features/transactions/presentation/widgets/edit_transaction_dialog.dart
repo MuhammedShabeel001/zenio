@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -10,6 +11,7 @@ import 'package:zenio/features/transactions/domain/models/transaction_detail_mod
 import 'package:zenio/features/transactions/presentation/widgets/manage_categories_bottom_sheet.dart';
 import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
 import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
+import 'package:zenio/features/wallet/domain/wallet_kind.dart';
 import 'package:zenio/features/wallet/presentation/widgets/add_wallet_bottom_sheet.dart';
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/theme/zenio_tokens.dart';
@@ -17,6 +19,7 @@ import 'package:zenio/shared/utils/app_fonts.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/utils/datetime.dart';
 import 'package:zenio/shared/utils/formatters.dart';
+import 'package:zenio/shared/widgets/money.dart';
 import 'package:zenio/shared/widgets/zenio_dropdown.dart';
 import 'package:zenio/shared/widgets/zenio_snack_bar.dart';
 
@@ -301,8 +304,10 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
     // Live amount validation
     final enteredAmount = AppNumberFormat.parseAmount(_amountController.text);
     final isDebit = !_isIncome; // Expense and transfer are debit
-    // Only wallets that still exist have a balance to check against.
+    // Only wallets that still exist have a balance to check against, and a
+    // credit card may go below zero.
     final isExceedingBalance = selectedSourceCard != null &&
+        !selectedSourceCard.isCredit &&
         isDebit &&
         enteredAmount > availableBalance;
     final isInvalidAmount = enteredAmount <= 0;
@@ -468,6 +473,19 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                   ],
                 ),
               ),
+              // What a credit card's balance becomes, said plainly.
+              if ((selectedSourceCard?.isCredit ?? false) && isDebit && enteredAmount > 0)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 2),
+                  child: Text(
+                    'Balance after transaction: ${Money.balance(availableBalance - enteredAmount, symbol: currencySymbol, alwaysShowDecimals: true)}',
+                    style: AppFonts.numeric(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: ZenioColors.textSecondary,
+                    ),
+                  ),
+                ),
               if (isExceedingBalance)
                 Padding(
                   padding: const EdgeInsets.only(top: 6),
@@ -544,6 +562,7 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
 
               // Source Wallet Selector
               ZenioDropdown<String>(
+                label: _isTransfer ? 'From' : null,
                 value: selectedSource,
                 leadingIcon: Assets.icons.wallet.svg(
                   width: 20,
@@ -592,6 +611,7 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
               // Category Selector (or Destination Wallet for Transfer)
               if (_isTransfer) ...[
                 ZenioDropdown<String>(
+                  label: 'To',
                   value: selectedDestination,
                   leadingIcon: Assets.icons.wallet.svg(
                     width: 20,
@@ -874,9 +894,11 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                             kind = TransactionKind.transfer;
                           } else {
                             title = _selectedCategory ??
-                                (categories.isNotEmpty
-                                    ? categories.first.name
-                                    : 'General');
+                                (_isIncome
+                                    ? 'Income'
+                                    : (categories.isNotEmpty
+                                        ? categories.first.name
+                                        : 'General'));
                             bankName = selectedSource;
                             kind = _isIncome
                                 ? TransactionKind.income
@@ -914,7 +936,13 @@ class _EditTransactionDialogState extends ConsumerState<EditTransactionDialog> {
                             });
                             return;
                           }
-                          if (!mounted) return;
+                          await HapticFeedback.lightImpact();
+                          if (!context.mounted) return;
+                          ZenioSnackBar.show(
+                            context,
+                            message: 'Transaction updated',
+                            type: ZenioSnackBarType.success,
+                          );
                           Navigator.of(context).pop();
                         }
                       : null,

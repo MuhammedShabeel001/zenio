@@ -10,6 +10,7 @@ import 'package:zenio/shared/services/csv_export_service.dart';
 import 'package:zenio/shared/services/csv_import_service.dart';
 import 'package:zenio/shared/shared.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
+import 'package:zenio/shared/utils/currency_display.dart';
 
 class SettingsScreenMobile extends ConsumerStatefulWidget {
   const SettingsScreenMobile({
@@ -27,6 +28,30 @@ class SettingsScreenMobile extends ConsumerStatefulWidget {
 class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
   bool _isChangingVaultLock = false;
   bool _isTransferringData = false;
+
+  /// Switches the symbol amounts are shown with, and says that the numbers
+  /// stay the same.
+  Future<void> _changeDisplayCurrency(String currency) async {
+    try {
+      await ref
+          .read(settingsNotifierProvider.notifier)
+          .updatePrimaryCurrency(currency);
+    } catch (_) {
+      if (!mounted) return;
+      ZenioSnackBar.show(
+        context,
+        message: "Couldn't change the display currency. Please try again.",
+        type: ZenioSnackBarType.error,
+      );
+      return;
+    }
+    if (!mounted) return;
+    ZenioSnackBar.show(
+      context,
+      message: 'Showing amounts in ${currencyDisplayCode(currency)} · '
+          "amounts aren't converted",
+    );
+  }
 
   Future<void> _clearAllData() async {
     setState(() => _isTransferringData = true);
@@ -238,8 +263,11 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                         children: [
                           // SECTION 1: PREFERENCES
                           _buildSectionHeader('Preferences', isFirst: true),
+                          // Only the symbol changes: amounts keep their
+                          // numbers.
                           SettingsItemTile(
-                            title: 'Primary Currency',
+                            title: 'Display currency',
+                            subtitle: "Amounts aren't converted.",
                             icon: currencyCode.toUpperCase() == 'DLR'
                                 ? const Center(
                                     child: Text(
@@ -287,11 +315,7 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                                   ),
                                 ),
                                 offset: const Offset(0, 38),
-                                onSelected: (String currency) {
-                                  ref
-                                      .read(settingsNotifierProvider.notifier)
-                                      .updatePrimaryCurrency(currency);
-                                },
+                                onSelected: _changeDisplayCurrency,
                                 itemBuilder: (BuildContext context) => [
                                   PopupMenuItem<String>(
                                     value: 'INR',
@@ -391,7 +415,7 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                                                 MainAxisAlignment.center,
                                             children: [
                                               Text(
-                                                'DLR',
+                                                'USD',
                                                 style: TextStyle(
                                                   fontSize: 14,
                                                   fontWeight: FontWeight.bold,
@@ -431,7 +455,7 @@ class _SettingsScreenMobileState extends ConsumerState<SettingsScreenMobile> {
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Text(
-                                        '$currencySymbol  $currencyCode',
+                                        '$currencySymbol  ${currencyDisplayCode(currencyCode)}',
                                         style: const TextStyle(
                                           fontSize: 13,
                                           fontWeight: FontWeight.w600,

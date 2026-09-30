@@ -236,13 +236,21 @@ class _VaultNoteItemState extends State<VaultNoteItem>
                             color: Color(0xFF333333),
                           ),
                         ),
-                        GestureDetector(
+                        Semantics(
+                          button: true,
+                          label: 'Copy note',
+                          excludeSemantics: true,
                           onTap: () =>
                               _copyToClipboard(context, widget.note.content),
-                          child: const Icon(
-                            Icons.copy_rounded,
-                            size: 18,
-                            color: ZenioColors.textPrimary,
+                          child: GestureDetector(
+                            onTap: () =>
+                                _copyToClipboard(context, widget.note.content),
+                            behavior: HitTestBehavior.opaque,
+                            child: const Icon(
+                              Icons.copy_rounded,
+                              size: 18,
+                              color: ZenioColors.textPrimary,
+                            ),
                           ),
                         ),
                       ],

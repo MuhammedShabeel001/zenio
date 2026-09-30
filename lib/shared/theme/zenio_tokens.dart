@@ -1,4 +1,4 @@
-import 'package:flutter/animation.dart';
+import 'package:flutter/widgets.dart';
 
 /// Zenio's colours, taken from the values the screens already use.
 ///
@@ -32,6 +32,46 @@ abstract final class ZenioColors {
 
   /// Deletion, spending and errors.
   static const Color danger = Color(0xFFDD3D34);
+
+  /// [danger] for small text on the black headers and dark cards, where
+  /// [danger] itself is too dark to read (6.3:1 on #1A1A1A).
+  static const Color dangerOnDark = Color(0xFFF87171);
+
+  /// Money coming in (income, "owes you"). Readable on white (5.5:1).
+  static const Color income = primaryStrong;
+
+  /// Secondary text on the black screen headers (5.3:1 on black).
+  static const Color textOnDarkSecondary = Color(0xFF808080);
+
+  /// Cards and pills on the black screen headers, and their border.
+  static const Color surfaceDark = Color(0xFF1A1A1A);
+  static const Color surfaceDarkBorder = Color(0xFF313131);
+}
+
+/// Font sizes by role. New and reworked text uses these instead of one-off
+/// sizes; nothing smaller than [caption] is used for text people need to
+/// read.
+abstract final class ZenioFontSizes {
+  /// Captions, secondary details and small labels.
+  static const double caption = 12;
+
+  /// Supporting labels next to values.
+  static const double label = 13;
+
+  /// Body text.
+  static const double body = 14;
+
+  /// List titles and amounts in rows.
+  static const double bodyLarge = 16;
+
+  /// Section titles.
+  static const double title = 20;
+
+  /// Amounts entered in forms, and the cents of headline amounts.
+  static const double amount = 24;
+
+  /// Headline amounts at the top of a screen.
+  static const double display = 32;
 }
 
 /// Spacing steps used for padding and gaps.
@@ -69,4 +109,11 @@ abstract final class ZenioMotion {
 
   /// Elements that move within the screen (swipes, reorders).
   static const Curve emphasizedCurve = Curves.fastOutSlowIn;
+
+  /// [duration], or none when the system asks for reduced motion. Use it for
+  /// every animation that is only there to explain a change.
+  static Duration of(BuildContext context, Duration duration) {
+    final reduce = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    return reduce ? Duration.zero : duration;
+  }
 }

@@ -19,6 +19,9 @@ class SubscriptionsNotifier extends _$SubscriptionsNotifier {
   Future<void>? _initialLoad;
   final _writes = SerialTaskQueue();
 
+  /// The day billing dates and reminders were last brought up to date.
+  DateTime? _loadedOn;
+
   @override
   SubscriptionsState build() {
     try {
@@ -56,7 +59,7 @@ class SubscriptionsNotifier extends _$SubscriptionsNotifier {
       }
 
       final filteredList = _filterSubscriptions(list, state.selectedFilter);
-      final balance = _calculateTotalBalance(filteredList);
+      final balance = subscriptionsTotal(filteredList, state.selectedFilter);
 
       state = state.copyWith(
         totalBalance: balance,
@@ -64,6 +67,7 @@ class SubscriptionsNotifier extends _$SubscriptionsNotifier {
         isLoading: false,
         errorMessage: null,
       );
+      _loadedOn = DateUtils.dateOnly(now);
 
       if (syncReminders) {
         unawaited(
@@ -82,6 +86,16 @@ class SubscriptionsNotifier extends _$SubscriptionsNotifier {
 
   Future<void> loadData() async => _loadData();
 
+  /// Brings billing dates and reminders up to date when Zenio comes back on
+  /// a later day than they were last worked out, for example after staying
+  /// in the background overnight. Otherwise does nothing.
+  Future<void> refreshIfStale({DateTime? now}) async {
+    await _initialLoad;
+    final today = DateUtils.dateOnly(now ?? DateTime.now());
+    if (_loadedOn == today) return;
+    await _loadData();
+  }
+
   List<SubscriptionModel> _filterSubscriptions(
     List<SubscriptionModel> allSubscriptions,
     String filter,
@@ -94,13 +108,6 @@ class SubscriptionsNotifier extends _$SubscriptionsNotifier {
     }).toList();
   }
 
-  double _calculateTotalBalance(List<SubscriptionModel> subs) {
-    double total = 0;
-    for (final sub in subs) {
-      total += sub.amount;
-    }
-    return total;
-  }
 
   void updateFilter(String filter) {
     state = state.copyWith(selectedFilter: filter);

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -13,6 +14,7 @@ import 'package:zenio/shared/services/notification_service.dart';
 import 'package:zenio/shared/theme/zenio_tokens.dart';
 import 'package:zenio/shared/utils/app_fonts.dart';
 import 'package:zenio/shared/utils/formatters.dart';
+import 'package:zenio/shared/widgets/zenio_snack_bar.dart';
 
 
 class AddSubscriptionBottomSheet extends ConsumerStatefulWidget {
@@ -92,6 +94,10 @@ class _AddSubscriptionBottomSheetState
   String? _formError;
   bool _isSaving = false;
 
+  bool get _canSave =>
+      _titleController.text.trim().isNotEmpty &&
+      AppNumberFormat.parseAmount(_amountController.text) > 0;
+
   Future<void> _saveSubscription() async {
     if (_isSaving) return;
     final title = _titleController.text.trim();
@@ -141,6 +147,12 @@ class _AddSubscriptionBottomSheetState
     }
     // The form may have been closed (or the Vault locked) meanwhile.
     if (!mounted) return;
+    unawaited(HapticFeedback.lightImpact());
+    ZenioSnackBar.show(
+      context,
+      message: 'Subscription added · $title',
+      type: ZenioSnackBarType.success,
+    );
     navigator.pop();
     // Ask for notifications now, when the reason is obvious: renewal
     // reminders for this subscription.
@@ -261,13 +273,15 @@ class _AddSubscriptionBottomSheetState
                   Expanded(
                     child: TextField(
                       controller: _amountController,
+                      // Like Add transaction: the amount comes first.
+                      autofocus: true,
                       keyboardType:
                           const TextInputType.numberWithOptions(decimal: true),
                       inputFormatters: [
                         ThousandsSeparatorInputFormatter(),
                       ],
                       onChanged: (val) {
-                        setState(() {});
+                        setState(() => _formError = null);
                       },
                       style: AppFonts.numeric(
                         fontSize: 24,
@@ -308,6 +322,9 @@ class _AddSubscriptionBottomSheetState
               ),
               child: TextField(
                 controller: _titleController,
+                textCapitalization: TextCapitalization.words,
+                textInputAction: TextInputAction.done,
+                onChanged: (_) => setState(() => _formError = null),
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
@@ -487,13 +504,29 @@ class _AddSubscriptionBottomSheetState
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: Text(
-                        formattedDate,
-                        style: AppFonts.numeric(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w400,
-                          color: const Color(0xFF000000),
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Says which date this is; a past date moves on
+                          // to the next renewal when saved.
+                          const Text(
+                            'Next billing date',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: ZenioColors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            formattedDate,
+                            style: AppFonts.numeric(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w400,
+                              color: const Color(0xFF000000),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     const Text(
@@ -522,20 +555,25 @@ class _AddSubscriptionBottomSheetState
             SizedBox(
               height: 60,
               child: ElevatedButton(
-                onPressed: _isSaving ? null : _saveSubscription,
+                // Like Add transaction: ready once there is a name and an
+                // amount.
+                onPressed: _isSaving || !_canSave ? null : _saveSubscription,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: ZenioColors.primary,
+                  disabledBackgroundColor: const Color(0xFFE5E5EA),
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                   ),
                 ),
-                child: const Text(
+                child: Text(
                   'Save subscription',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: _isSaving || !_canSave
+                        ? ZenioColors.textSecondary
+                        : Colors.white,
                   ),
                 ),
               ),

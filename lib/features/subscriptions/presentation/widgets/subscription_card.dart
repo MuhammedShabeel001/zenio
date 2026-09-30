@@ -141,13 +141,18 @@ class _SubscriptionCardState extends ConsumerState<SubscriptionCard>
     }
   }
 
-  String _formatAmount(double amount) {
-    return AppNumberFormat.formatAmount(amount);
+  /// "/ month" for a monthly price, and so on.
+  static String _perCycle(String cycle) {
+    return switch (cycle.trim().toLowerCase()) {
+      'daily' => '/ day',
+      'weekly' => '/ week',
+      'yearly' => '/ year',
+      _ => '/ month',
+    };
   }
 
   @override
   Widget build(BuildContext context) {
-    final currencyCode = ref.watch(currencyCodeProvider);
     final categories = ref.watch(subscriptionCategoriesNotifierProvider);
     final matchedCat = categories.where(
       (c) =>
@@ -317,7 +322,7 @@ class _SubscriptionCardState extends ConsumerState<SubscriptionCard>
                                 style: const TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w400,
-                                  color: Color(0xFFB2B2B2),
+                                  color: ZenioColors.textSecondary,
                                 ),
                               ),
                             ],
@@ -333,17 +338,14 @@ class _SubscriptionCardState extends ConsumerState<SubscriptionCard>
                               crossAxisAlignment: CrossAxisAlignment.baseline,
                               textBaseline: TextBaseline.alphabetic,
                               children: [
-                                Text(
-                                  _formatAmount(widget.subscription.amount),
-                                  style: AppFonts.numeric(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: const Color(0xFF000000),
-                                  ),
+                                AmountText(
+                                  widget.subscription.amount,
+                                  direction: MoneyDirection.neutral,
                                 ),
                                 const SizedBox(width: 4),
+                                // How often, which the total above relies on.
                                 Text(
-                                  currencyCode,
+                                  _perCycle(widget.subscription.billingCycle),
                                   style: const TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,

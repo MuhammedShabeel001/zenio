@@ -90,4 +90,13 @@ void main() {
 
     expect(result, ['30-09-2026']);
   });
+
+  test('period labels name the year of a month from an earlier year', () {
+    final now = DateTime(2026, 9, 30);
+
+    expect(periodLabel('Monthly', 'September', now: now), 'September');
+    expect(periodLabel('Monthly', 'December', now: now), 'December 2025');
+    expect(periodLabel('Weekly', 'This week', now: now), 'This week');
+    expect(periodLabel('Custom', allTimeTimeframe, now: now), 'All time');
+  });
 }

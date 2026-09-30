@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +14,7 @@ import 'package:zenio/features/vault/domain/vault_card_validation.dart';
 import 'package:zenio/shared/theme/zenio_tokens.dart';
 import 'package:zenio/shared/utils/app_fonts.dart';
 import 'package:zenio/shared/utils/formatters.dart';
+import 'package:zenio/shared/widgets/zenio_snack_bar.dart';
 
 class AddVaultItemBottomSheet extends ConsumerStatefulWidget {
   final VaultMode mode;
@@ -164,6 +167,15 @@ class _AddVaultItemBottomSheetState
     }
     // The form may have been closed (or the Vault locked) meanwhile.
     if (!mounted) return;
+    // Show the kind of item just saved, so a new note is not hidden behind
+    // the card list (and the other way round).
+    ref.read(vaultNotifierProvider.notifier).setMode(_currentMode);
+    unawaited(HapticFeedback.lightImpact());
+    ZenioSnackBar.show(
+      context,
+      message: _currentMode == VaultMode.cards ? 'Card saved' : 'Note saved',
+      type: ZenioSnackBarType.success,
+    );
     navigator.pop();
   }
 

@@ -88,10 +88,10 @@ class SettingsNotifier extends _$SettingsNotifier {
   /// settings are unknown, so a failed load never unlocks it.
   bool get vaultLockRequired => !_loaded || state.settings.isBiometricEnabled;
 
-  Future<void> updatePrimaryCurrency(String currency) async {
-    try {
-      await _update((s) => s.copyWith(primaryCurrency: currency));
-    } catch (_) {}
+  /// Changes the currency amounts are shown in. Amounts are not converted.
+  /// Throws if it could not be saved.
+  Future<void> updatePrimaryCurrency(String currency) {
+    return _update((s) => s.copyWith(primaryCurrency: currency));
   }
 
   Future<void> updateDefaultWallet(String walletName) async {

@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zenio/features/debts/debts.dart';
 import 'package:zenio/features/home/controller/home/home_notifier.dart';
+import 'package:zenio/features/home/domain/models/transaction/transaction_kind.dart';
 import 'package:zenio/features/home/presentation/widgets/delete_transaction_with_undo.dart';
 import 'package:zenio/features/home/presentation/widgets/quick_action_item.dart';
 import 'package:zenio/features/home/presentation/widgets/transaction_card.dart';
-import 'package:zenio/features/settings/controller/settings/settings_notifier.dart';
 import 'package:zenio/features/split/split.dart';
 import 'package:zenio/features/subscriptions/subscriptions.dart';
 import 'package:zenio/features/transactions/presentation/widgets/edit_transaction_dialog.dart';
@@ -19,7 +19,9 @@ import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/utils/formatters.dart';
 import 'package:zenio/shared/widgets/add_transaction_bottom_sheet.dart';
 import 'package:zenio/shared/widgets/custom_navigation_bar.dart';
+import 'package:zenio/shared/widgets/inserted_item.dart';
 import 'package:zenio/shared/widgets/list_state_message.dart';
+import 'package:zenio/shared/widgets/money.dart';
 
 class HomeScreenMobile extends ConsumerStatefulWidget {
   const HomeScreenMobile({
@@ -36,16 +38,24 @@ class HomeScreenMobile extends ConsumerStatefulWidget {
 class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
   String? _openTransactionId;
 
-  String _formatWholePart(double amount) =>
-      AppNumberFormat.formatWholePart(amount);
+  /// Set once the loaded list has been shown: from then on, new rows animate
+  /// in, while the first appearance of the list does not.
+  bool _listShown = false;
 
-  String _formatDecimalPart(double amount) =>
-      AppNumberFormat.formatDecimalPart(amount);
+  /// "+12% vs last month".
+  static String _changeText(double change) {
+    final percent = change.round();
+    final sign = percent > 0 ? '+' : (percent < 0 ? Money.minus : '');
+    return '$sign${percent.abs()}% vs last month';
+  }
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(homeNotifierProvider);
     final notifier = ref.read(homeNotifierProvider.notifier);
+    if (!_listShown && state.status == HomeStatus.success) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _listShown = true);
+    }
     final summary = state.summary;
     final transactions = state.transactions;
 
@@ -53,25 +63,23 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
     // rebuild Home (kept alive in the tab shell) on every card swipe.
     final totalBalance =
         ref.watch(walletNotifierProvider.select((s) => s.cardBalance));
+    final frozenWallets = ref.watch(
+      walletNotifierProvider.select(
+        (s) => s.cards.where((c) => c.isFrozen).length,
+      ),
+    );
     final income = summary?.income ?? 0.0;
-    final incomeChange = summary?.incomeChangePercentage ?? 0.0;
+    final incomeChange = summary?.incomeChangePercentage;
     final expense = summary?.expense ?? 0.0;
-    final expenseChange = summary?.expenseChangePercentage ?? 0.0;
-    final currency = ref.watch(currencyCodeProvider);
+    final expenseChange = summary?.expenseChangePercentage;
     final currencySymbol = ref.watch(currencySymbolProvider);
 
-    final formattedIncomeChange = incomeChange >= 0
-        ? '+ ${AppNumberFormat.formatAmount(incomeChange, alwaysShowDecimals: true)} %'
-        : '- ${AppNumberFormat.formatAmount(incomeChange.abs(), alwaysShowDecimals: true)} %';
-    final incomeChangeColor = incomeChange >= 0
+    // More income is good news, more spending is not.
+    final incomeChangeColor = (incomeChange ?? 0) >= 0
         ? ZenioColors.primary
-        : ZenioColors.danger;
-
-    final formattedExpenseChange = expenseChange >= 0
-        ? '+ ${AppNumberFormat.formatAmount(expenseChange, alwaysShowDecimals: true)} %'
-        : '- ${AppNumberFormat.formatAmount(expenseChange.abs(), alwaysShowDecimals: true)} %';
-    final expenseChangeColor = expenseChange >= 0
-        ? ZenioColors.danger
+        : ZenioColors.dangerOnDark;
+    final expenseChangeColor = (expenseChange ?? 0) > 0
+        ? ZenioColors.dangerOnDark
         : ZenioColors.primary;
 
     return Scaffold(
@@ -86,269 +94,29 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Top Balance Row & Currency Badge
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Flexible(
-                        // Large amounts and text sizes shrink to fit instead of overflowing.
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.centerLeft,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              RichText(
-                                text: TextSpan(
-                                  children: [
-                                    TextSpan(
-                                      text: '$currencySymbol ',
-                                      style: AppFonts.numeric(
-                                        fontSize: 32,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                        letterSpacing: -0.5,
-                                      ),
-                                    ),
-                                    TextSpan(
-                                      text: _formatWholePart(totalBalance),
-                                      style: AppFonts.numeric(
-                                        fontSize: 32,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                        letterSpacing: -0.5,
-                                      ),
-                                    ),
-                                    TextSpan(
-                                      text: _formatDecimalPart(totalBalance),
-                                      style: AppFonts.numeric(
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.bold,
-                                        color: const Color(0xFF808080),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              const Text(
-                                'Total balance',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w400,
-                                  color: Color(0xFF808080),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      // Currency Badge Pill
-                      Theme(
-                        data: Theme.of(context).copyWith(
-                          splashColor: Colors.transparent,
-                          highlightColor: Colors.transparent,
-                        ),
-                        child: PopupMenuButton<String>(
-                          tooltip: 'Select Currency',
-                          elevation: 12,
-                          shadowColor: Colors.black.withValues(alpha: 0.25),
-                          color: const Color(0xFF1E1E1E),
-                          surfaceTintColor: Colors.transparent,
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(
-                            minWidth: 190,
-                            maxWidth: 220,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                            side: const BorderSide(
-                              color: Color(0xFF313131),
-                              width: 1.2,
-                            ),
-                          ),
-                          offset: const Offset(0, 52),
-                          onSelected: (String code) {
-                            ref
-                                .read(settingsNotifierProvider.notifier)
-                                .updatePrimaryCurrency(code);
-                          },
-                          itemBuilder: (BuildContext context) => [
-                            PopupMenuItem<String>(
-                              value: 'INR',
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 32,
-                                    height: 32,
-                                    decoration: const BoxDecoration(
-                                      color: Color(0xFF2C2520),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Center(
-                                      child: Text(
-                                        '₹',
-                                        style: TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.bold,
-                                          color: Color(0xFFFDB965),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  const Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Text(
-                                          'INR',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                        Text(
-                                          'Indian Rupee',
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            color: ZenioColors.textSecondary,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  if (currency.toUpperCase() == 'INR')
-                                    const Icon(
-                                      Icons.check_circle_rounded,
-                                      color: ZenioColors.primary,
-                                      size: 18,
-                                    ),
-                                ],
-                              ),
-                            ),
-                            const PopupMenuItem<String>(
-                              enabled: false,
-                              height: 1,
-                              padding: EdgeInsets.zero,
-                              child: Divider(
-                                height: 1,
-                                thickness: 1,
-                                color: Color(0xFF313131),
-                              ),
-                            ),
-                            PopupMenuItem<String>(
-                              value: 'DLR',
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 32,
-                                    height: 32,
-                                    decoration: const BoxDecoration(
-                                      color: Color(0xFF1E2D27),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Center(
-                                      child: Text(
-                                        r'$',
-                                        style: TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.bold,
-                                          color: ZenioColors.primary,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  const Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Text(
-                                          'DLR',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                        Text(
-                                          'US Dollar',
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            color: ZenioColors.textSecondary,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  if (currency.toUpperCase() == 'DLR')
-                                    const Icon(
-                                      Icons.check_circle_rounded,
-                                      color: ZenioColors.primary,
-                                      size: 18,
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ],
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 18,
-                              vertical: 12,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF1a1a1a),
-                              borderRadius: BorderRadius.circular(30),
-                              border: Border.all(
-                                color: const Color(0xFF313131),
-                                width: 1,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  currencySymbol,
-                                  style: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFFE0E0E0),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  currency,
-                                  style: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                const Icon(
-                                  Icons.keyboard_arrow_down_rounded,
-                                  size: 16,
-                                  color: ZenioColors.textSecondary,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                  // Total balance. The display currency is chosen in
+                  // Settings, where it is explained.
+                  HeadlineAmount(
+                    amount: totalBalance,
+                    caption: frozenWallets == 0
+                        ? 'Total balance'
+                        : 'Total balance · excludes $frozenWallets frozen '
+                            'wallet${frozenWallets == 1 ? '' : 's'}',
                   ),
                   const SizedBox(height: 20),
 
                   // Income & Expense Summary Cards
+                  const Padding(
+                    padding: EdgeInsets.only(left: 4, bottom: 8),
+                    child: Text(
+                      'This month',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: ZenioColors.textOnDarkSecondary,
+                      ),
+                    ),
+                  ),
                   Row(
                     children: [
                       // Income Card
@@ -359,10 +127,10 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                             horizontal: 20,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF1a1a1a),
+                            color: ZenioColors.surfaceDark,
                             borderRadius: BorderRadius.circular(30),
                             border: Border.all(
-                              color: const Color(0xFF313131),
+                              color: ZenioColors.surfaceDarkBorder,
                             ),
                           ),
                           child: Column(
@@ -395,15 +163,17 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                                   color: Colors.white,
                                 ),
                               ),
-                              const SizedBox(height: 6),
-                              Text(
-                                formattedIncomeChange,
-                                style: AppFonts.numeric(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                  color: incomeChangeColor,
+                              if (incomeChange != null) ...[
+                                const SizedBox(height: 6),
+                                Text(
+                                  _changeText(incomeChange),
+                                  style: AppFonts.numeric(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: incomeChangeColor,
+                                  ),
                                 ),
-                              ),
+                              ],
                             ],
                           ),
                         ),
@@ -417,10 +187,10 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                             horizontal: 20,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF1a1a1a),
+                            color: ZenioColors.surfaceDark,
                             borderRadius: BorderRadius.circular(30),
                             border: Border.all(
-                              color: const Color(0xFF313131),
+                              color: ZenioColors.surfaceDarkBorder,
                             ),
                           ),
                           child: Column(
@@ -453,15 +223,17 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                                   color: Colors.white,
                                 ),
                               ),
-                              const SizedBox(height: 6),
-                              Text(
-                                formattedExpenseChange,
-                                style: AppFonts.numeric(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                  color: expenseChangeColor,
+                              if (expenseChange != null) ...[
+                                const SizedBox(height: 6),
+                                Text(
+                                  _changeText(expenseChange),
+                                  style: AppFonts.numeric(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: expenseChangeColor,
+                                  ),
                                 ),
-                              ),
+                              ],
                             ],
                           ),
                         ),
@@ -669,8 +441,12 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                                   }
                                 else
                                   ...transactions.take(10).map(
-                                    (tx) => TransactionCard(
+                                    // A transaction added (or restored by
+                                    // Undo) while Home is showing eases in.
+                                    (tx) => InsertedItem(
                                       key: ValueKey(tx.id),
+                                      animate: _listShown,
+                                      child: TransactionCard(
                                       transaction: tx,
                                       isOpen: _openTransactionId == tx.id,
                                       onOpen: () {
@@ -692,12 +468,16 @@ class _HomeScreenMobileState extends ConsumerState<HomeScreenMobile> {
                                         ref,
                                         tx.id,
                                       ),
-                                      onEdit: () {
-                                        EditTransactionDialog.show(
-                                          context,
-                                          transaction: tx,
-                                        );
-                                      },
+                                      // Adjustments can't be edited, so
+                                      // they offer no Edit at all.
+                                      onEdit: tx.resolvedKind ==
+                                              TransactionKind.adjustment
+                                          ? null
+                                          : () => EditTransactionDialog.show(
+                                                context,
+                                                transaction: tx,
+                                              ),
+                                    ),
                                     ),
                                   ),
                               ],

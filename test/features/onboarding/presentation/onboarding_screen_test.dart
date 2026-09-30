@@ -78,9 +78,9 @@ void main() {
       }
 
       // Verify 4th slide is visible
-      expect(find.text('Build Your Vault'), findsOneWidget);
+      expect(find.text('Keep It in Your Vault'), findsOneWidget);
       expect(
-        find.textContaining('Set meaningful savings goals'),
+        find.textContaining('Store card details and private notes'),
         findsOneWidget,
       );
 

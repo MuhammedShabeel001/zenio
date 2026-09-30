@@ -40,23 +40,26 @@ class CustomNavigationBar extends StatelessWidget {
     final isSelected = selectedIndex == index;
     final color = isSelected ? _activeColor : _inactiveColor;
 
-    return Semantics(
-      button: true,
-      selected: isSelected,
-      label: label,
-      excludeSemantics: true,
-      onTap: () => onTabSelected(index),
-      child: InkResponse(
+    // Each tab takes half of its capsule, so the bar fits narrow phones
+    // (320pt) with every tab still at least 48pt wide.
+    return Expanded(
+      child: Semantics(
+        button: true,
+        selected: isSelected,
+        label: label,
+        excludeSemantics: true,
         onTap: () => onTabSelected(index),
-        radius: 28,
-        child: SizedBox(
-          width: 56,
-          height: _barHeight,
-          child: Center(
-            child: iconGen.svg(
-              width: 24,
-              height: 24,
-              colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+        child: InkResponse(
+          onTap: () => onTabSelected(index),
+          radius: 28,
+          child: SizedBox(
+            height: _barHeight,
+            child: Center(
+              child: iconGen.svg(
+                width: 24,
+                height: 24,
+                colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+              ),
             ),
           ),
         ),
@@ -84,7 +87,6 @@ class CustomNavigationBar extends StatelessWidget {
                 borderRadius: BorderRadius.circular(30),
                 clipBehavior: Clip.antiAlias,
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     _buildNavItem(
                       index: 0,
@@ -139,7 +141,6 @@ class CustomNavigationBar extends StatelessWidget {
                 borderRadius: BorderRadius.circular(30),
                 clipBehavior: Clip.antiAlias,
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     _buildNavItem(
                       index: 2,

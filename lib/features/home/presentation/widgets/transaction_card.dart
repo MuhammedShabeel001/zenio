@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zenio/shared/widgets/item_actions.dart';
 import 'package:zenio/features/home/domain/models/transaction/transaction_kind.dart';
 import 'package:zenio/features/home/domain/models/transaction/transaction_model.dart';
+import 'package:zenio/features/home/presentation/widgets/transaction_amount.dart';
 import 'package:zenio/shared/shared.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 
@@ -33,7 +34,9 @@ class _TransactionCardState extends ConsumerState<TransactionCard>
   late AnimationController _animationController;
   late Animation<double> _animation;
   double _dragOffset = 0;
-  static const double _maxDragDistance = 146;
+  /// How far the card slides open: Delete and Edit, or Delete alone for
+  /// items that cannot be edited.
+  double get _maxDragDistance => widget.onEdit == null ? 76 : 146;
 
   @override
   void initState() {
@@ -122,13 +125,16 @@ class _TransactionCardState extends ConsumerState<TransactionCard>
     }
   }
 
-  String _formatAmount(double amount) {
-    return AppNumberFormat.formatAmount(amount);
-  }
-
   @override
   Widget build(BuildContext context) {
-    final currencyCode = ref.watch(currencyCodeProvider);
+    final tx = widget.transaction;
+    final kind = tx.resolvedKind;
+    final direction = moneyDirectionOf(kind, isIncome: tx.isIncome);
+    final amountText = Money.signed(
+      tx.amount,
+      symbol: ref.watch(currencySymbolProvider),
+      direction: direction,
+    );
     return ItemActions(
       onEdit: widget.onEdit,
       onDelete: widget.onDelete,
@@ -159,6 +165,7 @@ class _TransactionCardState extends ConsumerState<TransactionCard>
                         widget.onDelete?.call();
                       },
                     ),
+                    if (widget.onEdit != null) ...[
                     const SizedBox(width: 3),
   
                     // Edit Button (White Circle + Pencil Edit Icon)
@@ -185,6 +192,7 @@ class _TransactionCardState extends ConsumerState<TransactionCard>
                         ),
                       ),
                     ),
+                    ],
                   ],
                 ),
               ),
@@ -201,12 +209,26 @@ class _TransactionCardState extends ConsumerState<TransactionCard>
             child: GestureDetector(
               onHorizontalDragUpdate: _onHorizontalDragUpdate,
               onHorizontalDragEnd: _onHorizontalDragEnd,
+              // A tap opens the transaction for editing (or closes the
+              // swiped-open buttons).
               onTap: () {
                 if (_dragOffset < 0) {
                   _close();
+                } else {
+                  widget.onEdit?.call();
                 }
               },
-              child: Container(
+              child: Semantics(
+                label: transactionSemanticsLabel(
+                  kind: kind,
+                  title: tx.title,
+                  amount: amountText,
+                  when: tx.date.toRelativeDate,
+                ),
+                onTapHint: widget.onEdit == null ? null : 'edit',
+                onTap: widget.onEdit,
+                excludeSemantics: true,
+                child: Container(
                 padding: const EdgeInsets.fromLTRB(5, 5, 20, 5),
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -273,39 +295,22 @@ class _TransactionCardState extends ConsumerState<TransactionCard>
                             style: const TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w400,
-                              color: Color(0xFFB2B2B2),
+                              color: ZenioColors.textSecondary,
                             ),
                           ),
                         ],
                       ),
                     ),
 
-                    // Amount + Currency Unit
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
-                      children: [
-                        Text(
-                          _formatAmount(widget.transaction.amount),
-                          style: AppFonts.numeric(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFF000000),
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          currencyCode,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: ZenioColors.textSecondary,
-                          ),
-                        ),
-                      ],
+                    // Signed amount: +₹85,000 in, −₹420 out.
+                    AmountText(
+                      tx.amount,
+                      direction: direction,
+                      color: amountColorOf(kind),
                     ),
                   ],
                 ),
+              ),
               ),
             ),
           ),

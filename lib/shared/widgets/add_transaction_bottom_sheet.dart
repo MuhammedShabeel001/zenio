@@ -10,6 +10,7 @@ import 'package:zenio/features/transactions/controller/categories/categories_not
 import 'package:zenio/features/transactions/presentation/widgets/manage_categories_bottom_sheet.dart';
 import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
 import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
+import 'package:zenio/features/wallet/domain/wallet_kind.dart';
 import 'package:zenio/features/wallet/presentation/widgets/add_wallet_bottom_sheet.dart';
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/providers/default_wallet_provider/default_wallet_provider.dart';
@@ -17,7 +18,9 @@ import 'package:zenio/shared/theme/zenio_tokens.dart';
 import 'package:zenio/shared/utils/app_fonts.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/utils/formatters.dart';
+import 'package:zenio/shared/widgets/money.dart';
 import 'package:zenio/shared/widgets/zenio_dropdown.dart';
+import 'package:zenio/shared/widgets/zenio_snack_bar.dart';
 
 enum TransactionType { expense, income, transfer }
 
@@ -260,16 +263,115 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
     );
     final availableBalance = selectedSourceCard?.balance ?? 0.0;
     final isSourceFrozen = selectedSourceCard?.isFrozen ?? false;
+    // A credit card may go below zero: a purchase is never blocked by it.
+    final isCreditSource = selectedSourceCard?.isCredit ?? false;
 
     // Live amount validation
     final enteredAmount = AppNumberFormat.parseAmount(_amountController.text);
     final isDebit = _selectedType == TransactionType.expense || _selectedType == TransactionType.transfer;
-    final isExceedingBalance = isDebit && enteredAmount > availableBalance;
+    final isExceedingBalance =
+        isDebit && !isCreditSource && enteredAmount > availableBalance;
+    final showBalanceAfter = isDebit && isCreditSource && enteredAmount > 0;
     final isInvalidAmount = enteredAmount <= 0;
     final canSave = !isExceedingBalance && !isInvalidAmount;
     final currencySymbol = ref.watch(currencySymbolProvider);
     final currencyCode = ref.watch(currencyCodeProvider);
 
+
+    // The wallet the money comes from, and for a transfer where it goes.
+    Widget sourceField({String? label}) {
+      return ZenioDropdown<String>(
+        label: label,
+        value: selectedSource,
+        leadingIcon: Assets.icons.wallet.svg(
+          width: 20,
+          height: 20,
+          colorFilter: const ColorFilter.mode(
+            ZenioColors.textSecondary,
+            BlendMode.srcIn,
+          ),
+        ),
+        items: wallets.map((w) {
+          final card = walletState.cards
+              .cast<WalletCardModel?>()
+              .firstWhere(
+                (c) =>
+                    c?.bankName.trim().toLowerCase() ==
+                    w.trim().toLowerCase(),
+                orElse: () => null,
+              );
+          final bal = card?.balance ?? 0.0;
+          final hasEnough = !isDebit ||
+              (card?.isCredit ?? false) ||
+              bal >= enteredAmount;
+          return ZenioDropdownItem<String>(
+            value: w,
+            label: w,
+            subtitle: '$currencySymbol ${_formatAmount(bal)}',
+            subtitleColor: hasEnough
+                ? ZenioColors.textSecondary
+                : ZenioColors.danger,
+            icon: Assets.icons.wallet.svg(
+              width: 18,
+              height: 18,
+              colorFilter: const ColorFilter.mode(
+                ZenioColors.textSecondary,
+                BlendMode.srcIn,
+              ),
+            ),
+          );
+        }).toList(),
+        onChanged: (val) {
+          setState(() {
+            _sourceWallet = val;
+          });
+        },
+      );
+    }
+
+    Widget destinationField() {
+      return ZenioDropdown<String>(
+        label: 'To',
+        value: selectedDestination,
+        leadingIcon: Assets.icons.wallet.svg(
+          width: 20,
+          height: 20,
+          colorFilter: const ColorFilter.mode(
+            ZenioColors.textSecondary,
+            BlendMode.srcIn,
+          ),
+        ),
+        items: wallets.map((w) {
+          final card = walletState.cards
+              .cast<WalletCardModel?>()
+              .firstWhere(
+                (c) =>
+                    c?.bankName.trim().toLowerCase() ==
+                    w.trim().toLowerCase(),
+                orElse: () => null,
+              );
+          final bal = card?.balance ?? 0.0;
+          return ZenioDropdownItem<String>(
+            value: w,
+            label: w,
+            subtitle: '$currencySymbol ${_formatAmount(bal)}',
+            icon: Assets.icons.wallet.svg(
+              width: 18,
+              height: 18,
+              colorFilter: const ColorFilter.mode(
+                ZenioColors.textSecondary,
+                BlendMode.srcIn,
+              ),
+            ),
+          );
+        }).toList(),
+        onChanged: (val) {
+          setState(() {
+            _destinationWallet = val;
+          });
+        },
+      );
+    }
 
     return Container(
       decoration: const BoxDecoration(
@@ -318,7 +420,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                   _buildTabItem(
                     type: TransactionType.income,
                     label: 'Income',
-                    activeColor: ZenioColors.primary,
+                    activeColor: ZenioColors.primaryStrong,
                   ),
                   if (wallets.length >= 2)
                     _buildTabItem(
@@ -402,79 +504,106 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
               ),
             ),
 
-            // Live Error Banner if Exceeding Balance or Frozen
-            if (isExceedingBalance)
-              Padding(
-                padding: const EdgeInsets.only(top: 6),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 10,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFEAEA),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFFCA5A5)),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.error_outline_rounded,
-                        color: ZenioColors.danger,
-                        size: 18,
+            // Balance notes and warnings ease in and out instead of making
+            // the form jump.
+            AnimatedSize(
+              duration: ZenioMotion.of(context, ZenioMotion.standard),
+              curve: ZenioMotion.standardCurve,
+              alignment: Alignment.topCenter,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                // What a credit card's balance becomes, said plainly.
+                if (showBalanceAfter)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 2),
+                    child: Text(
+                      'Balance after transaction: ${Money.balance(availableBalance - enteredAmount, symbol: currencySymbol, alwaysShowDecimals: true)}',
+                      style: AppFonts.numeric(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: ZenioColors.textSecondary,
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Amount exceeds wallet balance (Available: $currencySymbol ${_formatAmount(availableBalance)} in $selectedSource). Change wallet or enter a valid amount.',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                    ),
+                  ),
+
+                // Live Error Banner if Exceeding Balance or Frozen
+                if (isExceedingBalance)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFEAEA),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFFCA5A5)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.error_outline_rounded,
                             color: ZenioColors.danger,
-                            height: 1.3,
+                            size: 18,
                           ),
-                        ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Amount exceeds wallet balance (Available: $currencySymbol ${_formatAmount(availableBalance)} in $selectedSource). Change wallet or enter a valid amount.',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: ZenioColors.danger,
+                                height: 1.3,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
-              )
-            else if (isSourceFrozen)
-              Padding(
-                padding: const EdgeInsets.only(top: 6),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 10,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFEF3C7),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFFCD34D)),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.ac_unit_rounded,
-                        color: Color(0xFFD97706),
-                        size: 18,
+                    ),
+                  )
+                else if (isSourceFrozen)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Note: $selectedSource is currently frozen.',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF3C7),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFFCD34D)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.ac_unit_rounded,
                             color: Color(0xFFD97706),
-                            height: 1.3,
+                            size: 18,
                           ),
-                        ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Note: $selectedSource is currently frozen.',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFFD97706),
+                                height: 1.3,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
               ),
+            ),
             const SizedBox(height: 6),
 
             // Field 1: Date Selector
@@ -520,129 +649,58 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
             ),
              const SizedBox(height: 6),
 
-            // Field 2: Source Wallet Selector
-            ZenioDropdown<String>(
-              value: selectedSource,
-              leadingIcon: Assets.icons.wallet.svg(
-                width: 20,
-                height: 20,
-                colorFilter: const ColorFilter.mode(
-                  ZenioColors.textSecondary,
-                  BlendMode.srcIn,
-                ),
-              ),
-              items: wallets.map((w) {
-                final card = walletState.cards
-                    .cast<WalletCardModel?>()
-                    .firstWhere(
-                      (c) =>
-                          c?.bankName.trim().toLowerCase() ==
-                          w.trim().toLowerCase(),
-                      orElse: () => null,
-                    );
-                final bal = card?.balance ?? 0.0;
-                final hasEnough = !isDebit || bal >= enteredAmount;
-                return ZenioDropdownItem<String>(
-                  value: w,
-                  label: w,
-                  subtitle: '$currencySymbol ${_formatAmount(bal)}',
-                  subtitleColor: hasEnough
-                      ? ZenioColors.textSecondary
-                      : ZenioColors.danger,
-                  icon: Assets.icons.wallet.svg(
-                    width: 18,
-                    height: 18,
-                    colorFilter: const ColorFilter.mode(
-                      ZenioColors.textSecondary,
-                      BlendMode.srcIn,
-                    ),
-                  ),
-                );
-              }).toList(),
-              onChanged: (val) {
-                setState(() {
-                  _sourceWallet = val;
-                });
-              },
-            ),
-            const SizedBox(height: 6),
-
-            // Field 3: Category OR Destination Wallet (with Swap Button for Transfer)
+            // Field 2 & 3: the wallet and a category, or for a transfer the
+            // From and To wallets with a swap button between them.
             if (_selectedType == TransactionType.transfer)
               Stack(
-                clipBehavior: Clip.none,
                 children: [
-                  // Destination Wallet Field
-                  ZenioDropdown<String>(
-                    value: selectedDestination,
-                    leadingIcon: Assets.icons.wallet.svg(
-                      width: 20,
-                      height: 20,
-                      colorFilter: const ColorFilter.mode(
-                        ZenioColors.textSecondary,
-                        BlendMode.srcIn,
-                      ),
-                    ),
-                    items: wallets.map((w) {
-                      final card = walletState.cards
-                          .cast<WalletCardModel?>()
-                          .firstWhere(
-                            (c) =>
-                                c?.bankName.trim().toLowerCase() ==
-                                w.trim().toLowerCase(),
-                            orElse: () => null,
-                          );
-                      final bal = card?.balance ?? 0.0;
-                      return ZenioDropdownItem<String>(
-                        value: w,
-                        label: w,
-                        subtitle: '$currencySymbol ${_formatAmount(bal)}',
-                        icon: Assets.icons.wallet.svg(
-                          width: 18,
-                          height: 18,
-                          colorFilter: const ColorFilter.mode(
-                            ZenioColors.textSecondary,
-                            BlendMode.srcIn,
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                    onChanged: (val) {
-                      setState(() {
-                        _destinationWallet = val;
-                      });
-                    },
+                  Column(
+                    children: [
+                      sourceField(label: 'From'),
+                      const SizedBox(height: 6),
+                      destinationField(),
+                    ],
                   ),
-
-                  // Floating Circular Swap Button (⇄)
+                  // Straddles the two fields, inside the Stack so all of it
+                  // can be tapped.
                   Positioned(
                     right: 60,
-                    top: -28,
-                    child: GestureDetector(
-                      onTap: () =>
-                          _swapWallets(selectedSource, selectedDestination),
-                      child: Container(
-                        width: 50,
-                        height: 50,
-                        decoration: BoxDecoration(
-                          color: ZenioColors.fieldFill,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.white,
-                            width: 5,
-                          ),
-                        ),
-                        child: Center(
-                          child: AnimatedRotation(
-                            turns: _swapTurns,
-                            duration: ZenioMotion.standard,
-                            curve: Curves.easeInOut,
-                            child: Assets.icons.swap.svg(
-                              width: 22,
-                              height: 22,
-                              colorFilter: const ColorFilter.mode(
-                                Color(0xFF8C43E6),
-                                BlendMode.srcIn,
+                    top: 0,
+                    bottom: 0,
+                    child: Center(
+                      child: Semantics(
+                        button: true,
+                        label: 'Swap From and To wallets',
+                        excludeSemantics: true,
+                        onTap: () =>
+                            _swapWallets(selectedSource, selectedDestination),
+                        child: GestureDetector(
+                          onTap: () =>
+                              _swapWallets(selectedSource, selectedDestination),
+                          child: Container(
+                            width: 50,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              color: ZenioColors.fieldFill,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.white,
+                                width: 5,
+                              ),
+                            ),
+                            child: Center(
+                              child: AnimatedRotation(
+                                turns: _swapTurns,
+                                duration: ZenioMotion.standard,
+                                curve: Curves.easeInOut,
+                                child: Assets.icons.swap.svg(
+                                  width: 22,
+                                  height: 22,
+                                  colorFilter: const ColorFilter.mode(
+                                    Color(0xFF8C43E6),
+                                    BlendMode.srcIn,
+                                  ),
+                                ),
                               ),
                             ),
                           ),
@@ -652,7 +710,9 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                   ),
                 ],
               )
-            else
+            else ...[
+              sourceField(),
+              const SizedBox(height: 6),
               // Category Chips Section for Expense / Income
               Container(
                 clipBehavior: Clip.antiAlias,
@@ -663,17 +723,25 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // The Manage link's tap area reaches into the row's padding
+                    // and the gap below, so the row keeps its height.
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 12, 16, 0),
+                      padding: const EdgeInsets.fromLTRB(20, 1, 6, 0),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
-                            'Category',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: ZenioColors.textSecondary,
+                          Flexible(
+                            child: Text(
+                              _selectedType == TransactionType.income
+                                  ? 'Category (optional)'
+                                  : 'Category',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: ZenioColors.textSecondary,
+                              ),
                             ),
                           ),
                           GestureDetector(
@@ -687,44 +755,51 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                               }
                             },
                             behavior: HitTestBehavior.opaque,
-                            child: const Padding(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 4,
-                                vertical: 2,
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.tune_rounded,
-                                    size: 14,
-                                    color: ZenioColors.primary,
-                                  ),
-                                  SizedBox(width: 4),
-                                  Text(
-                                    'Manage',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      color: ZenioColors.primary,
+                            child: Semantics(
+                              button: true,
+                              label: 'Manage categories',
+                              excludeSemantics: true,
+                              child: const Padding(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 13,
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.tune_rounded,
+                                      size: 14,
+                                      color: ZenioColors.primaryStrong,
                                     ),
-                                  ),
-                                ],
+                                    SizedBox(width: 4),
+                                    Text(
+                                      'Manage',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: ZenioColors.primaryStrong,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 10),
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       physics: const BouncingScrollPhysics(),
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                       child: Row(
                         children: categories.map((cat) {
+                            // The first category is only a default for spending; income is
+                            // never filed under "Food" unless the user picks it.
                             final isSelected = _selectedCategory == cat.name ||
                                 (_selectedCategory == null &&
+                                    _selectedType == TransactionType.expense &&
                                     cat == categories.first);
                             return Padding(
                               padding: const EdgeInsets.only(right: 8),
@@ -780,6 +855,7 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                   ],
                 ),
               ),
+            ],
             const SizedBox(height: 6),
 
             // Field 4: Note Input
@@ -839,12 +915,17 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                     ? () async {
                         final amount = AppNumberFormat.parseAmount(_amountController.text);
                         final note = _noteController.text.trim();
-                        final title = _selectedType == TransactionType.transfer
-                            ? '$transferTitlePrefix$selectedDestination'
-                            : (_selectedCategory ??
-                                (categories.isNotEmpty
-                                    ? categories.first.name
-                                    : 'Transaction'));
+                        final title = switch (_selectedType) {
+                          TransactionType.transfer =>
+                            '$transferTitlePrefix$selectedDestination',
+                          // Income without a chosen category is just Income.
+                          TransactionType.income =>
+                            _selectedCategory ?? 'Income',
+                          TransactionType.expense => _selectedCategory ??
+                              (categories.isNotEmpty
+                                  ? categories.first.name
+                                  : 'Transaction'),
+                        };
                         
                         final isIncome = _selectedType == TransactionType.income;
                         final formattedDate = DateFormat('dd-MM-yyyy').format(_selectedDate);
@@ -889,7 +970,21 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
                         }
 
                         await HapticFeedback.lightImpact();
-                        if (!mounted) return;
+                        if (!context.mounted) return;
+                        // A short confirmation: the new item may be dated
+                        // outside what the screen behind shows.
+                        final what = switch (_selectedType) {
+                          TransactionType.expense => 'Expense added · $title',
+                          TransactionType.income => 'Income added · $title',
+                          TransactionType.transfer =>
+                            'Transfer added · $selectedSource → $selectedDestination',
+                        };
+                        ZenioSnackBar.show(
+                          context,
+                          message:
+                              '$what · ${Money.signed(amount, symbol: currencySymbol, direction: MoneyDirection.neutral)}',
+                          type: ZenioSnackBarType.success,
+                        );
                         Navigator.of(context).pop();
                       }
                     : null,
@@ -930,25 +1025,31 @@ class _AddTransactionBottomSheetState extends ConsumerState<AddTransactionBottom
     final isSelected = _selectedType == type;
 
     return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          setState(() {
-            _selectedType = type;
-          });
-        },
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          decoration: BoxDecoration(
-            color: isSelected ? ZenioColors.fieldFill : Colors.transparent,
-            borderRadius: BorderRadius.circular(30),
-          ),
-          child: Center(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w300,
-                color: isSelected ? activeColor : const Color(0xFF808080),
+      child: Semantics(
+        button: true,
+        selected: isSelected,
+        child: GestureDetector(
+          onTap: () {
+            setState(() {
+              _selectedType = type;
+            });
+          },
+          behavior: HitTestBehavior.opaque,
+          child: AnimatedContainer(
+            duration: ZenioMotion.of(context, ZenioMotion.fast),
+            curve: ZenioMotion.standardCurve,
+            decoration: BoxDecoration(
+              color: isSelected ? ZenioColors.fieldFill : Colors.transparent,
+              borderRadius: BorderRadius.circular(30),
+            ),
+            child: Center(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w400,
+                  color: isSelected ? activeColor : ZenioColors.textSecondary,
+                ),
               ),
             ),
           ),

@@ -143,17 +143,12 @@ class TopSpentCard extends ConsumerWidget {
     return 0;
   }
 
-  String _formatAmount(double amount) {
-    return AppNumberFormat.formatAmount(amount);
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final categoryColor = _getCategoryColor(spend);
     final ratio = _getSpendRatio(spend, totalSpend);
     final expanded = isExpanded ?? false;
     final emoji = _getCategoryEmoji(ref, spend);
-    final currencyCode = ref.watch(currencyCodeProvider);
 
     return GestureDetector(
       onTap: onTap,
@@ -202,38 +197,21 @@ class TopSpentCard extends ConsumerWidget {
                       ),
                       const SizedBox(height: 3),
                       Text(
-                        '${AppNumberFormat.formatNumber(spend.spendsCount)} spends',
+                        '${AppNumberFormat.formatNumber(spend.spendsCount)} '
+                        '${spend.spendsCount == 1 ? 'spend' : 'spends'}',
                         style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w400,
-                          color: ZenioColors.textPlaceholder,
+                          color: ZenioColors.textSecondary,
                         ),
                       ),
                     ],
                   ),
                 ),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
-                  children: [
-                    Text(
-                      '- ${_formatAmount(spend.amount)}',
-                      style: AppFonts.numeric(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: ZenioColors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      currencyCode,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: ZenioColors.textSecondary,
-                      ),
-                    ),
-                  ],
+                // Spending, written like every other amount: −₹3,698.
+                AmountText(
+                  spend.amount,
+                  direction: MoneyDirection.outgoing,
                 ),
               ],
             ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
+import 'package:zenio/features/wallet/domain/wallet_kind.dart';
 import 'package:zenio/features/wallet/presentation/widgets/wallet_card_widget.dart';
 import 'package:zenio/shared/shared.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
@@ -45,18 +46,19 @@ class WalletCardDetailWidget extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Field 1: Wallet Id
-                const Text(
-                  'Wallet Id :',
-                  style: TextStyle(
+                // Field 1: the card's last four digits, or the wallet's type
+                // (only a card has a number to show).
+                Text(
+                  card.lastFour != null ? 'Card number :' : 'Type :',
+                  style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w400,
-                    color: ZenioColors.textPlaceholder,
+                    color: ZenioColors.textSecondary,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  card.cardNumber,
+                  card.lastFour != null ? '•••• ${card.lastFour}' : card.cardType,
                   style: AppFonts.numeric(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
@@ -79,7 +81,7 @@ class WalletCardDetailWidget extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w400,
-                            color: ZenioColors.textPlaceholder,
+                            color: ZenioColors.textSecondary,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -94,17 +96,31 @@ class WalletCardDetailWidget extends StatelessWidget {
                       ],
                     ),
 
-                    // Snowflake Icon on Right Side
+                    // Frozen: said in words, not only by the icon.
                     if (isFrozen)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 2, right: 6),
-                        child: Assets.icons.freeze.svg(
-                          width: 28,
-                          height: 28,
-                          colorFilter: const ColorFilter.mode(
-                            ZenioColors.border,
-                            BlendMode.srcIn,
-                          ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Assets.icons.freeze.svg(
+                              width: 22,
+                              height: 22,
+                              colorFilter: const ColorFilter.mode(
+                                ZenioColors.textSecondary,
+                                BlendMode.srcIn,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            const Text(
+                              'Frozen',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: ZenioColors.textSecondary,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                   ],

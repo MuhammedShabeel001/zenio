@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zenio/shared/widgets/item_actions.dart';
 import 'package:zenio/features/home/domain/models/transaction/transaction_kind.dart';
+import 'package:zenio/features/home/presentation/widgets/transaction_amount.dart';
 import 'package:zenio/features/transactions/domain/models/transaction_detail_model.dart';
 import 'package:zenio/shared/shared.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
@@ -45,7 +46,9 @@ class _TransactionDetailCardState extends ConsumerState<TransactionDetailCard>
   late AnimationController _animationController;
   late Animation<double> _animation;
   double _dragOffset = 0;
-  static const double _maxDragDistance = 146;
+  /// How far the card slides open: Delete and Edit, or Delete alone for
+  /// items that cannot be edited.
+  double get _maxDragDistance => widget.onEdit == null ? 76 : 146;
   bool _internalTileExpanded = false;
 
   bool get _effectiveIsTileExpanded =>
@@ -138,13 +141,16 @@ class _TransactionDetailCardState extends ConsumerState<TransactionDetailCard>
     }
   }
 
-  String _formatAmount(double amount) {
-    return AppNumberFormat.formatAmount(amount);
-  }
-
   @override
   Widget build(BuildContext context) {
-    final currencyCode = ref.watch(currencyCodeProvider);
+    final tx = widget.transaction;
+    final kind = tx.resolvedKind;
+    final direction = moneyDirectionOf(kind, isIncome: tx.isIncome);
+    final amountText = Money.signed(
+      tx.amount,
+      symbol: ref.watch(currencySymbolProvider),
+      direction: direction,
+    );
     return ItemActions(
       onEdit: widget.onEdit,
       onDelete: widget.onDelete,
@@ -173,6 +179,7 @@ class _TransactionDetailCardState extends ConsumerState<TransactionDetailCard>
                       widget.onDelete?.call();
                     },
                   ),
+                  if (widget.onEdit != null) ...[
                   const SizedBox(width: 3),
   
                   // Edit Button (White Circle + Pencil Edit Icon)
@@ -199,6 +206,7 @@ class _TransactionDetailCardState extends ConsumerState<TransactionDetailCard>
                       ),
                     ),
                   ),
+                  ],
                 ],
               ),
             ),
@@ -235,7 +243,18 @@ class _TransactionDetailCardState extends ConsumerState<TransactionDetailCard>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     // Top Row: Arrow badge, Title & Date, Amount & Currency
-                    Row(
+                    Semantics(
+                      label: transactionSemanticsLabel(
+                        kind: kind,
+                        title: tx.title,
+                        amount: amountText,
+                        when: tx.date.toRelativeDate,
+                      ),
+                      onTapHint: _effectiveIsTileExpanded
+                          ? 'hide details'
+                          : 'show details',
+                      excludeSemantics: true,
+                      child: Row(
                       children: [
                         // Direction Arrow Circle Badge (↓ for income, ↑ for expense)
                         Container(
@@ -296,38 +315,21 @@ class _TransactionDetailCardState extends ConsumerState<TransactionDetailCard>
                                 style: const TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w400,
-                                  color: Color(0xFFB2B2B2),
+                                  color: ZenioColors.textSecondary,
                                 ),
                               ),
                             ],
                           ),
                         ),
 
-                        // Amount & Currency
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.baseline,
-                          textBaseline: TextBaseline.alphabetic,
-                          children: [
-                            Text(
-                              _formatAmount(widget.transaction.amount),
-                              style: AppFonts.numeric(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: const Color(0xFF000000),
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              currencyCode,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: ZenioColors.textSecondary,
-                              ),
-                            ),
-                          ],
+                        // Signed amount: +₹85,000 in, −₹420 out.
+                        AmountText(
+                          tx.amount,
+                          direction: direction,
+                          color: amountColorOf(kind),
                         ),
                       ],
+                    ),
                     ),
 
                     // Expandable Detail Section (Note, Divider, Bank Name & Timestamp)
@@ -400,11 +402,28 @@ class _TransactionDetailCardState extends ConsumerState<TransactionDetailCard>
                                   style: AppFonts.numeric(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w400,
-                                    color: const Color(0xFFB2B2B2),
+                                    color: ZenioColors.textSecondary,
                                   ),
                                 ),
                               ],
                             ),
+                            // Opening the row shows its details; editing is
+                            // one tap away from here.
+                            if (widget.onEdit != null) ...[
+                              const SizedBox(height: 8),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton.icon(
+                                  onPressed: widget.onEdit,
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: ZenioColors.primaryStrong,
+                                    minimumSize: const Size(48, 48),
+                                  ),
+                                  icon: const Icon(Icons.edit_outlined, size: 18),
+                                  label: const Text('Edit'),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),

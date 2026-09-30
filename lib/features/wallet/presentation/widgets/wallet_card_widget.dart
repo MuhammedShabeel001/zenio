@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
+import 'package:zenio/features/wallet/domain/wallet_kind.dart';
+import 'package:zenio/shared/theme/zenio_tokens.dart';
 import 'package:zenio/shared/utils/app_fonts.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 
@@ -59,15 +61,22 @@ class WalletCardWidget extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  card.bankName,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    letterSpacing: 0.5,
+                // Wallet names can be long; they end in "…" rather than
+                // pushing past the card.
+                Flexible(
+                  child: Text(
+                    card.bankName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      letterSpacing: 0.5,
+                    ),
                   ),
                 ),
+                const SizedBox(width: 12),
                 // Mastercard-style overlapping translucent circles
                 SizedBox(
                   width: 48,
@@ -102,11 +111,16 @@ class WalletCardWidget extends StatelessWidget {
               ],
             ),
 
-            // Middle Masked Card Number
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12),
+            // Middle Masked Card Number, for cards only. Spaced by the column,
+            // and on one line that shrinks only on narrow screens or with
+            // large text.
+            if (card.lastFour != null)
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
               child: Text(
-                '**** **** **** ${card.cardNumber.length >= 4 ? card.cardNumber.substring(card.cardNumber.length - 4) : card.cardNumber}',
+                '**** **** **** ${card.lastFour}',
+                maxLines: 1,
                 style: AppFonts.numeric(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -120,24 +134,35 @@ class WalletCardWidget extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  card.cardType.toUpperCase(),
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.white.withValues(alpha: 0.8),
-                    letterSpacing: 1.8,
-                  ),
-                ),
-                if (isFrozen)
-                  Assets.icons.freeze.svg(
-                    width: 24,
-                    height: 24,
-                    colorFilter: const ColorFilter.mode(
-                      Colors.white,
-                      BlendMode.srcIn,
+                // Card types can be typed in, so they can be long too.
+                Flexible(
+                  child: Text(
+                    card.cardType.toUpperCase(),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white.withValues(alpha: 0.8),
+                      letterSpacing: 1.8,
                     ),
                   ),
+                ),
+                const SizedBox(width: 12),
+                // Fades in and out as the wallet is frozen or unfrozen.
+                AnimatedSwitcher(
+                  duration: ZenioMotion.of(context, ZenioMotion.fast),
+                  child: isFrozen
+                      ? Assets.icons.freeze.svg(
+                          width: 24,
+                          height: 24,
+                          colorFilter: const ColorFilter.mode(
+                            Colors.white,
+                            BlendMode.srcIn,
+                          ),
+                        )
+                      : const SizedBox.shrink(),
+                ),
               ],
             ),
           ],

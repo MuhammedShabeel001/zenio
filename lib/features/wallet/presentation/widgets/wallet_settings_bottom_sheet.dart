@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
 import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
+import 'package:zenio/features/wallet/domain/wallet_kind.dart';
 import 'package:zenio/features/wallet/presentation/widgets/edit_wallet_dialog.dart';
 import 'package:zenio/shared/providers/currency_provider/currency_provider.dart';
 import 'package:zenio/shared/theme/zenio_tokens.dart';
@@ -128,8 +129,8 @@ class WalletSettingsBottomSheet extends ConsumerWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        card.cardNumber.isNotEmpty
-                            ? '•••• ${card.cardNumber.length >= 4 ? card.cardNumber.substring(card.cardNumber.length - 4) : card.cardNumber}'
+                        card.lastFour != null
+                            ? '•••• ${card.lastFour}'
                             : card.cardType,
                         style: const TextStyle(
                           fontSize: 12,

@@ -141,14 +141,14 @@ class _DebtCardState extends ConsumerState<DebtCard>
     }
   }
 
-  String _formatAmount(double amount) {
-    final formatted = AppNumberFormat.formatAmount(amount);
-    return widget.debt.isOwed ? '- $formatted' : '+ $formatted';
-  }
-
   @override
   Widget build(BuildContext context) {
-    final currencyCode = ref.watch(currencyCodeProvider);
+    // isOwed means the user owes this person: money going out.
+    final youOwe = widget.debt.isOwed;
+    final direction =
+        youOwe ? MoneyDirection.outgoing : MoneyDirection.incoming;
+    final directionLabel = youOwe ? 'You owe' : 'Owes you';
+    final when = widget.debt.date.toRelativeDate;
     return ItemActions(
       onEdit: widget.onEdit,
       onDelete: widget.onDelete,
@@ -250,7 +250,11 @@ class _DebtCardState extends ConsumerState<DebtCard>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     // Top Row: Arrow Badge, Person Name & Date, Amount
-                    Row(
+                    Semantics(
+                      label: '${widget.debt.personName}, $directionLabel, '
+                          '${Money.signed(widget.debt.amount, symbol: ref.watch(currencySymbolProvider), direction: direction)}, $when',
+                      excludeSemantics: true,
+                      child: Row(
                       children: [
                         // Circle Badge with Up Arrow SVG Icon
                         Container(
@@ -260,8 +264,10 @@ class _DebtCardState extends ConsumerState<DebtCard>
                             color: ZenioColors.fieldFill,
                             shape: BoxShape.circle,
                           ),
+                          // Money coming to you points down, as income
+                          // does elsewhere; money you owe points up.
                           child: Center(
-                            child: widget.debt.isOwed
+                            child: !youOwe
                                 ? Assets.icons.downArrow.svg(
                                     width: 24,
                                     height: 24,
@@ -297,43 +303,35 @@ class _DebtCardState extends ConsumerState<DebtCard>
                                 ),
                               ),
                               const SizedBox(height: 3),
-                              Text(
-                                widget.debt.date,
+                              Text.rich(
+                                TextSpan(
+                                  children: [
+                                    TextSpan(
+                                      text: directionLabel,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        color: youOwe
+                                            ? ZenioColors.textPrimary
+                                            : ZenioColors.income,
+                                      ),
+                                    ),
+                                    TextSpan(text: ' · $when'),
+                                  ],
+                                ),
                                 style: const TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w400,
-                                  color: Color(0xFFB2B2B2),
+                                  color: ZenioColors.textSecondary,
                                 ),
                               ),
                             ],
                           ),
                         ),
 
-                        // Amount + Currency Unit
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.baseline,
-                          textBaseline: TextBaseline.alphabetic,
-                          children: [
-                            Text(
-                              _formatAmount(widget.debt.amount),
-                              style: AppFonts.numeric(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: const Color(0xFF000000),
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              currencyCode,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: ZenioColors.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
+                        // Signed amount: +₹1,200 owed to you, −₹500 you owe.
+                        AmountText(widget.debt.amount, direction: direction),
                       ],
+                    ),
                     ),
 
                     // Expandable Detail Section (Description Header & Note Text)

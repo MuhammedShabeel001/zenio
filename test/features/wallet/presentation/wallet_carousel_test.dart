@@ -76,14 +76,16 @@ void main() {
     await tester.pump();
   }
 
-  /// Lets database work finish between frames.
-  Future<void> settle(WidgetTester tester) async {
-    for (var i = 0; i < 15; i++) {
+  /// Lets database work finish between frames until [done], giving up after
+  /// a few seconds.
+  Future<void> settle(WidgetTester tester, bool Function() done) async {
+    for (var i = 0; i < 150 && !done(); i++) {
       await tester.runAsync(
         () => Future<void>.delayed(const Duration(milliseconds: 20)),
       );
       await tester.pump(const Duration(milliseconds: 50));
     }
+    await tester.pumpAndSettle();
   }
 
   testWidgets('freezing the card on screen shows that card frozen',
@@ -91,7 +93,10 @@ void main() {
     await showWallets(tester);
 
     await tester.tap(find.text('Freeze'));
-    await settle(tester);
+    await settle(
+      tester,
+      () => container.read(walletNotifierProvider).cards.any((c) => c.isFrozen),
+    );
 
     final frozen = tester
         .widgetList<WalletCardWidget>(find.byType(WalletCardWidget))
@@ -101,6 +106,22 @@ void main() {
     final onScreen = state.cards[state.activeCardIndex % state.cards.length];
     expect(onScreen.isFrozen, isTrue);
     expect(frozen, [onScreen.id]);
+
+    // Says what freezing does, and can be undone.
+    expect(find.text('Unfreeze'), findsOneWidget);
+    expect(
+      find.text('${onScreen.bankName} frozen · not counted in Total balance'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Undo'));
+    await settle(
+      tester,
+      () => container
+          .read(walletNotifierProvider)
+          .cards
+          .every((c) => !c.isFrozen),
+    );
+    expect(find.text('Freeze'), findsOneWidget);
   });
 
   testWidgets('a new wallet is brought into view', (tester) async {

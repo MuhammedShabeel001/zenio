@@ -29,9 +29,17 @@ class _MemorySubscriptions implements ISubscriptionsRepository {
 }
 
 void main() {
-  testWidgets(
-      'a reminder shows its subscription even if the last filter hides it',
-      (tester) async {
+  late ProviderContainer container;
+
+  String filter() =>
+      container.read(subscriptionsNotifierProvider).selectedFilter;
+
+  /// Fifteen monthly subscriptions, the filter left on [lastFilter] from an
+  /// earlier visit, and a screen that a reminder for "Service 14" opens.
+  Future<void> openReminder(
+    WidgetTester tester, {
+    required String lastFilter,
+  }) async {
     tester.view.physicalSize = const Size(1170, 2532);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
@@ -57,28 +65,74 @@ void main() {
           iconName: '🎬',
         ),
     ]);
-    final container = TestStorage.create().container(
+    container = TestStorage.create().container(
       overrides: [
         subscriptionsRepositoryRepoProvider.overrideWith((ref) => repository),
       ],
     );
     await tester.runAsync(() => container.read(sqlitePrefsProvider.future));
-    container.read(subscriptionsNotifierProvider.notifier).updateFilter(
-          'Weekly',
-        );
+    container
+        .read(subscriptionsNotifierProvider.notifier)
+        .updateFilter(lastFilter);
     await tester.pump();
 
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: const MaterialApp(
-          home: SubscriptionsScreenMobile(initialExpandedId: 's14'),
+        child: MaterialApp(
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: TextButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const SubscriptionsScreenMobile(
+                      initialExpandedId: 's14',
+                    ),
+                  ),
+                ),
+                child: const Text('Reminder'),
+              ),
+            ),
+          ),
         ),
       ),
     );
+    await tester.tap(find.text('Reminder'));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets(
+      'a reminder shows its subscription even if the last filter hides it, '
+      'and the filter comes back afterwards', (tester) async {
+    await openReminder(tester, lastFilter: 'Weekly');
+
+    expect(filter(), 'All');
+    expect(find.text('Service 14').hitTestable(), findsOneWidget);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(filter(), 'Weekly');
+  });
+
+  testWidgets('a filter the user picks on the reminder screen is kept',
+      (tester) async {
+    await openReminder(tester, lastFilter: 'Weekly');
+
+    await tester.tap(find.text('All'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(PopupMenuItem<String>, 'Yearly'));
+    await tester.pumpAndSettle();
+    await tester.pageBack();
     await tester.pumpAndSettle();
 
-    expect(container.read(subscriptionsNotifierProvider).selectedFilter, 'All');
+    expect(filter(), 'Yearly');
+  });
+
+  testWidgets('a filter that already shows the subscription is left alone',
+      (tester) async {
+    await openReminder(tester, lastFilter: 'Monthly');
+
+    expect(filter(), 'Monthly');
     expect(find.text('Service 14').hitTestable(), findsOneWidget);
   });
 }

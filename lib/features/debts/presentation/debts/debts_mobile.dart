@@ -17,11 +17,14 @@ class DebtsScreenMobile extends ConsumerStatefulWidget {
 class _DebtsScreenMobileState extends ConsumerState<DebtsScreenMobile> {
   String? _openDebtId;
   String? _expandedTileId;
-  String _formatWholePart(double amount) =>
-      AppNumberFormat.formatWholePart(amount);
-
-  String _formatDecimalPart(double amount) =>
-      AppNumberFormat.formatDecimalPart(amount);
+  /// Says which way the headline amount goes, since it is shown without a
+  /// sign: "Net · You're owed", "You owe in total", and so on.
+  static String _totalCaption(String filter, double net) {
+    if (filter == 'I Owe') return 'You owe in total';
+    if (filter == 'Owed to me') return 'Owed to you in total';
+    if ((net * 100).round() == 0) return 'Net · All settled';
+    return net > 0 ? "Net · You're owed" : 'Net · You owe';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +46,6 @@ class _DebtsScreenMobileState extends ConsumerState<DebtsScreenMobile> {
       }
     }
 
-    final currencySymbol = ref.watch(currencySymbolProvider);
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -54,7 +56,7 @@ class _DebtsScreenMobileState extends ConsumerState<DebtsScreenMobile> {
             const ScreenTitleBar(title: 'Debts'),
             // Dark Top Header Section
             Padding(
-              padding: const EdgeInsets.fromLTRB(10, 4, 10, 20),
+              padding: const EdgeInsets.fromLTRB(10, 4, 10, 13),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -62,43 +64,13 @@ class _DebtsScreenMobileState extends ConsumerState<DebtsScreenMobile> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Total Balance (₹ - 268.01)
+                      // What is owed, and which way.
                       Flexible(
-                        // Large amounts and text sizes shrink to fit instead of overflowing.
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.centerLeft,
-                          child: RichText(
-                            text: TextSpan(
-                              children: [
-                                TextSpan(
-                                  text: '$currencySymbol ',
-                                  style: AppFonts.numeric(
-                                    fontSize: 32,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                    letterSpacing: -0.5,
-                                  ),
-                                ),
-                                TextSpan(
-                                  text: _formatWholePart(totalBalance),
-                                  style: AppFonts.numeric(
-                                    fontSize: 32,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                    letterSpacing: -0.5,
-                                  ),
-                                ),
-                                TextSpan(
-                                  text: _formatDecimalPart(totalBalance),
-                                  style: AppFonts.numeric(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                    color: const Color(0xFF808080),
-                                  ),
-                                ),
-                              ],
-                            ),
+                        child: HeadlineAmount(
+                          amount: totalBalance.abs(),
+                          caption: _totalCaption(
+                            state.selectedFilter,
+                            totalBalance,
                           ),
                         ),
                       ),
@@ -114,10 +86,10 @@ class _DebtsScreenMobileState extends ConsumerState<DebtsScreenMobile> {
                             vertical: 17,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF1A1A1A),
+                            color: ZenioColors.surfaceDark,
                             borderRadius: BorderRadius.circular(30),
                             border: Border.all(
-                              color: const Color(0xFF313131),
+                              color: ZenioColors.surfaceDarkBorder,
                               width: 1,
                             ),
                           ),
@@ -147,7 +119,7 @@ class _DebtsScreenMobileState extends ConsumerState<DebtsScreenMobile> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 13),
 
                   // Bottom Row: Filter Dropdown Pill (Debts v)
                   Row(
@@ -289,31 +261,36 @@ class _DebtsScreenMobileState extends ConsumerState<DebtsScreenMobile> {
         ),
       ],
       offset: const Offset(0, 40),
-      color: const Color(0xFF1A1A1A),
+      color: ZenioColors.surfaceDark,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1A1A1A),
-          borderRadius: BorderRadius.circular(30),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              label == 'Debts' ? 'All' : label,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: ZenioColors.border,
+      // 7pt of invisible padding above and below makes the tap target 48pt;
+      // the space around the pill row is reduced by the same amount.
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 7),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: ZenioColors.surfaceDark,
+            borderRadius: BorderRadius.circular(30),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label == 'Debts' ? 'All' : label,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: ZenioColors.border,
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            Assets.icons.dropDown.svg(
-              width: 24,
-              height: 24,
-            ),
-          ],
+              const SizedBox(width: 8),
+              Assets.icons.dropDown.svg(
+                width: 24,
+                height: 24,
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -1,5 +1,7 @@
-import 'dart:math';
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
 import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
@@ -9,6 +11,7 @@ import 'package:zenio/shared/utils/app_fonts.dart';
 import 'package:zenio/shared/utils/assets.gen.dart';
 import 'package:zenio/shared/utils/formatters.dart';
 import 'package:zenio/shared/widgets/zenio_dropdown.dart';
+import 'package:zenio/shared/widgets/zenio_snack_bar.dart';
 
 
 class AddWalletBottomSheet extends ConsumerStatefulWidget {
@@ -224,13 +227,6 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
     final balance = AppNumberFormat.parseAmount(_balanceController.text);
     final isEditing = widget.editingCard != null;
 
-    final r = Random();
-    final p1 = (r.nextInt(9000) + 1000).toString();
-    final p2 = (r.nextInt(9000) + 1000).toString();
-    final p3 = (r.nextInt(9000) + 1000).toString();
-    final p4 = (r.nextInt(9000) + 1000).toString();
-    final cardNo = '$p1  $p2  $p3  $p4';
-
     final selectedImage = _cardImages[_selectedImageIndex];
 
     final now = DateTime.now();
@@ -238,7 +234,7 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
       'January', 'February', 'March', 'April', 'May', 'June',
       'July', 'August', 'September', 'October', 'November', 'December',
     ];
-    final formattedDate = '${months[now.month - 1]} ${now.day} , ${now.year}';
+    final formattedDate = '${months[now.month - 1]} ${now.day}, ${now.year}';
 
     var finalType = _selectedType;
     if (_selectedType == '__CUSTOM__' || _isCustom) {
@@ -253,7 +249,9 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
     final newCard = WalletCardModel(
       id: isEditing ? widget.editingCard!.id : DateTime.now().toIso8601String(),
       bankName: name,
-      cardNumber: isEditing ? widget.editingCard!.cardNumber : cardNo,
+      // No made-up card number: a card's last four digits can be added
+      // when editing it.
+      cardNumber: isEditing ? widget.editingCard!.cardNumber : '',
       cardType: finalType,
       gradientStartHex: 'image:$selectedImage',
       gradientEndHex: 'image:$selectedImage',
@@ -283,7 +281,23 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
     }
 
     if (!mounted) return;
+    if (!isEditing) {
+      unawaited(HapticFeedback.lightImpact());
+      ZenioSnackBar.show(
+        context,
+        message: 'Wallet added · $name',
+        type: ZenioSnackBarType.success,
+      );
+    }
     Navigator.of(context).pop(true);
+  }
+
+  /// A credit card may start below zero (money already owed on it).
+  bool get _typeIsCredit {
+    final type = _selectedType == '__CUSTOM__' || _isCustom
+        ? _customTypeController.text
+        : _selectedType;
+    return type.toUpperCase().contains('CREDIT');
   }
 
   @override
@@ -362,10 +376,14 @@ class _AddWalletBottomSheetState extends ConsumerState<AddWalletBottomSheet> {
                     child: TextField(
                       controller: _balanceController,
                       readOnly: widget.editingCard != null,
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: TextInputType.numberWithOptions(
+                        decimal: true,
+                        signed: _typeIsCredit,
+                      ),
                       inputFormatters: [
-                        ThousandsSeparatorInputFormatter(),
+                        ThousandsSeparatorInputFormatter(
+                          allowNegative: _typeIsCredit,
+                        ),
                       ],
                       onChanged: (val) {
                         setState(() {});

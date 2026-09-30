@@ -36,13 +36,19 @@ class QuickActionItem extends StatelessWidget {
               ),
               child: Center(child: icon),
             ),
-            const SizedBox(height: 12),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w500,
-                color: Colors.black,
+            const SizedBox(height: 10),
+            // One line that shrinks to fit rather than breaking a word
+            // ("Subscription/s") on narrow screens or with large text.
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                maxLines: 1,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black,
+                ),
               ),
             ),
           ],

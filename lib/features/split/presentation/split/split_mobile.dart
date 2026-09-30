@@ -235,21 +235,32 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
                           ),
                           const SizedBox(height: 12),
 
-                          // Form Card 2: Coming back (Trip split mode only)
-                          if (!isEqualMode) ...[
-                            _buildCounterCard(
-                              iconWidget: const Icon(
-                                Icons.replay_rounded,
-                                size: 24,
-                                color: ZenioColors.textPrimary,
-                              ),
-                              title: 'Coming back',
-                              count: state.returnersCount,
-                              onDecrement: notifier.decrementReturners,
-                              onIncrement: notifier.incrementReturners,
-                            ),
-                            const SizedBox(height: 12),
-                          ],
+                          // Form Card 2: Coming back (Trip split mode only),
+                          // easing in and out as the mode changes.
+                          AnimatedSize(
+                            duration:
+                                ZenioMotion.of(context, ZenioMotion.standard),
+                            curve: ZenioMotion.standardCurve,
+                            alignment: Alignment.topCenter,
+                            child: isEqualMode
+                                ? const SizedBox(width: double.infinity)
+                                : Column(
+                                    children: [
+                                      _buildCounterCard(
+                                        iconWidget: const Icon(
+                                          Icons.replay_rounded,
+                                          size: 24,
+                                          color: ZenioColors.textPrimary,
+                                        ),
+                                        title: 'Coming back',
+                                        count: state.returnersCount,
+                                        onDecrement: notifier.decrementReturners,
+                                        onIncrement: notifier.incrementReturners,
+                                      ),
+                                      const SizedBox(height: 12),
+                                    ],
+                                  ),
+                          ),
 
                           const SizedBox(height: 16),
 
@@ -260,19 +271,21 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
                               const Icon(
                                 Icons.info_outline_rounded,
                                 size: 16,
-                                color: ZenioColors.textPlaceholder,
+                                color: ZenioColors.textSecondary,
                               ),
                               const SizedBox(width: 8),
                               Flexible(
                                 child: Text(
                                   isEqualMode
-                                      ? 'Standard split divides the amount equally.'
-                                      : 'Trip split divides the bill into two halves: one for going and one for returning.',
+                                      ? 'Equal split divides the amount equally between everyone.'
+                                      : 'Trip split halves the bill: one half is shared by everyone going, the other by those coming back.',
                                   textAlign: TextAlign.center,
+                                  // Readable size and contrast: it is the only
+                                  // explanation of how the split works.
                                   style: const TextStyle(
-                                    fontSize: 8,
+                                    fontSize: 12,
                                     fontWeight: FontWeight.w400,
-                                    color: ZenioColors.textPlaceholder,
+                                    color: ZenioColors.textSecondary,
                                     height: 1.3,
                                   ),
                                 ),
@@ -322,7 +335,10 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
                                   color: Colors.white,
                                   shape: const CircleBorder(),
                                   clipBehavior: Clip.antiAlias,
-                                  child: InkWell(
+                                  child: Semantics(
+                                    button: true,
+                                    label: 'Share split',
+                                    child: InkWell(
                                     customBorder: const CircleBorder(),
                                     onTap: () => _handleShare(buttonContext, state),
                                     child: SizedBox(
@@ -339,6 +355,7 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
                                         ),
                                       ),
                                     ),
+                                  ),
                                   ),
                                 );
                               },
@@ -545,7 +562,7 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w400,
-            color: ZenioColors.textPlaceholder,
+            color: ZenioColors.textSecondary,
           ),
         ),
         const SizedBox(height: 2),
@@ -578,7 +595,7 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w400,
-                  color: ZenioColors.textPlaceholder,
+                  color: ZenioColors.textSecondary,
                 ),
               ),
               const SizedBox(height: 2),
@@ -613,7 +630,7 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w400,
-                  color: ZenioColors.textPlaceholder,
+                  color: ZenioColors.textSecondary,
                 ),
               ),
               const SizedBox(height: 2),

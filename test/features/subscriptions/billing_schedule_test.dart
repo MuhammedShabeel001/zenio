@@ -61,8 +61,9 @@ void main() {
     test('weekly and yearly cycles', () {
       expect(
         rolledForward(
-                _sub(DateTime(2026, 9, 1), 'Weekly'), DateTime(2026, 9, 20),)
-            .nextBillingDate,
+          _sub(DateTime(2026, 9, 1), 'Weekly'),
+          DateTime(2026, 9, 20),
+        ).nextBillingDate,
         DateTime(2026, 9, 22),
       );
       expect(
@@ -140,5 +141,31 @@ void main() {
     );
     expect(stored.single.amount, 799);
     expect(stored.single.billingDay, 31);
+  });
+
+  group('subscription totals', () {
+    SubscriptionModel priced(double amount, String cycle) =>
+        _sub(DateTime(2026, 10), cycle).copyWith(amount: amount);
+
+    test('all cycles together are shown as a monthly equivalent', () {
+      final subs = [
+        priced(120, 'Weekly'), // 120 × 52 / 12 = 520
+        priced(649, 'Monthly'),
+        priced(1200, 'Yearly'), // 1200 / 12 = 100
+      ];
+
+      expect(subscriptionsTotal(subs, 'All'), closeTo(1269, 0.001));
+    });
+
+    test('one cycle is shown as its own plain total', () {
+      final weekly = [priced(120, 'Weekly'), priced(80, 'Weekly')];
+
+      expect(subscriptionsTotal(weekly, 'Weekly'), 200);
+    });
+
+    test('daily and unknown cycles', () {
+      expect(monthlyEquivalent(priced(12, 'Daily')), closeTo(365, 0.001));
+      expect(monthlyEquivalent(priced(99, 'Fortnightly')), 99);
+    });
   });
 }
