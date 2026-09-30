@@ -103,7 +103,8 @@ class _SplashScreenWebState extends ConsumerState<SplashScreenWeb>
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: _navigateToNext,
+      // After a failed start, a tap anywhere tries again, like the button.
+      onTap: _startupFailed ? _retryStartup : _navigateToNext,
       behavior: HitTestBehavior.opaque,
       child: Scaffold(
         backgroundColor: AppColors.black,

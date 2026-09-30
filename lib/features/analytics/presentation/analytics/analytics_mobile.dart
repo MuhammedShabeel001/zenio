@@ -62,8 +62,10 @@ class _AnalyticsScreenMobileState extends ConsumerState<AnalyticsScreenMobile> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(analyticsNotifierProvider);
-    final walletState = ref.watch(walletNotifierProvider);
-    final walletCards = walletState.cards;
+    // Only the wallets, so swiping the wallet carousel does not rebuild this.
+    final walletCards = ref.watch(
+      walletNotifierProvider.select((s) => s.cards),
+    );
     final totalBalance = state.totalBalance;
     final categories = state.categorySpends.take(10).toList();
     final currencySymbol = ref.watch(currencySymbolProvider);

@@ -237,12 +237,6 @@ class NotificationService {
     }
   }
 
-  /// Cancel a scheduled subscription notification
-  Future<void> cancelSubscriptionReminder(String subscriptionId) async {
-    final id = _getNotificationId(subscriptionId);
-    await _notificationsPlugin.cancel(id);
-  }
-
   /// Makes the scheduled reminders match [subscriptions]: one reminder per
   /// subscription, and none for subscriptions that no longer exist.
   Future<void> syncSubscriptionReminders(

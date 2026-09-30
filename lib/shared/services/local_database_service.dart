@@ -121,16 +121,6 @@ class LocalDatabaseService {
     );
   }
 
-  /// Inserts or replaces a single transaction row.
-  Future<void> saveTransactionMap(Map<String, dynamic> tx) async {
-    final db = await database;
-    await db.insert(
-      _transactionsTable,
-      tx,
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
-  }
-
   /// Inserts [transactions] in one database transaction: either every row is
   /// written or none is. Fails (writing nothing) if any row is invalid or its
   /// id already exists, so existing transactions are never overwritten.
@@ -195,19 +185,6 @@ class LocalDatabaseService {
       {'key': key, 'value': value},
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
-  }
-
-  Future<String?> getKeyValue(String key) async {
-    final db = await database;
-    final maps = await db.query(
-      _keyValueTable,
-      where: 'key = ?',
-      whereArgs: [key],
-    );
-    if (maps.isNotEmpty) {
-      return maps.first['value'] as String?;
-    }
-    return null;
   }
 
   /// Rebuilds the database file so that deleted values no longer linger in

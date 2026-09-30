@@ -67,12 +67,48 @@ class AppNumberFormat {
 /// Automatically formats numbers entered into text fields with commas (thousands separators)
 /// as the user types (e.g. 12345.67 -> 12,345.67), while preserving cursor position.
 class ThousandsSeparatorInputFormatter extends TextInputFormatter {
-  ThousandsSeparatorInputFormatter({this.decimalRange = 2});
+  ThousandsSeparatorInputFormatter({
+    this.decimalRange = 2,
+    this.allowNegative = false,
+  });
 
   final int decimalRange;
 
+  /// Whether a leading minus sign is kept, for values such as a wallet
+  /// balance that can be below zero.
+  final bool allowNegative;
+
   @override
   TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    if (!allowNegative || !newValue.text.startsWith('-')) {
+      return _format(oldValue, newValue);
+    }
+    if (newValue.text == '-') return newValue;
+    final unsigned = _format(_withoutSign(oldValue), _withoutSign(newValue));
+    return TextEditingValue(
+      text: '-${unsigned.text}',
+      selection: TextSelection.collapsed(
+        offset: unsigned.selection.baseOffset + 1,
+      ),
+    );
+  }
+
+  static TextEditingValue _withoutSign(TextEditingValue value) {
+    if (!value.text.startsWith('-')) return value;
+    int shifted(int offset) => (offset - 1).clamp(0, value.text.length - 1);
+    return TextEditingValue(
+      text: value.text.substring(1),
+      selection: TextSelection(
+        baseOffset: shifted(value.selection.baseOffset),
+        extentOffset: shifted(value.selection.extentOffset),
+      ),
+    );
+  }
+
+  TextEditingValue _format(
     TextEditingValue oldValue,
     TextEditingValue newValue,
   ) {

@@ -1,6 +1,9 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zenio/features/subscriptions/controller/subscriptions/subscriptions_notifier.dart';
+import 'package:zenio/features/subscriptions/domain/models/subscription_model.dart';
 import 'package:zenio/features/subscriptions/presentation/widgets/add_subscription_bottom_sheet.dart';
 import 'package:zenio/features/subscriptions/presentation/widgets/edit_subscription_dialog.dart';
 import 'package:zenio/features/subscriptions/presentation/widgets/subscription_card.dart';
@@ -23,6 +26,72 @@ class _SubscriptionsScreenMobileState
     extends ConsumerState<SubscriptionsScreenMobile> {
   String? _openSubscriptionId;
   late String? _expandedTileId = widget.initialExpandedId;
+
+  /// Set until the subscription a reminder opened this screen for has been
+  /// scrolled into view.
+  late bool _revealPending = widget.initialExpandedId != null;
+  final _remindedKey = GlobalKey();
+  final _listController = ScrollController();
+
+  @override
+  void dispose() {
+    _listController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    final remindedId = widget.initialExpandedId;
+    if (remindedId == null) return;
+    // The filter chosen on an earlier visit may hide the subscription the
+    // reminder was about.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final state = ref.read(subscriptionsNotifierProvider);
+      if (state.selectedFilter.toLowerCase() != 'all' &&
+          !state.subscriptions.any((s) => s.id == remindedId)) {
+        ref.read(subscriptionsNotifierProvider.notifier).updateFilter('All');
+      }
+    });
+  }
+
+  /// Scrolls to the reminded subscription once it is in the list.
+  void _revealRemindedWhenListed(List<SubscriptionModel> subscriptions) {
+    if (!_revealPending ||
+        !subscriptions.any((s) => s.id == widget.initialExpandedId)) {
+      return;
+    }
+    _revealPending = false;
+    _scrollToReminded();
+  }
+
+  /// The list builds cards as they scroll in, so it moves down a screen at a
+  /// time until the reminded card exists, then brings it fully into view.
+  void _scrollToReminded({int screensLeft = 20}) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final card = _remindedKey.currentContext;
+      if (card != null) {
+        Scrollable.ensureVisible(
+          card,
+          duration: ZenioMotion.standard,
+          curve: ZenioMotion.standardCurve,
+        );
+        return;
+      }
+      if (screensLeft == 0 || !_listController.hasClients) return;
+      final position = _listController.position;
+      if (position.pixels >= position.maxScrollExtent) return;
+      _listController.jumpTo(
+        math.min(
+          position.pixels + position.viewportDimension,
+          position.maxScrollExtent,
+        ),
+      );
+      _scrollToReminded(screensLeft: screensLeft - 1);
+    });
+  }
   String _formatWholePart(double amount) =>
       AppNumberFormat.formatWholePart(amount);
 
@@ -33,10 +102,8 @@ class _SubscriptionsScreenMobileState
   Widget build(BuildContext context) {
     final state = ref.watch(subscriptionsNotifierProvider);
     final subscriptions = state.subscriptions;
-    final totalBalance = subscriptions.fold<double>(
-      0,
-      (sum, item) => sum + item.amount,
-    );
+    _revealRemindedWhenListed(subscriptions);
+    final totalBalance = state.totalBalance;
 
     final currencySymbol = ref.watch(currencySymbolProvider);
 
@@ -168,6 +235,7 @@ class _SubscriptionsScreenMobileState
                     top: Radius.circular(30),
                   ),
                   child: ListView(
+                    controller: _listController,
                     padding: const EdgeInsets.fromLTRB(10, 16, 10, 20),
                     children: [
                       if (subscriptions.isEmpty) ...[
@@ -198,62 +266,67 @@ class _SubscriptionsScreenMobileState
                           ),
                       ] else
                         ...subscriptions.map(
-                          (item) => SubscriptionCard(
+                          (item) => KeyedSubtree(
                             key: ValueKey(item.id),
-                            subscription: item,
-                            isOpen: _openSubscriptionId == item.id,
-                            isTileExpanded: _expandedTileId == item.id,
-                            onTileTap: () {
-                              setState(() {
-                                if (_expandedTileId == item.id) {
-                                  _expandedTileId = null;
-                                } else {
-                                  _expandedTileId = item.id;
+                            child: SubscriptionCard(
+                              key: item.id == widget.initialExpandedId
+                                  ? _remindedKey
+                                  : null,
+                              subscription: item,
+                              isOpen: _openSubscriptionId == item.id,
+                              isTileExpanded: _expandedTileId == item.id,
+                              onTileTap: () {
+                                setState(() {
+                                  if (_expandedTileId == item.id) {
+                                    _expandedTileId = null;
+                                  } else {
+                                    _expandedTileId = item.id;
+                                  }
+                                });
+                              },
+                              onOpen: () {
+                                if (_openSubscriptionId != item.id) {
+                                  setState(() {
+                                    _openSubscriptionId = item.id;
+                                  });
                                 }
-                              });
-                            },
-                            onOpen: () {
-                              if (_openSubscriptionId != item.id) {
-                                setState(() {
-                                  _openSubscriptionId = item.id;
-                                });
-                              }
-                            },
-                            onClose: () {
-                              if (_openSubscriptionId == item.id) {
-                                setState(() {
-                                  _openSubscriptionId = null;
-                                });
-                              }
-                            },
-                            onDelete: () async {
-                              try {
-                                await ref
-                                    .read(subscriptionsNotifierProvider.notifier)
-                                    .deleteSubscription(item.id);
-                              } catch (_) {
+                              },
+                              onClose: () {
+                                if (_openSubscriptionId == item.id) {
+                                  setState(() {
+                                    _openSubscriptionId = null;
+                                  });
+                                }
+                              },
+                              onDelete: () async {
+                                try {
+                                  await ref
+                                      .read(subscriptionsNotifierProvider.notifier)
+                                      .deleteSubscription(item.id);
+                                } catch (_) {
+                                  if (!context.mounted) return;
+                                  ZenioSnackBar.show(
+                                    context,
+                                    message:
+                                        "Couldn't delete the subscription. Please try again.",
+                                    type: ZenioSnackBarType.error,
+                                  );
+                                  return;
+                                }
                                 if (!context.mounted) return;
                                 ZenioSnackBar.show(
                                   context,
-                                  message:
-                                      "Couldn't delete the subscription. Please try again.",
-                                  type: ZenioSnackBarType.error,
+                                  message: 'Subscription deleted',
+                                  type: ZenioSnackBarType.success,
                                 );
-                                return;
-                              }
-                              if (!context.mounted) return;
-                              ZenioSnackBar.show(
-                                context,
-                                message: 'Subscription deleted',
-                                type: ZenioSnackBarType.success,
-                              );
-                            },
-                            onEdit: () {
-                              EditSubscriptionDialog.show(
-                                context,
-                                subscription: item,
-                              );
-                            },
+                              },
+                              onEdit: () {
+                                EditSubscriptionDialog.show(
+                                  context,
+                                  subscription: item,
+                                );
+                              },
+                            ),
                           ),
                         ),
                     ],

@@ -112,27 +112,28 @@ class WalletNotifier extends _$WalletNotifier {
     state = state.copyWith(activeCardIndex: index);
   }
 
+  /// The repository, once the initial load has finished.
+  Future<IWalletRepository> _ready() async {
+    final repo = _walletRepository;
+    if (repo == null) {
+      throw StateError('Local storage is not ready yet.');
+    }
+    await _initialLoad;
+    return repo;
+  }
+
   /// Applies [change] to the stored cards (not the in-memory copy) once the
   /// initial load has finished, one write at a time, and publishes the result.
   /// [change] returns null to leave everything untouched.
   ///
-  /// Balances are always recomputed from the current transactions. With
-  /// [keepBalances], adding, renaming or removing a wallet does not change
-  /// any balance the user sees: wallets named in older transactions (for
-  /// example of a deleted wallet with the same name) absorb them into their
-  /// opening balance, as the migration did. [newBalances] gives the balance
-  /// to show for added wallets.
+  /// See [_balanced] for [keepBalances] and [newBalances].
   Future<List<WalletCardModel>?> _mutate(
     List<WalletCardModel>? Function(List<WalletCardModel> current) change, {
     bool keepBalances = false,
     Map<String, double> newBalances = const {},
   }) {
     return _writes.run(() async {
-      final repo = _walletRepository;
-      if (repo == null) {
-        throw StateError('Local storage is not ready yet.');
-      }
-      await _initialLoad;
+      final repo = await _ready();
       // Throws if the transactions cannot be loaded: opening balances worked
       // out without them would count every transaction twice later on.
       final transactions = await _loadedTransactions();
@@ -140,22 +141,46 @@ class WalletNotifier extends _$WalletNotifier {
       final changed = change(current);
       if (changed == null) return null;
 
-      var updated = changed;
-      if (keepBalances) {
-        final shown = {
-          for (final card in withDerivedBalances(current, transactions))
-            card.id: card.balance,
-          ...newBalances,
-        };
-        updated = keepShownBalances(changed, transactions, shown);
-      }
-      updated = withDerivedBalances(updated, transactions);
-
+      final updated = _balanced(
+        current,
+        changed,
+        transactions,
+        keepBalances: keepBalances,
+        newBalances: newBalances,
+      );
       await repo.saveCards(updated);
-      await repo.saveCardBalance(_calculateTotalBalance(updated));
       _publish(updated);
       return updated;
     });
+  }
+
+  /// [changed] with every balance recomputed from [transactions].
+  ///
+  /// With [keepBalances], adding, renaming or removing a wallet does not
+  /// change any balance the user saw for [current] (worked out from
+  /// [shownWith], by default [transactions]): wallets named in older
+  /// transactions (for example of a deleted wallet with the same name)
+  /// absorb them into their opening balance, as the migration did.
+  /// [newBalances] gives the balance to show for added wallets.
+  static List<WalletCardModel> _balanced(
+    List<WalletCardModel> current,
+    List<WalletCardModel> changed,
+    List<TransactionModel> transactions, {
+    bool keepBalances = false,
+    List<TransactionModel>? shownWith,
+    Map<String, double> newBalances = const {},
+  }) {
+    var updated = changed;
+    if (keepBalances) {
+      final shown = {
+        for (final card
+            in withDerivedBalances(current, shownWith ?? transactions))
+          card.id: card.balance,
+        ...newBalances,
+      };
+      updated = keepShownBalances(changed, transactions, shown);
+    }
+    return withDerivedBalances(updated, transactions);
   }
 
   /// Replaces the card with the same id as [card] in [cards].
@@ -188,11 +213,7 @@ class WalletNotifier extends _$WalletNotifier {
     // wallets and transactions rather than the balances on screen, which
     // can be out of date.
     return _writes.run(() async {
-      final repo = _walletRepository;
-      if (repo == null) {
-        throw StateError('Local storage is not ready yet.');
-      }
-      await _initialLoad;
+      final repo = await _ready();
       final cards = withDerivedBalances(
         await repo.getCards(),
         await _loadedTransactions(),
@@ -269,54 +290,68 @@ class WalletNotifier extends _$WalletNotifier {
   /// [adjustBalance]). Renaming also renames the wallet in its transactions,
   /// so their history and the balance stay with the wallet.
   Future<void> editCard(int index, WalletCardModel newCard) async {
-    final oldCard = _cardAt(index);
-    if (oldCard == null) return;
-    final edited = newCard.copyWith(
-      id: oldCard.id,
-      balance: oldCard.balance,
-      openingBalance: oldCard.openingBalance,
-    );
+    final target = _cardAt(index);
+    if (target == null) return;
 
-    final renamed =
-        walletNameKey(oldCard.bankName) != walletNameKey(edited.bankName);
-    // Transactions name their wallet; with duplicate names they belong to the
-    // first wallet with that name, so only that one takes them along.
-    final ownsTransactions = state.cards
-            .firstWhere(
-              (c) =>
-                  walletNameKey(c.bankName) == walletNameKey(oldCard.bankName),
-            )
-            .id ==
-        oldCard.id;
-    final home = ref.read(homeNotifierProvider.notifier);
-    if (renamed && ownsTransactions) {
-      await home.renameWallet(oldCard.bankName, edited.bankName);
-    }
-
-    try {
-      final updated = await _mutate(
-        (cards) => _replaceById(cards, edited),
-        keepBalances: true,
-        newBalances: {edited.id: oldCard.balance},
+    // One queued task, worked out from the stored wallets and transactions,
+    // so the balance cannot be taken from an out-of-date screen and the
+    // wallet is shown once, renamed together with its transactions.
+    final oldName = await _writes.run(() async {
+      final repo = await _ready();
+      final transactions = await _loadedTransactions();
+      final current = await repo.getCards();
+      final oldCard = current.where((c) => c.id == target.id).firstOrNull;
+      if (oldCard == null) throw StateError('Wallet no longer exists.');
+      final edited = newCard.copyWith(
+        id: oldCard.id,
+        balance: oldCard.balance,
+        openingBalance: oldCard.openingBalance,
       );
-      if (updated == null) throw StateError('Wallet no longer exists.');
-    } catch (_) {
-      // Keep transactions and wallet consistent if the wallet save failed.
-      if (renamed && ownsTransactions) {
-        await home.renameWallet(edited.bankName, oldCard.bankName);
+
+      // Transactions name their wallet; with duplicate names they belong to
+      // the first wallet with that name, so only that one takes them along.
+      final owner = current.firstWhere(
+        (c) => walletNameKey(c.bankName) == walletNameKey(oldCard.bankName),
+      );
+      final movesTransactions = owner.id == oldCard.id &&
+          walletNameKey(oldCard.bankName) != walletNameKey(edited.bankName);
+      final renamedTransactions = movesTransactions
+          ? withWalletRenamed(transactions, oldCard.bankName, edited.bankName)
+          : transactions;
+      final updated = _balanced(
+        current,
+        _replaceById(current, edited)!,
+        renamedTransactions,
+        keepBalances: true,
+        shownWith: transactions,
+      );
+
+      await repo.saveCards(updated);
+      if (movesTransactions) {
+        try {
+          await ref
+              .read(homeNotifierProvider.notifier)
+              .renameWallet(oldCard.bankName, edited.bankName);
+        } catch (_) {
+          // Renaming the transactions is all or nothing, so they still have
+          // the old name: put the wallets back as they were to match.
+          await repo.saveCards(withDerivedBalances(current, transactions));
+          rethrow;
+        }
       }
-      rethrow;
-    }
+      _publish(updated);
+      return oldCard.bankName;
+    });
 
     // If default wallet was renamed, keep default synchronized
-    if (renamed) {
+    if (walletNameKey(oldName) != walletNameKey(newCard.bankName)) {
       try {
         final currentDefault =
             ref.read(settingsNotifierProvider).settings.defaultWallet;
-        if (walletNameKey(currentDefault) == walletNameKey(oldCard.bankName)) {
+        if (walletNameKey(currentDefault) == walletNameKey(oldName)) {
           await ref
               .read(settingsNotifierProvider.notifier)
-              .updateDefaultWallet(edited.bankName);
+              .updateDefaultWallet(newCard.bankName);
         }
       } catch (_) {}
     }

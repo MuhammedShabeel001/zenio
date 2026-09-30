@@ -119,34 +119,58 @@ class SettingsNotifier extends _$SettingsNotifier {
       await repo.clearAllAppData();
       await _loadSettings();
 
-      // Reset all feature notifiers so the in-memory state matches the clean database
-      try {
-        await ref.read(homeNotifierProvider.notifier).loadMoneyTrackerData();
-      } catch (_) {}
-      try {
-        await ref.read(walletNotifierProvider.notifier).loadWalletData();
-      } catch (_) {}
-      try {
-        await ref.read(vaultNotifierProvider.notifier).loadData();
-      } catch (_) {}
-      try {
-        await ref.read(subscriptionsNotifierProvider.notifier).loadData();
-      } catch (_) {}
-      try {
-        await ref.read(debtsNotifierProvider.notifier).loadData();
-      } catch (_) {}
-      try {
-        await ref.read(splitNotifierProvider.notifier).loadData();
-      } catch (_) {}
-      try {
-        await ref.read(categoriesNotifierProvider.notifier).resetCategories();
-      } catch (_) {}
-      try {
-        await ref
-            .read(subscriptionCategoriesNotifierProvider.notifier)
-            .resetCategories();
-      } catch (_) {}
+      // Reload every feature so what is shown matches the cleared storage.
+      // Each reload reports whether it worked; all are tried either way.
+      final reloads = <Future<bool> Function()>[
+        () async {
+          await ref.read(homeNotifierProvider.notifier).loadMoneyTrackerData();
+          return ref.read(homeNotifierProvider).status == HomeStatus.success;
+        },
+        () async {
+          await ref.read(walletNotifierProvider.notifier).loadWalletData();
+          return ref.read(walletNotifierProvider).status ==
+              WalletStatus.success;
+        },
+        () async {
+          await ref.read(vaultNotifierProvider.notifier).loadData();
+          return ref.read(vaultNotifierProvider).errorMessage == null;
+        },
+        () async {
+          await ref.read(subscriptionsNotifierProvider.notifier).loadData();
+          return ref.read(subscriptionsNotifierProvider).errorMessage == null;
+        },
+        () async {
+          await ref.read(debtsNotifierProvider.notifier).loadData();
+          return ref.read(debtsNotifierProvider).errorMessage == null;
+        },
+        () async {
+          await ref.read(splitNotifierProvider.notifier).loadData();
+          return ref.read(splitNotifierProvider).errorMessage == null;
+        },
+        () async {
+          await ref.read(categoriesNotifierProvider.notifier).resetCategories();
+          return true;
+        },
+        () async {
+          await ref
+              .read(subscriptionCategoriesNotifierProvider.notifier)
+              .resetCategories();
+          return true;
+        },
+      ];
+      var allReloaded = true;
+      for (final reload in reloads) {
+        try {
+          if (!await reload()) allReloaded = false;
+        } catch (_) {
+          allReloaded = false;
+        }
+      }
       if (vaultError != null) throw vaultError;
+      // The data is gone, but a screen may still show what it had loaded.
+      if (!allReloaded) {
+        throw StateError('Some features could not reload after clearing.');
+      }
     } catch (e) {
       state = state.copyWith(
         isLoading: false,

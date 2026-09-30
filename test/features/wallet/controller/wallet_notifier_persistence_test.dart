@@ -9,6 +9,7 @@ import 'package:zenio/features/home/domain/models/transaction/transaction_model.
 import 'package:zenio/features/home/domain/repositories/implementations/money_tracker/money_tracker_repository.dart';
 import 'package:zenio/features/wallet/controller/wallet/wallet_notifier.dart';
 import 'package:zenio/features/wallet/domain/models/card/wallet_card_model.dart';
+import 'package:zenio/features/wallet/domain/repositories/implementations/wallet_repository.dart';
 import 'package:zenio/shared/services/local_database_service.dart';
 import 'package:zenio/shared/services/sqlite_prefs.dart';
 
@@ -250,6 +251,57 @@ void main() {
       );
     });
 
+    test('renaming never shows the wallet with another balance', () async {
+      final storage = TestStorage.create();
+      final container = await migratedContainer(storage);
+      final shown = <double>[];
+      container.listen(walletNotifierProvider, (_, next) {
+        final card = next.cards.singleOrNull;
+        if (card != null) shown.add(card.balance);
+      });
+
+      await container
+          .read(walletNotifierProvider.notifier)
+          .editCard(0, _card('1', 'HDFC Savings'));
+      await balanceAfterChanges(container);
+
+      expect(shown, isNotEmpty);
+      expect(shown.toSet(), {500});
+    });
+
+    test('renaming to the name of a deleted wallet keeps the balance',
+        () async {
+      final storage = TestStorage.create();
+      // Transactions of a wallet deleted long ago.
+      await seedTransaction(storage.open(), _tx('old', 'Cash', 5000));
+      final container = await migratedContainer(storage);
+
+      await container
+          .read(walletNotifierProvider.notifier)
+          .editCard(0, _card('1', 'Cash'));
+      expect(await balanceAfterChanges(container), 500);
+
+      final restarted = storage.container();
+      final wallets = await _loadedWallets(restarted);
+      expect(wallets.single.balance, 500);
+    });
+
+    test('editing right after a transaction keeps the new balance', () async {
+      final storage = TestStorage.create();
+      final container = await migratedContainer(storage);
+
+      await container
+          .read(homeNotifierProvider.notifier)
+          .addTransaction(_tx('t2', 'HDFC', 100));
+      await container
+          .read(walletNotifierProvider.notifier)
+          .editCard(0, _card('1', 'HDFC Savings'));
+
+      expect(await balanceAfterChanges(container), 400);
+      final restarted = storage.container();
+      expect((await _loadedWallets(restarted)).single.balance, 400);
+    });
+
     test('adjusting right after a transaction starts from the new balance',
         () async {
       final storage = TestStorage.create();
@@ -289,7 +341,6 @@ void main() {
           final prefs = ref.watch(sqlitePrefsProvider).valueOrNull;
           if (prefs == null) throw StateError('Local storage is not ready.');
           return _UnreadableTransactions(
-            prefs,
             ref.watch(localDatabaseServiceProvider),
           );
         }),
@@ -307,6 +358,74 @@ void main() {
 
     // Saving 500 as the opening balance would count the 200 twice later.
     expect((await _stored(storage)).single.openingBalance, 700);
+  });
+
+  test(
+      'a rename whose transactions cannot be moved leaves the wallet as it '
+      'was', () async {
+    final storage = TestStorage.create();
+    await seedTransaction(storage.open(), _tx('t1', 'HDFC', 200));
+    await _seedLegacyWallets(storage, [_card('1', 'HDFC', balance: 500)]);
+    final container = storage.container(
+      overrides: [
+        moneyTrackerRepositoryRepoProvider.overrideWith((ref) {
+          final prefs = ref.watch(sqlitePrefsProvider).valueOrNull;
+          if (prefs == null) throw StateError('Local storage is not ready.');
+          return _RenameFails(ref.watch(localDatabaseServiceProvider));
+        }),
+      ],
+    );
+    await _loadedWallets(container);
+
+    await expectLater(
+      container
+          .read(walletNotifierProvider.notifier)
+          .editCard(0, _card('1', 'HDFC Savings')),
+      throwsStateError,
+    );
+
+    final stored = (await _stored(storage)).single;
+    expect(stored.bankName, 'HDFC');
+    expect(stored.openingBalance, 700);
+    expect((await storage.transactionRows()).single['bank_name'], 'HDFC');
+    expect(
+        container.read(walletNotifierProvider).cards.single.bankName, 'HDFC');
+  });
+
+  test(
+      'a rename whose wallet cannot be saved leaves every transaction as it '
+      'was', () async {
+    final storage = TestStorage.create();
+    final db = storage.open();
+    await seedTransaction(db, _tx('t1', 'HDFC', 200));
+    // Transactions of a deleted wallet with the name being chosen.
+    await seedTransaction(db, _tx('old', 'Cash', 5000));
+    await _seedLegacyWallets(storage, [_card('1', 'HDFC', balance: 500)]);
+    _SaveCanFail? walletRepo;
+    final container = storage.container(
+      overrides: [
+        walletRepositoryRepoProvider.overrideWith((ref) {
+          final prefs = ref.watch(sqlitePrefsProvider).valueOrNull;
+          if (prefs == null) throw StateError('Local storage is not ready.');
+          return walletRepo = _SaveCanFail(prefs);
+        }),
+      ],
+    );
+    await _loadedWallets(container);
+    walletRepo!.failSaves = true;
+
+    await expectLater(
+      container
+          .read(walletNotifierProvider.notifier)
+          .editCard(0, _card('1', 'Cash')),
+      throwsStateError,
+    );
+
+    final rows = {
+      for (final r in await storage.transactionRows()) r['id']: r,
+    };
+    expect(rows['t1']!['bank_name'], 'HDFC');
+    expect(rows['old']!['bank_name'], 'Cash');
   });
 
   test('the carousel keeps its page through wallet and transaction changes',
@@ -335,9 +454,31 @@ void main() {
 
 /// Transactions that cannot be read, as when the database fails.
 class _UnreadableTransactions extends MoneyTrackerRepository {
-  _UnreadableTransactions(super.prefs, super.db);
+  _UnreadableTransactions(super.db);
 
   @override
   Future<List<TransactionModel>> getTransactions() =>
       throw StateError('The database could not be read.');
+}
+
+/// Transactions that cannot be moved to another wallet name.
+class _RenameFails extends MoneyTrackerRepository {
+  _RenameFails(super.db);
+
+  @override
+  Future<void> renameWallet(String oldName, String newName) =>
+      throw StateError('The database could not be written.');
+}
+
+/// Wallets whose saves fail once [failSaves] is set.
+class _SaveCanFail extends WalletRepository {
+  _SaveCanFail(super.prefs);
+
+  bool failSaves = false;
+
+  @override
+  Future<void> saveCards(List<WalletCardModel> cards) {
+    if (failSaves) throw StateError('The wallets could not be saved.');
+    return super.saveCards(cards);
+  }
 }

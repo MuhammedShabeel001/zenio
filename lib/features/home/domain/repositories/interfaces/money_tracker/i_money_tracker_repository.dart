@@ -1,13 +1,9 @@
-import 'package:zenio/features/home/domain/models/summary/financial_summary_model.dart';
 import 'package:zenio/features/home/domain/models/transaction/transaction_model.dart';
 
 abstract class IMoneyTrackerRepository {
-  Future<FinancialSummaryModel> getSummary();
-
   /// Returns every readable transaction. Rows that cannot be decoded are
   /// skipped and left untouched in storage.
   Future<List<TransactionModel>> getTransactions();
-  Future<void> saveSummary(FinancialSummaryModel summary);
 
   /// Inserts a new transaction without touching any other row.
   Future<void> insertTransaction(TransactionModel transaction);

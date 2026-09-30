@@ -125,6 +125,12 @@ class _TransactionDetailCardState extends ConsumerState<TransactionDetailCard>
     }
   }
 
+  /// The Edit button revealed by a swipe.
+  void _editFromSwipe() {
+    _close();
+    widget.onEdit?.call();
+  }
+
   void _close() {
     if (_dragOffset != 0) {
       _animateTo(0);
@@ -173,12 +179,10 @@ class _TransactionDetailCardState extends ConsumerState<TransactionDetailCard>
                   Semantics(
                     button: true,
                     label: 'Edit',
+                    onTap: _editFromSwipe,
                     excludeSemantics: true,
                     child: GestureDetector(
-                      onTap: () {
-                        _close();
-                        widget.onEdit?.call();
-                      },
+                      onTap: _editFromSwipe,
                       child: Container(
                         width: 70,
                         height: 70,

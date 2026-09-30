@@ -147,6 +147,42 @@ void main() {
     expect(stored.map((c) => c.id), ['b']);
   });
 
+  test(
+      'when secure storage fails, cards saved by an older version can still '
+      'be removed but not changed', () async {
+    // Another key order and a field this version no longer has.
+    String older(String id) => jsonEncode({
+          'cvv': '123',
+          'expiry': '12/30',
+          'cardNumber': '4242424242424242',
+          'cardType': 'Visa',
+          'id': id,
+          'nickname': 'Old',
+        });
+    await storage.putKeyValue(
+      _legacyCards,
+      jsonEncode([older('a'), older('b')]),
+    );
+    secure.failWrites = true;
+    final container = storage.container(
+      overrides: [secureKeyValueStoreProvider.overrideWithValue(secure)],
+    );
+    await container.read(sqlitePrefsProvider.future);
+    final notifier = container.read(vaultNotifierProvider.notifier);
+
+    await notifier.deleteCard('a');
+    await expectLater(
+      notifier.updateCard(_card('b').copyWith(cvv: '999')),
+      throwsA(isA<VaultUnavailableException>()),
+    );
+
+    final prefs = await reloadPrefs();
+    final stored =
+        await prefs.readJsonList(_legacyCards, VaultCardModel.fromJson);
+    expect(stored.map((c) => c.id), ['b']);
+    expect(stored.single.cvv, '123');
+  });
+
   test('clearing works even when the key store cannot delete', () async {
     await seedLegacyVault();
     final container = storage.container(

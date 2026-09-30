@@ -1,9 +1,6 @@
-import 'dart:convert';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:zenio/features/home/domain/models/summary/financial_summary_model.dart';
 import 'package:zenio/features/home/domain/models/transaction/transaction_model.dart';
 import 'package:zenio/features/home/domain/repositories/interfaces/money_tracker/i_money_tracker_repository.dart';
 import 'package:zenio/features/wallet/domain/wallet_balances.dart';
@@ -12,35 +9,9 @@ import 'package:zenio/shared/providers/providers.dart';
 part 'money_tracker_repository.g.dart';
 
 class MoneyTrackerRepository implements IMoneyTrackerRepository {
-  MoneyTrackerRepository(this._prefs, this._dbService);
+  MoneyTrackerRepository(this._dbService);
 
-  final SqlitePrefs _prefs;
   final LocalDatabaseService _dbService;
-
-  static const String _summaryKey = 'money_tracker_summary_v2';
-
-  static const FinancialSummaryModel _emptySummary = FinancialSummaryModel(
-    totalBalance: 0,
-    income: 0,
-    incomeChangePercentage: 0,
-    expense: 0,
-    expenseChangePercentage: 0,
-    selectedCurrency: 'INR',
-  );
-
-  @override
-  Future<FinancialSummaryModel> getSummary() async {
-    final raw = _prefs.getString(_summaryKey);
-    if (raw == null) return _emptySummary;
-    try {
-      return FinancialSummaryModel.fromJson(
-        jsonDecode(raw) as Map<String, dynamic>,
-      );
-    } catch (_) {
-      // The summary is derived data and is recomputed on the next change.
-      return _emptySummary;
-    }
-  }
 
   @override
   Future<List<TransactionModel>> getTransactions() async {
@@ -57,11 +28,6 @@ class MoneyTrackerRepository implements IMoneyTrackerRepository {
       }
     }
     return transactions;
-  }
-
-  @override
-  Future<void> saveSummary(FinancialSummaryModel summary) async {
-    await _prefs.setString(_summaryKey, jsonEncode(summary.toJson()));
   }
 
   @override
@@ -113,11 +79,10 @@ class MoneyTrackerRepository implements IMoneyTrackerRepository {
 
 @Riverpod(keepAlive: true)
 IMoneyTrackerRepository moneyTrackerRepositoryRepo(Ref ref) {
-  final prefsAsync = ref.watch(sqlitePrefsProvider);
-  final dbService = ref.watch(localDatabaseServiceProvider);
-  final prefs = prefsAsync.valueOrNull;
-  if (prefs == null) {
+  // Transactions are read once local storage has opened, like everything
+  // else, so a failed start is reported in one place.
+  if (ref.watch(sqlitePrefsProvider).valueOrNull == null) {
     throw StateError('Local storage is not ready yet.');
   }
-  return MoneyTrackerRepository(prefs, dbService);
+  return MoneyTrackerRepository(ref.watch(localDatabaseServiceProvider));
 }

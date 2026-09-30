@@ -144,6 +144,22 @@ void main() {
       expect(rows['Down']!['is_income'], 0);
     });
 
+    test('rows without a wallet get a named wallet even with no default',
+        () async {
+      final storage = TestStorage.create();
+      final service = CsvImportService(storage.open());
+
+      // The default wallet setting is empty until a wallet exists.
+      await service.importCsvContent(
+        'Date,Category,Amount\n15-09-2026,Food,120\n',
+        defaultWallet: '',
+        now: now,
+      );
+
+      final row = (await storage.transactionRows()).single;
+      expect(row['bank_name'], 'Default Wallet');
+    });
+
     test('reads a first row of data as data', () async {
       final storage = TestStorage.create();
       final service = CsvImportService(storage.open());

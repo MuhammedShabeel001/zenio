@@ -112,6 +112,8 @@ class CsvImportService {
     final seenIds = <String>{};
     var alreadyPresent = 0;
     final timeOfImport = DateFormat('HH : mm').format(clock);
+    // With no wallets yet, the default wallet setting is empty.
+    final fallbackWallet = defaultWallet?.trim() ?? '';
     final records = <Map<String, dynamic>>[];
     var skipped = 0;
 
@@ -151,7 +153,9 @@ class CsvImportService {
       }
 
       var wallet = cell('wallet');
-      if (wallet.isEmpty) wallet = defaultWallet ?? 'Default Wallet';
+      if (wallet.isEmpty) {
+        wallet = fallbackWallet.isEmpty ? 'Default Wallet' : fallbackWallet;
+      }
       if (kind == TransactionKind.transfer &&
           parseTransferWallets(wallet) == null) {
         skipped++;

@@ -212,7 +212,11 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
       return;
     }
 
-    final balance = AppNumberFormat.parseAmount(_balanceController.text);
+    // An empty balance leaves it as it is rather than setting it to zero.
+    final balanceText = _balanceController.text.trim();
+    final balance = balanceText.isEmpty || balanceText == '-'
+        ? widget.card.balance
+        : AppNumberFormat.parseAmount(balanceText);
     final cardNumber = _cardNumberController.text.trim().isNotEmpty
         ? _cardNumberController.text.trim()
         : widget.card.cardNumber;
@@ -349,10 +353,13 @@ class _EditWalletDialogState extends ConsumerState<EditWalletDialog> {
                     Expanded(
                       child: TextField(
                         controller: _balanceController,
-                        keyboardType:
-                            const TextInputType.numberWithOptions(decimal: true),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                          signed: true,
+                        ),
                         inputFormatters: [
-                          ThousandsSeparatorInputFormatter(),
+                          // A balance can be below zero, e.g. a credit card.
+                          ThousandsSeparatorInputFormatter(allowNegative: true),
                         ],
                         onChanged: (val) {
                           setState(() {});

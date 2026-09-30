@@ -106,10 +106,4 @@ class SubscriptionCategoriesNotifier extends _$SubscriptionCategoriesNotifier {
     state = updated;
     await _saveCategories(updated);
   }
-
-  Future<void> resetToDefaults() async {
-    await _ready();
-    state = CategoryItemModel.defaultSubscriptionCategories;
-    await _saveCategories(CategoryItemModel.defaultSubscriptionCategories);
-  }
 }

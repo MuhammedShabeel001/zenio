@@ -120,5 +120,59 @@ void main() {
       expect(res.text, '12,345.67');
       expect(res.selection.baseOffset, 9);
     });
+
+    test('rejects a minus sign unless negatives are allowed', () {
+      final res = formatter.formatEditUpdate(
+        const TextEditingValue(text: '1,234'),
+        const TextEditingValue(
+          text: '-1,234',
+          selection: TextSelection.collapsed(offset: 1),
+        ),
+      );
+      expect(res.text, '1,234');
+    });
+
+    group('with negatives allowed', () {
+      final signed = ThousandsSeparatorInputFormatter(allowNegative: true);
+
+      test('keeps a typed minus sign', () {
+        final res = signed.formatEditUpdate(
+          TextEditingValue.empty,
+          const TextEditingValue(
+            text: '-',
+            selection: TextSelection.collapsed(offset: 1),
+          ),
+        );
+        expect(res.text, '-');
+      });
+
+      test('edits a negative balance with commas and the cursor in place',
+          () {
+        final res = signed.formatEditUpdate(
+          const TextEditingValue(
+            text: '-1,234',
+            selection: TextSelection.collapsed(offset: 6),
+          ),
+          const TextEditingValue(
+            text: '-1,2345',
+            selection: TextSelection.collapsed(offset: 7),
+          ),
+        );
+        expect(res.text, '-12,345');
+        expect(res.selection.baseOffset, 7);
+      });
+
+      test('makes a number negative when a minus is typed in front', () {
+        final res = signed.formatEditUpdate(
+          const TextEditingValue(text: '1,234'),
+          const TextEditingValue(
+            text: '-1,234',
+            selection: TextSelection.collapsed(offset: 1),
+          ),
+        );
+        expect(res.text, '-1,234');
+        expect(res.selection.baseOffset, 1);
+      });
+    });
   });
 }

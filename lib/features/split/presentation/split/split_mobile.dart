@@ -292,7 +292,9 @@ class _SplitScreenMobileState extends ConsumerState<SplitScreenMobile> {
                             // Summary Capsule Card
                             Expanded(
                               child: Container(
-                                height: 80,
+                                // Grows with larger text instead of clipping.
+                                constraints:
+                                    const BoxConstraints(minHeight: 80),
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 30,
                                   vertical: 18,

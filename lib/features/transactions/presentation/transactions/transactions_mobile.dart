@@ -3,7 +3,6 @@ import 'package:calendar_date_picker2/calendar_date_picker2.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zenio/features/home/presentation/widgets/delete_transaction_with_undo.dart';
 import 'package:zenio/shared/utils/period_filter.dart';
-import 'package:zenio/features/home/domain/models/transaction/transaction_kind.dart';
 import 'package:zenio/features/transactions/controller/transactions/transactions_notifier.dart';
 import 'package:zenio/features/transactions/presentation/widgets/transaction_detail_card.dart';
 import 'package:zenio/features/home/home.dart';
@@ -39,9 +38,8 @@ class _TransactionsScreenMobileState
     final loadFailed = ref.watch(
       homeNotifierProvider.select((s) => s.status == HomeStatus.error),
     );
-    final totalExpenses = transactions
-        .where((tx) => tx.resolvedKind == TransactionKind.expense)
-        .fold<double>(0, (sum, tx) => sum + tx.amount);
+    // Spending in the shown period, worked out with the filtered list.
+    final totalExpenses = state.totalBalance;
 
     final currencySymbol = ref.watch(currencySymbolProvider);
 

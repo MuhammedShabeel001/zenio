@@ -123,6 +123,12 @@ class _SubscriptionCardState extends ConsumerState<SubscriptionCard>
     }
   }
 
+  /// The Edit button revealed by a swipe.
+  void _editFromSwipe() {
+    _close();
+    widget.onEdit?.call();
+  }
+
   void _close() {
     if (_isConfirmingDelete) {
       setState(() {
@@ -216,12 +222,10 @@ class _SubscriptionCardState extends ConsumerState<SubscriptionCard>
                   Semantics(
                     button: true,
                     label: 'Edit',
+                    onTap: _editFromSwipe,
                     excludeSemantics: true,
                     child: GestureDetector(
-                      onTap: () {
-                        _close();
-                        widget.onEdit?.call();
-                      },
+                      onTap: _editFromSwipe,
                       child: Container(
                         width: 70,
                         height: 70,

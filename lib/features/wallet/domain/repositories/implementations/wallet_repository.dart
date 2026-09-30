@@ -13,24 +13,13 @@ class WalletRepository implements IWalletRepository {
 
   final SqlitePrefs _prefs;
 
-  static const String _balanceKey = 'wallet_card_balance';
   static const String _cardsKey = 'wallet_cards_list';
   static const String _preMigrationBackupKey =
       'wallet_cards_list.before_opening_balances';
 
   @override
-  Future<double> getCardBalance() async {
-    return _prefs.getDouble(_balanceKey) ?? 0;
-  }
-
-  @override
   Future<List<WalletCardModel>> getCards() {
     return _prefs.readJsonList(_cardsKey, WalletCardModel.fromJson);
-  }
-
-  @override
-  Future<void> saveCardBalance(double balance) async {
-    await _prefs.setDouble(_balanceKey, balance);
   }
 
   @override

@@ -41,7 +41,7 @@ class HomeNotifier extends _$HomeNotifier {
         status: HomeStatus.success,
         transactions: transactions,
       );
-      await _recalculateSummary(transactions);
+      _recalculateSummary(transactions);
     } catch (e) {
       state = state.copyWith(status: HomeStatus.error);
     }
@@ -78,18 +78,9 @@ class HomeNotifier extends _$HomeNotifier {
     // The same change the repository made, applied to the loaded list
     // rather than reloading it: a failed reload would leave the old names
     // in memory and the wallets would work out their balances from them.
-    final updatedTxs = state.transactions.map((tx) {
-      final renamed = renamedWalletReferences(
-        title: tx.title,
-        bankName: tx.bankName,
-        oldName: oldName,
-        newName: newName,
-      );
-      return renamed == null
-          ? tx
-          : tx.copyWith(title: renamed.title, bankName: renamed.bankName);
-    }).toList();
-    state = state.copyWith(transactions: updatedTxs);
+    state = state.copyWith(
+      transactions: withWalletRenamed(state.transactions, oldName, newName),
+    );
   }
 
   Future<void> addTransaction(TransactionModel newTx) async {
@@ -98,7 +89,7 @@ class HomeNotifier extends _$HomeNotifier {
 
     final updatedTxs = _newestFirst([newTx, ...state.transactions]);
     state = state.copyWith(transactions: updatedTxs);
-    await _recalculateSummary(updatedTxs);
+    _recalculateSummary(updatedTxs);
   }
 
   Future<void> updateTransaction(TransactionModel updatedTx) async {
@@ -111,7 +102,7 @@ class HomeNotifier extends _$HomeNotifier {
           .toList(),
     );
     state = state.copyWith(transactions: updatedTxs);
-    await _recalculateSummary(updatedTxs);
+    _recalculateSummary(updatedTxs);
   }
 
   Future<void> deleteTransaction(String id) async {
@@ -121,7 +112,7 @@ class HomeNotifier extends _$HomeNotifier {
     final updatedTxs = state.transactions.where((tx) => tx.id != id).toList();
     if (updatedTxs.length == state.transactions.length) return;
     state = state.copyWith(transactions: updatedTxs);
-    await _recalculateSummary(updatedTxs);
+    _recalculateSummary(updatedTxs);
   }
 
   /// The order the database returns: by timestamp, then date, newest first,
@@ -145,7 +136,7 @@ class HomeNotifier extends _$HomeNotifier {
       );
   }
 
-  Future<void> _recalculateSummary(List<TransactionModel> txs) async {
+  void _recalculateSummary(List<TransactionModel> txs) {
     final now = DateTime.now();
     final currentMonth = DateTime(now.year, now.month);
     final previousMonth = DateTime(now.year, now.month - 1);
@@ -212,11 +203,5 @@ class HomeNotifier extends _$HomeNotifier {
     );
 
     state = state.copyWith(summary: newSummary);
-
-    // The summary is derived from the transactions, so failing to cache it
-    // must not fail the mutation that triggered it.
-    try {
-      await _moneyTrackerRepository?.saveSummary(newSummary);
-    } catch (_) {}
   }
 }

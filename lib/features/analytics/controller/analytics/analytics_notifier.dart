@@ -150,7 +150,12 @@ class AnalyticsNotifier extends _$AnalyticsNotifier {
 
   @override
   AnalyticsState build() {
-    ref.listen(homeNotifierProvider, (previous, next) {
+    // Only the transactions and their loading state matter here, so a
+    // summary update does not work everything out again.
+    ref.listen(
+        homeNotifierProvider.select(
+          (s) => (status: s.status, transactions: s.transactions),
+        ), (previous, next) {
       if (next.status == HomeStatus.error) {
         state = state.copyWith(status: AnalyticsStatus.error);
         return;
@@ -189,9 +194,9 @@ class AnalyticsNotifier extends _$AnalyticsNotifier {
       }
     });
 
-    ref.listen(walletNotifierProvider, (previous, next) {
+    ref.listen(walletNotifierProvider.select((s) => s.cards), (previous, cards) {
       if (state.selectedWallet != 'All Wallets' && state.selectedWallet != 'All') {
-        final walletExists = next.cards.any(
+        final walletExists = cards.any(
           (c) => c.bankName.trim().toLowerCase() == state.selectedWallet.trim().toLowerCase(),
         );
         if (!walletExists) {

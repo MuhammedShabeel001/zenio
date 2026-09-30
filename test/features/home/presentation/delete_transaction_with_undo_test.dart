@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zenio/features/home/controller/home/home_notifier.dart';
-import 'package:zenio/features/home/domain/models/summary/financial_summary_model.dart';
 import 'package:zenio/features/home/domain/models/transaction/transaction_model.dart';
 import 'package:zenio/features/home/domain/repositories/implementations/money_tracker/money_tracker_repository.dart';
 import 'package:zenio/features/home/domain/repositories/interfaces/money_tracker/i_money_tracker_repository.dart';
@@ -30,12 +29,6 @@ class _MemoryTransactions implements IMoneyTrackerRepository {
 
   @override
   Future<void> deleteTransaction(String id) async => rows.remove(id);
-
-  @override
-  Future<void> saveSummary(FinancialSummaryModel summary) async {}
-
-  @override
-  Future<FinancialSummaryModel> getSummary() => throw UnimplementedError();
 
   @override
   Future<void> updateTransaction(TransactionModel transaction) =>

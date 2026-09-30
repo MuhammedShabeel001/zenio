@@ -115,7 +115,8 @@ class _SplashScreenMobileState extends ConsumerState<SplashScreenMobile>
         systemNavigationBarDividerColor: Colors.transparent,
       ),
       child: GestureDetector(
-        onTap: _navigateToNext,
+        // After a failed start, a tap anywhere tries again, like the button.
+        onTap: _startupFailed ? _retryStartup : _navigateToNext,
         behavior: HitTestBehavior.opaque,
         child: Scaffold(
           backgroundColor: AppColors.black,

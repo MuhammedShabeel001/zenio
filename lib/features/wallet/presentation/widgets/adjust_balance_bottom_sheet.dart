@@ -49,7 +49,7 @@ class _AdjustBalanceBottomSheetState
 
   Future<void> _onSave(WalletCardModel card) async {
     final amountText = _amountController.text.trim();
-    if (amountText.isEmpty || _isSaving) return;
+    if (amountText.isEmpty || amountText == '-' || _isSaving) return;
 
     final amount = AppNumberFormat.parseAmount(amountText);
     if (amount <= 0 && _mode != 'set') return;
@@ -198,10 +198,15 @@ class _AdjustBalanceBottomSheetState
                   Expanded(
                     child: TextField(
                       controller: _amountController,
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: TextInputType.numberWithOptions(
+                        decimal: true,
+                        signed: _mode == 'set',
+                      ),
                       inputFormatters: [
-                        ThousandsSeparatorInputFormatter(),
+                        // Only a balance to set can be below zero.
+                        ThousandsSeparatorInputFormatter(
+                          allowNegative: _mode == 'set',
+                        ),
                       ],
                       onChanged: (val) {
                         setState(() {});

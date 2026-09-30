@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -116,6 +118,7 @@ class VaultRepository implements IVaultRepository {
       _cardsKey,
       _legacyCardsKey,
       cards.map((card) => card.toJson()),
+      asRead: (json) => VaultCardModel.fromJson(json).toJson(),
     );
   }
 
@@ -130,6 +133,7 @@ class VaultRepository implements IVaultRepository {
       _notesKey,
       _legacyNotesKey,
       notes.map((note) => note.toJson()),
+      asRead: (json) => VaultNoteModel.fromJson(json).toJson(),
     );
   }
 
@@ -159,11 +163,14 @@ class VaultRepository implements IVaultRepository {
     return decoded.items;
   }
 
+  /// Writes [items]. [asRead] turns a stored entry into what the app reads
+  /// from it, as JSON again.
   Future<void> _writeList(
     String secureKey,
     String legacyKey,
-    Iterable<Map<String, dynamic>> items,
-  ) async {
+    Iterable<Map<String, dynamic>> items, {
+    required Map<String, dynamic> Function(Map<String, dynamic> json) asRead,
+  }) async {
     final raw = encodeJsonList(items);
     if (await _useSecureStorage()) {
       await _secure.write(secureKey, raw);
@@ -171,9 +178,17 @@ class VaultRepository implements IVaultRepository {
     }
     // Secure storage is unavailable. Existing entries can still be removed,
     // but new or changed card details are never written as plain text.
-    final stored = decodeStringList(_prefs.getString(legacyKey) ?? '[]');
-    final onlyRemoves =
-        decodeStringList(raw).every((entry) => stored.contains(entry));
+    // Entries are compared as the app reads them: one saved by an older
+    // version (other key order or fields) is not a change.
+    final stored = <String>{};
+    for (final entry in decodeStringList(_prefs.getString(legacyKey) ?? '[]')) {
+      stored.add(entry);
+      try {
+        stored
+            .add(jsonEncode(asRead(jsonDecode(entry) as Map<String, dynamic>)));
+      } catch (_) {}
+    }
+    final onlyRemoves = decodeStringList(raw).every(stored.contains);
     if (!onlyRemoves) throw const VaultUnavailableException();
     await _prefs.setString(legacyKey, raw);
   }

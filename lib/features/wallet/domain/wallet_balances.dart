@@ -137,3 +137,25 @@ double roundToCents(double amount) => (amount * 100).roundToDouble() / 100;
   }
   return null;
 }
+
+/// [transactions] after the wallet [oldName] was renamed to [newName], as
+/// the database stores them after renaming.
+List<TransactionModel> withWalletRenamed(
+  List<TransactionModel> transactions,
+  String oldName,
+  String newName,
+) {
+  return [
+    for (final tx in transactions)
+      switch (renamedWalletReferences(
+        title: tx.title,
+        bankName: tx.bankName,
+        oldName: oldName,
+        newName: newName,
+      )) {
+        null => tx,
+        final renamed =>
+          tx.copyWith(title: renamed.title, bankName: renamed.bankName),
+      },
+  ];
+}

@@ -59,6 +59,27 @@ class _WalletScreenMobileState extends ConsumerState<WalletScreenMobile> {
     final notifier = ref.read(walletNotifierProvider.notifier);
     final currencySymbol = ref.watch(currencySymbolProvider);
 
+    // A new wallet is added at the end; bring it to the front of the
+    // carousel.
+    ref.listen(
+      walletNotifierProvider.select((s) => s.cards.length),
+      (previous, length) {
+        final controller = _pageController;
+        if (previous == null ||
+            length <= previous ||
+            controller == null ||
+            !controller.hasClients) {
+          return;
+        }
+        final page = controller.page?.round() ?? controller.initialPage;
+        controller.animateToPage(
+          page - page % length + length - 1,
+          duration: ZenioMotion.slow,
+          curve: ZenioMotion.emphasizedCurve,
+        );
+      },
+    );
+
     final cards = state.cards;
     final activeIndex = state.activeCardIndex;
     
