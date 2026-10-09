@@ -27,7 +27,7 @@ import UniformTypeIdentifiers
 enum ZenioSecurityChannel {
   static func register(with messenger: FlutterBinaryMessenger) {
     let channel = FlutterMethodChannel(
-      name: "com.aurea.zenio/security",
+      name: "com.auren.zenio/security",
       binaryMessenger: messenger
     )
     channel.setMethodCallHandler { call, result in

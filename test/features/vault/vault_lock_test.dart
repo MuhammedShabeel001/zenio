@@ -51,7 +51,7 @@ Future<ProviderContainer> _vaultWithCard(
   });
   PackageInfo.setMockInitialValues(
     appName: 'Zenio',
-    packageName: 'com.aurea.zenio',
+    packageName: 'com.auren.zenio',
     version: '2.0.0',
     buildNumber: '2',
     buildSignature: '',

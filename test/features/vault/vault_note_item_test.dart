@@ -9,7 +9,7 @@ void main() {
       (tester) async {
     final copied = <Object?>[];
     tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-      const MethodChannel('com.aurea.zenio/security'),
+      const MethodChannel('com.auren.zenio/security'),
       (call) async {
         if (call.method == 'copySensitive') copied.add(call.arguments);
         return null;
@@ -20,7 +20,7 @@ void main() {
     addTearDown(() {
       tester.binding.defaultBinaryMessenger
         ..setMockMethodCallHandler(
-          const MethodChannel('com.aurea.zenio/security'),
+          const MethodChannel('com.auren.zenio/security'),
           null,
         )
         ..setMockMethodCallHandler(SystemChannels.platform, null);

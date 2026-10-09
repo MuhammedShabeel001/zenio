@@ -1,4 +1,4 @@
-package com.aurea.zenio
+package com.auren.zenio
 
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -101,7 +101,7 @@ class MainActivity : FlutterFragmentActivity() {
     }
 
     private companion object {
-        const val CHANNEL = "com.aurea.zenio/security"
+        const val CHANNEL = "com.auren.zenio/security"
         const val CLIP_LABEL = "Zenio sensitive"
         const val SENSITIVE_EXTRA = "android.content.extra.IS_SENSITIVE"
         val CLEAR_TOKEN = Any()

@@ -89,11 +89,11 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.aurea" "\0"
+            VALUE "CompanyName", "com.auren" "\0"
             VALUE "FileDescription", "Zenio" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "zenio" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2024 com.aurea. All rights reserved." "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2024 com.auren. All rights reserved." "\0"
             VALUE "OriginalFilename", "zenio.exe" "\0"
             VALUE "ProductName", "Zenio" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"

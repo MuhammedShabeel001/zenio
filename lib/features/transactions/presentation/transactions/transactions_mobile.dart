@@ -5,7 +5,6 @@ import 'package:zenio/features/home/domain/models/transaction/transaction_kind.d
 import 'package:zenio/features/home/home.dart';
 import 'package:zenio/features/home/presentation/widgets/delete_transaction_with_undo.dart';
 import 'package:zenio/features/transactions/controller/transactions/transactions_notifier.dart';
-import 'package:zenio/features/transactions/presentation/widgets/adjustment_details_dialog.dart';
 import 'package:zenio/features/transactions/presentation/widgets/edit_transaction_dialog.dart';
 import 'package:zenio/features/transactions/presentation/widgets/transaction_detail_card.dart';
 import 'package:zenio/shared/shared.dart';
@@ -23,6 +22,7 @@ class TransactionsScreenMobile extends ConsumerStatefulWidget {
 class _TransactionsScreenMobileState
     extends ConsumerState<TransactionsScreenMobile> {
   String? _openTransactionId;
+  String? _expandedTileId;
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(transactionsNotifierProvider);
@@ -179,13 +179,13 @@ class _TransactionsScreenMobileState
                               key: ValueKey(item.id),
                               transaction: item,
                               isOpen: _openTransactionId == item.id,
-                              // An adjustment can't be edited; a tap
-                              // shows what it did.
-                              onTap: () => showAdjustmentDetails(
-                                context,
-                                ref,
-                                item.toModel(),
-                              ),
+                              // A tap shows the details; one row at a time.
+                              isTileExpanded: _expandedTileId == item.id,
+                              onTileTap: () => setState(() {
+                                _expandedTileId = _expandedTileId == item.id
+                                    ? null
+                                    : item.id;
+                              }),
                               onOpen: () {
                                 if (_openTransactionId != item.id) {
                                   setState(() {

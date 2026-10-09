@@ -5,14 +5,14 @@ import 'package:flutter/services.dart';
 
 /// Platform protections for sensitive screens and copied secrets.
 ///
-/// Backed by the `com.aurea.zenio/security` channel in `MainActivity.kt` and
+/// Backed by the `com.auren.zenio/security` channel in `MainActivity.kt` and
 /// `AppDelegate.swift`. Falls back to plain Dart behaviour where the channel
 /// is unavailable (tests, desktop, web).
 class SecurePlatform {
   SecurePlatform._();
 
   static const MethodChannel _channel =
-      MethodChannel('com.aurea.zenio/security');
+      MethodChannel('com.auren.zenio/security');
 
   /// How long a copied secret stays on the clipboard.
   static const Duration clipboardLifetime = Duration(seconds: 60);

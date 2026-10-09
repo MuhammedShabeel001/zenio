@@ -35,8 +35,7 @@ class _MemoryTransactions implements IMoneyTrackerRepository {
   dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
 }
 
-WalletCardModel _wallet(String id, String name, String type) =>
-    WalletCardModel(
+WalletCardModel _wallet(String id, String name, String type) => WalletCardModel(
       id: id,
       bankName: name,
       cardNumber: '',
@@ -78,7 +77,7 @@ void main() {
     });
     PackageInfo.setMockInitialValues(
       appName: 'Zenio',
-      packageName: 'com.aurea.zenio',
+      packageName: 'com.auren.zenio',
       version: '2.0.0',
       buildNumber: '2',
       buildSignature: '',
@@ -208,7 +207,8 @@ void main() {
   testWidgets('with the keyboard up, Save stays in view above it',
       (tester) async {
     // A 390 x 844 phone, with the keyboard over the lower 336pt.
-    await openSheet(tester, defaultWallet: 'HDFC', size: const Size(1170, 2532));
+    await openSheet(tester,
+        defaultWallet: 'HDFC', size: const Size(1170, 2532));
     tester.view.viewInsets = const FakeViewPadding(bottom: 336 * 3);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));

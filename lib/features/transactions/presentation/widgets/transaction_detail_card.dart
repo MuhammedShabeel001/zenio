@@ -12,23 +12,28 @@ class TransactionDetailCard extends ConsumerStatefulWidget {
     required this.transaction,
     this.onDelete,
     this.onEdit,
-    this.onTap,
     this.isOpen = false,
     this.onOpen,
     this.onClose,
+    this.isTileExpanded,
+    this.onTileTap,
     super.key,
   });
 
   final TransactionDetailModel transaction;
   final VoidCallback? onDelete;
   final VoidCallback? onEdit;
-
-  /// What a tap does when the transaction cannot be edited, for example
-  /// showing an adjustment's details. A tap otherwise opens [onEdit].
-  final VoidCallback? onTap;
   final bool isOpen;
   final VoidCallback? onOpen;
   final VoidCallback? onClose;
+
+  /// Whether the details (note, wallet, time) are showing. When null the
+  /// card keeps track of it itself.
+  final bool? isTileExpanded;
+
+  /// Called when the row is tapped to show or hide its details, for a
+  /// screen that keeps one row open at a time.
+  final VoidCallback? onTileTap;
 
   @override
   ConsumerState<TransactionDetailCard> createState() => _TransactionDetailCardState();
@@ -42,6 +47,9 @@ class _TransactionDetailCardState extends ConsumerState<TransactionDetailCard>
   /// How far the card slides open: Delete and Edit, or Delete alone for
   /// items that cannot be edited.
   double get _maxDragDistance => widget.onEdit == null ? 76 : 146;
+  bool _internalTileExpanded = false;
+
+  bool get _isExpanded => widget.isTileExpanded ?? _internalTileExpanded;
 
   @override
   void initState() {
@@ -207,14 +215,15 @@ class _TransactionDetailCardState extends ConsumerState<TransactionDetailCard>
             child: GestureDetector(
               onHorizontalDragUpdate: _onHorizontalDragUpdate,
               onHorizontalDragEnd: _onHorizontalDragEnd,
-              // A tap opens the transaction for editing (or closes the
-              // swiped-open buttons). One that can't be edited, such as a
-              // balance adjustment, shows its details instead.
+              // A tap shows or hides the details (or closes the swiped-open
+              // buttons).
               onTap: () {
                 if (_dragOffset < 0) {
                   _close();
+                } else if (widget.onTileTap != null) {
+                  widget.onTileTap!();
                 } else {
-                  (widget.onEdit ?? widget.onTap)?.call();
+                  setState(() => _internalTileExpanded = !_internalTileExpanded);
                 }
               },
               child: AnimatedContainer(
@@ -236,10 +245,7 @@ class _TransactionDetailCardState extends ConsumerState<TransactionDetailCard>
                         amount: amountText,
                         when: tx.date.toRelativeDate,
                       ),
-                      onTapHint: transactionTapHint(
-                        canEdit: widget.onEdit != null,
-                        hasDetails: widget.onTap != null,
-                      ),
+                      onTapHint: _isExpanded ? 'hide details' : 'show details',
                       excludeSemantics: true,
                       child: Row(
                       children: [
@@ -325,6 +331,22 @@ class _TransactionDetailCardState extends ConsumerState<TransactionDetailCard>
                     ),
                     ),
 
+                    // Details: note, wallet and time. Edit is a swipe or a
+                    // long press away, like Delete.
+                    AnimatedCrossFade(
+                      duration: ZenioMotion.of(context, ZenioMotion.standard),
+                      firstCurve: Curves.fastOutSlowIn,
+                      secondCurve: Curves.fastOutSlowIn,
+                      sizeCurve: Curves.fastOutSlowIn,
+                      crossFadeState: _isExpanded
+                          ? CrossFadeState.showSecond
+                          : CrossFadeState.showFirst,
+                      firstChild: const SizedBox(
+                        width: double.infinity,
+                        height: 0,
+                      ),
+                      secondChild: _Details(transaction: tx),
+                    ),
                   ],
                 ),
               ),
@@ -333,6 +355,94 @@ class _TransactionDetailCardState extends ConsumerState<TransactionDetailCard>
         ],
       ),
     ),
+    );
+  }
+}
+
+/// What a transaction's row shows when opened: its note, wallet and time
+/// (and, for a balance adjustment, why it can't be edited).
+class _Details extends StatelessWidget {
+  const _Details({required this.transaction});
+
+  final TransactionDetailModel transaction;
+
+  @override
+  Widget build(BuildContext context) {
+    final tx = transaction;
+    final note = tx.note?.trim() ?? '';
+    final ends = tx.transferEnds;
+    final wallet = ends != null ? '${ends.from} → ${ends.to}' : tx.bankName;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(20, 12, 0, 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (note.isNotEmpty) ...[
+            const Text(
+              'Note :',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w400,
+                color: ZenioColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              note,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF000000),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Divider(
+              color: Color(0xFFE5E5E5),
+              height: 1,
+              thickness: 1,
+            ),
+            const SizedBox(height: 12),
+          ],
+          Row(
+            children: [
+              Assets.icons.walletOpen.svg(width: 24, height: 24),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  wallet == null || wallet.isEmpty ? '—' : wallet,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: ZenioColors.textPrimary,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                DateTimeUtils.timeOfTimestamp(tx.timestamp) ?? '—',
+                style: AppFonts.numeric(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w400,
+                  color: ZenioColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+          if (tx.resolvedKind == TransactionKind.adjustment) ...[
+            const SizedBox(height: 12),
+            const Text(
+              "A balance adjustment corrects a wallet's balance. It isn't "
+              "income or spending, and it can't be edited.",
+              style: TextStyle(
+                fontSize: 12,
+                color: ZenioColors.textSecondary,
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
